@@ -6,8 +6,9 @@ import * as schema from "@/db/schema";
 export const auth = betterAuth({
   appName: "Bhada",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-  // This keeps static/demo builds healthy. Always override it in a deployed environment.
-  secret: process.env.BETTER_AUTH_SECRET ?? "bhada-local-demo-secret-change-before-production",
+  // A transient secret keeps demo builds healthy without shipping a known fallback.
+  // Production authentication requires BETTER_AUTH_SECRET for stable sessions.
+  secret: process.env.BETTER_AUTH_SECRET ?? crypto.randomUUID(),
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
