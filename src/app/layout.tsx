@@ -15,7 +15,10 @@ const displayFont = Gotu({
 });
 
 export const metadata: Metadata = {
-  title: "Bhada — Rent, without the runaround",
+  title: {
+    default: "Bhada — Rent, without the runaround",
+    template: "%s | Bhada",
+  },
   description: "A calm, modern rent tracking workspace for independent landlords.",
 };
 

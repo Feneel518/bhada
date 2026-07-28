@@ -8,7 +8,6 @@ import {
   Building2,
   CalendarDays,
   Check,
-  ChevronDown,
   CircleDollarSign,
   CreditCard,
   Ellipsis,
@@ -19,6 +18,7 @@ import {
   Plus,
   Search,
   Settings,
+  LogOut,
   Sparkles,
   Users,
   WalletCards,
@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { LineChart } from "@/components/ui/line-chart";
 import { chart, payments, properties } from "@/lib/demo-data";
+import { authClient } from "@/lib/auth-client";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const nav = [
@@ -45,7 +46,14 @@ const statusStyles: Record<string, string> = {
   Upcoming: "bg-[#eef0f9] text-[#626a86]",
 };
 
-export function Dashboard() {
+type DashboardUser = {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+};
+
+export function Dashboard({ user }: { user: DashboardUser }) {
   const [active, setActive] = useState("Overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -65,6 +73,19 @@ export function Dashboard() {
     setActive(section);
     setSidebarOpen(false);
   }
+
+  async function signOut() {
+    await authClient.signOut();
+    window.location.assign("/");
+  }
+
+  const firstName = user.name.trim().split(/\s+/)[0] || "there";
+  const initials = user.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="min-h-screen bg-transparent lg:grid lg:grid-cols-[248px_1fr]">
@@ -142,12 +163,19 @@ export function Dashboard() {
         </div>
 
         <div className="mt-4 flex items-center gap-3 rounded-xl px-2 py-2">
-          <div className="grid size-9 place-items-center rounded-full bg-[#272b3a] text-xs font-bold text-white">JD</div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#292f3d]">Jamie Doyle</p>
-            <p className="truncate text-[11px] text-[#969baa]">jamie@bhada.app</p>
+          <div
+            className="grid size-9 place-items-center overflow-hidden rounded-full bg-[#272b3a] bg-cover bg-center text-xs font-bold text-white"
+            style={user.image ? { backgroundImage: `url("${user.image.replace(/"/g, "%22")}")` } : undefined}
+          >
+            {!user.image && initials}
           </div>
-          <ChevronDown className="size-4 text-[#9298a7]" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-[#292f3d]">{user.name}</p>
+            <p className="truncate text-[11px] text-[#969baa]">{user.email}</p>
+          </div>
+          <button onClick={signOut} aria-label="Sign out" title="Sign out" className="grid size-8 place-items-center rounded-lg text-[#9298a7] hover:bg-white hover:text-[#5555c7]">
+            <LogOut className="size-4" />
+          </button>
         </div>
       </aside>
 
@@ -191,6 +219,7 @@ export function Dashboard() {
               payments={visiblePayments}
               onAddProperty={() => setPropertyOpen(true)}
               onRecordPayment={() => setPaymentOpen(true)}
+              firstName={firstName}
             />
           ) : (
             <SectionView
@@ -215,12 +244,14 @@ function Overview({
   payments: rows,
   onAddProperty,
   onRecordPayment,
+  firstName,
 }: {
   period: string;
   setPeriod: (value: string) => void;
   payments: typeof payments;
   onAddProperty: () => void;
   onRecordPayment: () => void;
+  firstName: string;
 }) {
   return (
     <>
@@ -228,7 +259,7 @@ function Overview({
         <div>
           <p className="mb-1 text-sm font-medium text-[#888e9d]">Tuesday, July 28</p>
           <h1 className="font-display text-[29px] leading-tight tracking-[-0.045em] text-[#222836] sm:text-[34px]">
-            Good evening, Jamie
+            Good evening, {firstName}
           </h1>
           <p className="mt-1.5 text-sm text-[#747b8b]">Here&apos;s how your portfolio is doing this month.</p>
         </div>
