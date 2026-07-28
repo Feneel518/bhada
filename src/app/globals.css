@@ -8,6 +8,9 @@
   --line: #e7e9f0;
   --brand: #5b5bd6;
   --brand-dark: #4646b8;
+  --chart-line-primary: #5b5bd6;
+  --chart-crosshair: #6c6cd1;
+  --chart-grid: #e9ebf2;
 }
 
 @theme inline {

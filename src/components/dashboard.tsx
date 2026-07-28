@@ -27,6 +27,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { LineChart } from "@/components/ui/line-chart";
 import { chart, payments, properties } from "@/lib/demo-data";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -260,7 +261,7 @@ function Overview({
               <option>This quarter</option>
             </select>
           </div>
-          <IncomeChart />
+          <IncomeChart period={period} />
         </section>
 
         <section className="rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)] sm:p-6">
@@ -343,32 +344,15 @@ function MetricCard({
   );
 }
 
-function IncomeChart() {
-  const points = chart.map((value, index) => `${(index / (chart.length - 1)) * 100},${100 - value}`).join(" ");
-  return (
-    <div className="mt-6">
-      <div className="relative h-[190px] overflow-hidden">
-        {[0, 1, 2, 3].map((line) => (
-          <div key={line} className="absolute inset-x-0 border-t border-dashed border-[#eceef3]" style={{ top: `${line * 31}%` }} />
-        ))}
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-          <defs>
-            <linearGradient id="income-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#5b5bd6" stopOpacity=".22" />
-              <stop offset="100%" stopColor="#5b5bd6" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <polygon points={`0,100 ${points} 100,100`} fill="url(#income-fill)" />
-          <polyline points={points} fill="none" stroke="#5b5bd6" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-        </svg>
-      </div>
-      <div className="mt-1 flex justify-between text-[10px] font-medium text-[#9ba0ad]">
-        {["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"].map((month, index) => (
-          <span key={month} className={cn(index % 2 !== 0 && "hidden sm:inline")}>{month}</span>
-        ))}
-      </div>
-    </div>
-  );
+function IncomeChart({ period }: { period: string }) {
+  const months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+  const fullData = chart.map((value, index) => ({
+    label: months[index],
+    value: Math.round(9200 + value * 82),
+  }));
+  const count = period === "This quarter" ? 3 : period === "Last 6 months" ? 6 : 12;
+  const visibleData = fullData.slice(-count);
+  return <LineChart key={period} data={visibleData} markerIndex={count > 6 ? 7 : undefined} />;
 }
 
 function Legend({ dot, label, value }: { dot: string; label: string; value: string }) {
