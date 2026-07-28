@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, Manrope } from "next/font/google";
+import { DM_Sans, Gotu } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -8,9 +8,10 @@ const bodyFont = DM_Sans({
   subsets: ["latin"],
 });
 
-const displayFont = Manrope({
+const displayFont = Gotu({
   variable: "--font-display",
   subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {

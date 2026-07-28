@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7fb;
+  --background: #f7f8fc;
   --foreground: #1e2432;
   --card: #ffffff;
   --muted: #6d7485;
@@ -26,6 +26,10 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
+  background-image:
+    radial-gradient(circle at 82% 0%, rgba(91, 91, 214, 0.055), transparent 27rem),
+    radial-gradient(circle at 18% 100%, rgba(22, 163, 154, 0.04), transparent 30rem);
+  background-attachment: fixed;
 }
 
 button,

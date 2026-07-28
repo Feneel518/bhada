@@ -66,7 +66,7 @@ export function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f7fb] lg:grid lg:grid-cols-[248px_1fr]">
+    <div className="min-h-screen bg-transparent lg:grid lg:grid-cols-[248px_1fr]">
       {sidebarOpen && (
         <button
           aria-label="Close menu"
@@ -76,17 +76,17 @@ export function Dashboard() {
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-[#e8e9ef] bg-white px-4 py-5 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-white/70 bg-white/85 px-4 py-5 shadow-[16px_0_50px_rgba(38,42,61,.035)] backdrop-blur-2xl transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-11 items-center justify-between px-2">
           <button onClick={() => selectSection("Overview")} className="flex items-center gap-2.5">
-            <span className="relative grid size-9 place-items-center overflow-hidden rounded-xl bg-[#5b5bd6] text-white shadow-sm shadow-indigo-200">
+            <span className="relative grid size-9 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-[#6969e7] to-[#4848bd] text-white shadow-md shadow-indigo-200/70">
               <Building2 className="size-[18px]" strokeWidth={2.4} />
               <span className="absolute -bottom-2 -right-2 size-4 rounded-full bg-[#7e7ee7]" />
             </span>
-            <span className="font-display text-[20px] font-extrabold tracking-[-0.04em] text-[#202636]">bhada</span>
+            <span className="font-display text-[18px] tracking-[-0.04em] text-[#202636]">bhada</span>
           </button>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="size-5" />
@@ -151,7 +151,7 @@ export function Dashboard() {
       </aside>
 
       <main className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-[#e8e9ef] bg-white/90 px-4 backdrop-blur-xl sm:px-7 lg:px-9">
+        <header className="sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-white/80 bg-white/72 px-4 shadow-[0_1px_20px_rgba(30,36,50,.025)] backdrop-blur-2xl sm:px-7 lg:px-9">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="size-5" />
           </Button>
@@ -225,8 +225,8 @@ function Overview({
     <>
       <div className="animate-rise flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="mb-1 text-sm font-medium text-[#888e9d]">Monday, July 28</p>
-          <h1 className="font-display text-[30px] font-extrabold tracking-[-0.045em] text-[#222836] sm:text-[36px]">
+          <p className="mb-1 text-sm font-medium text-[#888e9d]">Tuesday, July 28</p>
+          <h1 className="font-display text-[29px] leading-tight tracking-[-0.045em] text-[#222836] sm:text-[34px]">
             Good evening, Jamie
           </h1>
           <p className="mt-1.5 text-sm text-[#747b8b]">Here&apos;s how your portfolio is doing this month.</p>
@@ -324,7 +324,7 @@ function MetricCard({
     pink: "bg-[#f9eaf0] text-[#b85d82]",
   };
   return (
-    <article className="rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)]">
+    <article className="group rounded-[22px] border border-white/80 bg-white/90 p-5 shadow-[0_8px_30px_rgba(32,38,55,.045)] backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_45px_rgba(32,38,55,.075)]">
       <div className="flex items-center justify-between">
         <span className={cn("grid size-10 place-items-center rounded-xl", tones[tone])}>
           <Icon className="size-[19px]" strokeWidth={2.1} />
@@ -334,7 +334,7 @@ function MetricCard({
         </button>
       </div>
       <p className="mt-5 text-xs font-medium text-[#858b9a]">{label}</p>
-      <p className="mt-1 font-display text-[25px] font-extrabold tracking-[-0.045em] text-[#242a38]">{value}</p>
+      <p className="mt-1 font-display text-[23px] tracking-[-0.045em] text-[#242a38]">{value}</p>
       <p className={cn("mt-3 flex items-center gap-1 text-[11px] font-semibold", trend === "up" ? "text-[#479078]" : "text-[#c06b58]")}>
         {trend === "up" ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
         {note}
