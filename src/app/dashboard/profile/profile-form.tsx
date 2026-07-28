@@ -1,9 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Check, LoaderCircle, Save, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { saveProfile, type ProfileActionState } from "./actions";
 
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -19,9 +18,10 @@ export type ProfileValues = {
   pincode: string;
 };
 
-const initialState: ProfileActionState = {
-  status: "idle",
-  message: "",
+type SaveResult = {
+  status: "idle" | "success" | "error";
+  message: string;
+  panError?: string;
 };
 
 const inputClass =
@@ -34,7 +34,8 @@ export function ProfileForm({
   email: string;
   initialValues: ProfileValues;
 }) {
-  const [state, formAction, pending] = useActionState(saveProfile, initialState);
+  const [result, setResult] = useState<SaveResult>({ status: "idle", message: "" });
+  const [pending, setPending] = useState(false);
   const [gstin, setGstin] = useState(initialValues.gstin);
   const [pan, setPan] = useState(initialValues.pan);
 
@@ -45,7 +46,26 @@ export function ProfileForm({
   const panError =
     pan.length > 0 && !PAN_REGEX.test(pan)
       ? "Enter a valid PAN, for example ABCDE1234F."
-      : state.panError ?? "";
+      : result.panError ?? "";
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setResult({ status: "idle", message: "" });
+
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PUT",
+        body: new FormData(event.currentTarget),
+      });
+      const payload = (await response.json()) as SaveResult;
+      setResult(payload);
+    } catch {
+      setResult({ status: "error", message: "We couldn’t save your profile. Please try again." });
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <div className="animate-rise lg:flex lg:h-[calc(100vh-144px)] lg:flex-col">
@@ -59,7 +79,7 @@ export function ProfileForm({
         </p>
       </header>
 
-      <form action={formAction} className="mt-5 w-full overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)] lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+      <form onSubmit={submit} className="mt-5 w-full overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)] lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
           <section className="border-b border-[#eceef3] px-5 py-4 sm:px-6">
             <div className="flex items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#efeffd] text-[#5656c9]">
@@ -162,10 +182,10 @@ export function ProfileForm({
 
           <footer className="flex flex-col gap-3 border-t border-[#eceef3] bg-[#fafafd] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div aria-live="polite" className="min-h-5 text-sm">
-              {state.message && (
-                <p className={state.status === "success" ? "flex items-center gap-2 font-semibold text-[#27816b]" : "font-medium text-[#c65c4d]"}>
-                  {state.status === "success" && <Check className="size-4" />}
-                  {state.message}
+              {result.message && (
+                <p className={result.status === "success" ? "flex items-center gap-2 font-semibold text-[#27816b]" : "font-medium text-[#c65c4d]"}>
+                  {result.status === "success" && <Check className="size-4" />}
+                  {result.message}
                 </p>
               )}
             </div>

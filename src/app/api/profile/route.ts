@@ -1,44 +1,42 @@
-"use server";
-
 import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
-import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { landlord } from "@/db/schema";
+import { auth } from "@/lib/auth";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
-export type ProfileActionState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  panError?: string;
-};
-
-export async function saveProfile(
-  _previousState: ProfileActionState,
-  formData: FormData,
-): Promise<ProfileActionState> {
+export async function PUT(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
 
   if (!session) {
-    return { status: "error", message: "Your session has expired. Please sign in again." };
+    return Response.json(
+      { status: "error", message: "Your session has expired. Please sign in again." },
+      { status: 401 },
+    );
   }
 
+  const formData = await request.formData();
   const value = (name: string) => String(formData.get(name) ?? "").trim();
   const optional = (name: string) => value(name) || null;
   const businessName = value("businessName");
   const pan = value("pan").toUpperCase();
 
   if (!businessName) {
-    return { status: "error", message: "Business name is required." };
+    return Response.json(
+      { status: "error", message: "Business name is required." },
+      { status: 400 },
+    );
   }
 
   if (pan && !PAN_REGEX.test(pan)) {
-    return {
-      status: "error",
-      message: "Please correct the PAN before saving.",
-      panError: "Enter a valid PAN, for example ABCDE1234F.",
-    };
+    return Response.json(
+      {
+        status: "error",
+        message: "Please correct the PAN before saving.",
+        panError: "Enter a valid PAN, for example ABCDE1234F.",
+      },
+      { status: 400 },
+    );
   }
 
   const profile = {
@@ -65,6 +63,5 @@ export async function saveProfile(
       set: profile,
     });
 
-  revalidatePath("/dashboard/profile");
-  return { status: "success", message: "Profile saved." };
+  return Response.json({ status: "success", message: "Profile saved." });
 }
