@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   ArrowDownRight,
@@ -28,6 +29,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { LineChart } from "@/components/ui/line-chart";
+import { ProfileForm, type ProfileValues } from "@/app/dashboard/profile/profile-form";
 import { chart, payments, properties } from "@/lib/demo-data";
 import { authClient } from "@/lib/auth-client";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -53,8 +55,16 @@ type DashboardUser = {
   image: string | null;
 };
 
-export function Dashboard({ user }: { user: DashboardUser }) {
-  const [active, setActive] = useState("Overview");
+export function Dashboard({
+  user,
+  initialSection = "Overview",
+  profile,
+}: {
+  user: DashboardUser;
+  initialSection?: "Overview" | "Profile";
+  profile?: ProfileValues;
+}) {
+  const [active, setActive] = useState<string>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [propertyOpen, setPropertyOpen] = useState(false);
@@ -141,9 +151,17 @@ export function Dashboard({ user }: { user: DashboardUser }) {
 
         <nav className="mt-7 space-y-1 border-t border-[#eff0f4] pt-6">
           <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a1a6b3]">Manage</p>
-          <button className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#697081] hover:bg-[#f6f7fa]">
+          <Link
+            href="/dashboard/profile"
+            className={cn(
+              "flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
+              active === "Profile"
+                ? "bg-[#efeffd] text-[#4e4ec4]"
+                : "text-[#697081] hover:bg-[#f6f7fa] hover:text-[#2e3443]",
+            )}
+          >
             <Settings className="size-[18px]" /> Settings
-          </button>
+          </Link>
           <button className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#697081] hover:bg-[#f6f7fa]">
             <HelpCircle className="size-[18px]" /> Help center
           </button>
@@ -221,6 +239,8 @@ export function Dashboard({ user }: { user: DashboardUser }) {
               onRecordPayment={() => setPaymentOpen(true)}
               firstName={firstName}
             />
+          ) : active === "Profile" && profile ? (
+            <ProfileForm email={user.email} initialValues={profile} />
           ) : (
             <SectionView
               section={active}

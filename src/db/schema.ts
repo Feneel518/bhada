@@ -19,6 +19,21 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const landlord = pgTable("landlord", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().unique().references(() => user.id, { onDelete: "cascade" }),
+  businessName: text("business_name").notNull(),
+  phone: text("phone"),
+  gstin: text("gstin"),
+  pan: text("pan"),
+  address: text("address"),
+  city: text("city"),
+  state: text("state"),
+  pincode: text("pincode"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
@@ -122,6 +137,10 @@ export const userRelations = relations(user, ({ many }) => ({
   tenants: many(tenant),
 }));
 
+export const landlordRelations = relations(landlord, ({ one }) => ({
+  user: one(user, { fields: [landlord.userId], references: [user.id] }),
+}));
+
 export const propertyRelations = relations(property, ({ one, many }) => ({
   owner: one(user, { fields: [property.ownerId], references: [user.id] }),
   units: many(unit),
@@ -140,6 +159,7 @@ export const leaseRelations = relations(lease, ({ one, many }) => ({
 
 export const schema = {
   user,
+  landlord,
   session,
   account,
   verification,
@@ -149,6 +169,7 @@ export const schema = {
   lease,
   payment,
   userRelations,
+  landlordRelations,
   propertyRelations,
   unitRelations,
   leaseRelations,
