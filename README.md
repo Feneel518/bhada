@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bhada
 
-## Getting Started
+A polished rent tracking workspace built with Next.js, Tailwind CSS, shadcn-style
+components, Better Auth, Drizzle ORM, and Neon Postgres.
 
-First, run the development server:
+## Run locally
 
 ```bash
+npm install
+copy .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The dashboard is available in demo mode without environment variables. To enable
+real authentication and persistence, create a Neon database and fill in:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+DATABASE_URL="postgresql://..."
+BETTER_AUTH_SECRET="a-random-secret-at-least-32-characters-long"
+BETTER_AUTH_URL="http://localhost:3000"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Then push the schema:
 
-## Learn More
+```bash
+npm run db:push
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Useful commands
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+npm run build
+npm run db:generate
+npm run db:studio
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Architecture
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/components/dashboard.tsx` - responsive dashboard and demo interactions
+- `src/app/sign-in/page.tsx` - Better Auth email/password experience
+- `src/app/api/auth/[...all]/route.ts` - Better Auth Next.js handler
+- `src/db/schema.ts` - auth, property, unit, tenant, lease, and payment tables
+- `src/db/index.ts` - Neon HTTP / Drizzle connection
