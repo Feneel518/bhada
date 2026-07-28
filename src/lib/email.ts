@@ -38,9 +38,14 @@ export async function sendAuthEmail({
     ? "Verify your email address to activate your secure Bhada workspace."
     : "We received a request to reset your password. This secure link expires in one hour.";
   const action = verification ? "Verify email" : "Reset password";
+  const configuredFrom = process.env.EMAIL_FROM;
+  const from =
+    configuredFrom && !configuredFrom.includes("example.com")
+      ? configuredFrom
+      : `"Bhada" <${process.env.SMTP_USER}>`;
 
   await getTransport().sendMail({
-    from: process.env.EMAIL_FROM ?? `"Bhada" <${process.env.SMTP_USER}>`,
+    from,
     to,
     subject,
     text: `${heading}\n\n${copy}\n\n${url}\n\nIf you did not request this, you can safely ignore this email.`,
