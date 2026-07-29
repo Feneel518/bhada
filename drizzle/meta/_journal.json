@@ -57,6 +57,13 @@
       "when": 1785341927471,
       "tag": "0007_violet_stephen_strange",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785343265586,
+      "tag": "0008_dusty_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }

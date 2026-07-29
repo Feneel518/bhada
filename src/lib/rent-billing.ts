@@ -18,6 +18,11 @@ export type RentBillRecord = {
   billNumber: string;
   billingPeriod: string;
   dueDate: string;
+  baseAmount: number;
+  gstRate: number;
+  gstAmount: number;
+  tdsRate: number;
+  tdsAmount: number;
   amount: number;
   paid: number;
   pending: number;
@@ -109,6 +114,10 @@ export async function ensureRentBills(userId: string, now = new Date()) {
       leaseEnd: tenant.leaseEnd,
       monthlyRent: tenant.monthlyRent,
       rentBillingDay: tenant.rentBillingDay,
+      gstEnabled: tenant.gstEnabled,
+      gstRate: tenant.gstRate,
+      tdsEnabled: tenant.tdsEnabled,
+      tdsRate: tenant.tdsRate,
     })
     .from(tenant)
     .innerJoin(landlord, eq(tenant.landlordId, landlord.id))
@@ -140,13 +149,23 @@ export async function ensureRentBills(userId: string, now = new Date()) {
 
       if (!startsAfterDue && !endsBeforeDue && billDueDate.getTime() <= now.getTime()) {
         const billingPeriod = period(cursor.year, cursor.month);
+        const basePaise = Math.round(renter.monthlyRent * 100);
+        const gstRate = renter.gstEnabled ? renter.gstRate : 0;
+        const tdsRate = renter.tdsEnabled ? renter.tdsRate : 0;
+        const gstPaise = Math.round((basePaise * gstRate) / 100);
+        const tdsPaise = Math.round(((basePaise + gstPaise) * tdsRate) / 100);
         rows.push({
           id: crypto.randomUUID(),
           landlordId: renter.landlordId,
           tenantId: renter.id,
           billNumber: `RENT-${renter.id.slice(0, 8).toUpperCase()}-${billingPeriod.replace("-", "")}`,
           billingPeriod,
-          amount: asMoney(renter.monthlyRent),
+          baseAmount: asMoney(basePaise / 100),
+          gstRate: gstRate.toFixed(2),
+          gstAmount: asMoney(gstPaise / 100),
+          tdsRate: tdsRate.toFixed(2),
+          tdsAmount: asMoney(tdsPaise / 100),
+          amount: asMoney((basePaise + gstPaise - tdsPaise) / 100),
           dueDate: billDueDate,
         });
       }
@@ -182,6 +201,11 @@ export async function getRentBilling(
         tenantName: tenant.name,
         billNumber: rentBill.billNumber,
         billingPeriod: rentBill.billingPeriod,
+        baseAmount: rentBill.baseAmount,
+        gstRate: rentBill.gstRate,
+        gstAmount: rentBill.gstAmount,
+        tdsRate: rentBill.tdsRate,
+        tdsAmount: rentBill.tdsAmount,
         amount: rentBill.amount,
         dueDate: rentBill.dueDate,
         storedStatus: rentBill.status,
@@ -291,6 +315,11 @@ export async function getRentBilling(
       billNumber: bill.billNumber,
       billingPeriod: bill.billingPeriod,
       dueDate: bill.dueDate.toISOString().slice(0, 10),
+      baseAmount: Number(bill.baseAmount),
+      gstRate: Number(bill.gstRate),
+      gstAmount: Number(bill.gstAmount),
+      tdsRate: Number(bill.tdsRate),
+      tdsAmount: Number(bill.tdsAmount),
       amount,
       paid,
       pending,

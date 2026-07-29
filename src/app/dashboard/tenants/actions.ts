@@ -19,6 +19,8 @@ type TenantField =
   | "leaseEnd"
   | "monthlyRent"
   | "rentBillingDay"
+  | "gstRate"
+  | "tdsRate"
   | "securityDeposit"
   | "lockInMonths"
   | "noticePeriodMonths"
@@ -84,8 +86,12 @@ export async function saveTenant(
   const leaseEnd = value("leaseEnd");
   const nextEscalationDate = value("nextEscalationDate");
   const isActive = formData.get("isActive") === "on";
+  const gstEnabled = formData.get("gstEnabled") === "on";
+  const tdsEnabled = formData.get("tdsEnabled") === "on";
   const monthlyRent = optionalNumber(value("monthlyRent"), "Monthly rent");
   const rentBillingDay = optionalNumber(value("rentBillingDay"), "Rent billing day", true);
+  const gstRate = optionalNumber(value("gstRate"), "GST rate");
+  const tdsRate = optionalNumber(value("tdsRate"), "TDS rate");
   const securityDeposit = optionalNumber(value("securityDeposit"), "Security deposit");
   const lockInMonths = optionalNumber(value("lockInMonths"), "Lock-in period", true);
   const noticePeriodMonths = optionalNumber(value("noticePeriodMonths"), "Notice period", true);
@@ -111,6 +117,12 @@ export async function saveTenant(
   if (monthlyRent.error) errors.monthlyRent = monthlyRent.error;
   if (rentBillingDay.error || rentBillingDay.value === null || rentBillingDay.value < 1 || rentBillingDay.value > 31) {
     errors.rentBillingDay = "Rent billing day must be between 1 and 31.";
+  }
+  if (gstRate.error || (gstEnabled && (!gstRate.value || gstRate.value > 100))) {
+    errors.gstRate = "GST rate must be greater than 0 and at most 100.";
+  }
+  if (tdsRate.error || (tdsEnabled && (!tdsRate.value || tdsRate.value > 100))) {
+    errors.tdsRate = "TDS rate must be greater than 0 and at most 100.";
   }
   if (securityDeposit.error) errors.securityDeposit = securityDeposit.error;
   if (lockInMonths.error) errors.lockInMonths = lockInMonths.error;
@@ -178,6 +190,10 @@ export async function saveTenant(
     leaseEnd: date(leaseEnd),
     monthlyRent: monthlyRent.value,
     rentBillingDay: rentBillingDay.value ?? 1,
+    gstEnabled,
+    gstRate: gstEnabled ? (gstRate.value ?? 0) : 0,
+    tdsEnabled,
+    tdsRate: tdsEnabled ? (tdsRate.value ?? 0) : 0,
     securityDeposit: securityDeposit.value,
     lockInMonths: lockInMonths.value,
     noticePeriodMonths: noticePeriodMonths.value,

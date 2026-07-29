@@ -827,7 +827,7 @@ function RentBillTable({
               <th className="px-6 py-3 font-bold">Bill</th>
               <th className="px-4 py-3 font-bold">Bill month</th>
               <th className="hidden px-4 py-3 font-bold lg:table-cell">Tenant</th>
-              <th className="hidden px-4 py-3 font-bold md:table-cell">Billed</th>
+              <th className="hidden px-4 py-3 font-bold md:table-cell">Payable</th>
               <th className="px-4 py-3 font-bold">Pending</th>
               <th className="hidden px-4 py-3 font-bold md:table-cell">Due date</th>
               <th className="px-4 py-3 font-bold">Status</th>
@@ -841,7 +841,16 @@ function RentBillTable({
                 </td>
                 <td className="px-4 py-3.5 text-xs text-[#5f6676]">{formatBillingMonth(bill.billingPeriod)}</td>
                 <td className="hidden px-4 py-3.5 text-xs text-[#5f6676] lg:table-cell">{bill.tenantName}</td>
-                <td className="hidden px-4 py-3.5 text-xs font-bold text-[#343a48] md:table-cell">{formatCurrency(bill.amount)}</td>
+                <td className="hidden px-4 py-3.5 md:table-cell">
+                  <p className="text-xs font-bold text-[#343a48]">{formatCurrency(bill.amount)}</p>
+                  {(bill.gstAmount > 0 || bill.tdsAmount > 0) && (
+                    <p className="mt-1 text-[10px] font-medium text-[#8b91a0]">
+                      {formatCurrency(bill.baseAmount)}
+                      {bill.gstAmount > 0 ? ` + ${formatCurrency(bill.gstAmount)} GST` : ""}
+                      {bill.tdsAmount > 0 ? ` - ${formatCurrency(bill.tdsAmount)} TDS` : ""}
+                    </p>
+                  )}
+                </td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</td>
                 <td className="hidden px-4 py-3.5 text-xs text-[#7e8595] md:table-cell">{bill.dueDate}</td>
                 <td className="px-4 py-3.5">
@@ -1047,6 +1056,12 @@ function TenantCard({
         <p><span className="font-bold text-[#4d5362]">Lease:</span> {item.leaseStart || "—"} to {item.leaseEnd || "—"}</p>
         <p><span className="font-bold text-[#4d5362]">Monthly rent:</span> {item.monthlyRent === null ? "—" : formatInr(item.monthlyRent)}</p>
         <p><span className="font-bold text-[#4d5362]">Billing day:</span> Day {item.rentBillingDay} of each month</p>
+        <p>
+          <span className="font-bold text-[#4d5362]">Tax on rent:</span>{" "}
+          {item.gstEnabled ? `${item.gstRate}% GST` : "No GST"}
+          {" · "}
+          {item.tdsEnabled ? `${item.tdsRate}% TDS` : "No TDS"}
+        </p>
         <p><span className="font-bold text-[#4d5362]">Opening balance:</span> {formatCurrency(item.openingBalance)}</p>
         <p><span className="font-bold text-[#4d5362]">Deposit:</span> {item.securityDeposit === null ? "—" : formatInr(item.securityDeposit)}</p>
       </div>
@@ -1978,6 +1993,17 @@ function TenantDialog({
 }) {
   const [state, formAction, pending] = useActionState(saveTenant, initialTenantState);
   const editing = Boolean(tenant);
+  const [gstEnabled, setGstEnabled] = useState(tenant?.gstEnabled ?? false);
+  const [gstRate, setGstRate] = useState(String(tenant?.gstRate || 18));
+  const [tdsEnabled, setTdsEnabled] = useState(tenant?.tdsEnabled ?? false);
+  const [tdsRate, setTdsRate] = useState(String(tenant?.tdsRate || 10));
+  const [monthlyRent, setMonthlyRent] = useState(String(tenant?.monthlyRent ?? ""));
+  const baseRent = Math.max(0, Number(monthlyRent) || 0);
+  const previewGst = gstEnabled ? (baseRent * (Number(gstRate) || 0)) / 100 : 0;
+  const previewTds = tdsEnabled
+    ? ((baseRent + previewGst) * (Number(tdsRate) || 0)) / 100
+    : 0;
+  const previewPayable = baseRent + previewGst - previewTds;
   const units = properties.flatMap((item) =>
     item.units.map((unit) => ({
       id: unit.id,
@@ -2063,7 +2089,19 @@ function TenantDialog({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <TenantInput label="Lease start" name="leaseStart" type="date" value={tenant?.leaseStart} error={state.errors?.leaseStart} />
               <TenantInput label="Lease end" name="leaseEnd" type="date" value={tenant?.leaseEnd} error={state.errors?.leaseEnd} />
-              <TenantInput label="Monthly rent (₹)" name="monthlyRent" type="number" value={tenant?.monthlyRent} error={state.errors?.monthlyRent} step="any" />
+              <Field label="Monthly rent (₹)">
+                <input
+                  className={inputClass}
+                  name="monthlyRent"
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={monthlyRent}
+                  onChange={(event) => setMonthlyRent(event.target.value)}
+                  aria-invalid={Boolean(state.errors?.monthlyRent)}
+                />
+                {state.errors?.monthlyRent && <FieldError message={state.errors.monthlyRent} />}
+              </Field>
               <TenantInput label="Bill rent on day" name="rentBillingDay" type="number" value={tenant?.rentBillingDay ?? 1} error={state.errors?.rentBillingDay} />
               <TenantInput label="Security deposit" name="securityDeposit" type="number" value={tenant?.securityDeposit} error={state.errors?.securityDeposit} step="any" />
               <TenantInput label="Lock-in (months)" name="lockInMonths" type="number" value={tenant?.lockInMonths} error={state.errors?.lockInMonths} />
@@ -2071,6 +2109,88 @@ function TenantDialog({
               <TenantInput label="Opening outstanding balance" name="openingBalance" type="number" value={tenant?.openingBalance ?? 0} error={state.errors?.openingBalance} step="any" />
               <TenantInput label="Credit balance" name="creditBalance" type="number" value={tenant?.creditBalance ?? 0} error={state.errors?.creditBalance} step="any" />
             </div>
+          </section>
+
+          <section className="space-y-4 border-t border-[#eff0f4] pt-5">
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b91a0]">Rent bill taxes</p>
+              <p className="mt-1.5 text-xs leading-5 text-[#858b9a]">
+                Choose these per tenant. TDS is calculated on the GST-inclusive invoice total.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[#e3e5ec] bg-[#fafafd] p-4">
+                <label className="flex items-center gap-3 text-sm font-semibold text-[#4d5362]">
+                  <input
+                    className="size-4 accent-[#5555c7]"
+                    type="checkbox"
+                    name="gstEnabled"
+                    checked={gstEnabled}
+                    onChange={(event) => setGstEnabled(event.target.checked)}
+                  />
+                  Add GST to rent bills
+                </label>
+                {gstEnabled && (
+                  <div className="mt-3">
+                    <Field label="GST rate (%)">
+                      <input
+                        className={inputClass}
+                        name="gstRate"
+                        type="number"
+                        min={0.01}
+                        max={100}
+                        step="any"
+                        value={gstRate}
+                        onChange={(event) => setGstRate(event.target.value)}
+                        aria-invalid={Boolean(state.errors?.gstRate)}
+                      />
+                      {state.errors?.gstRate && <FieldError message={state.errors.gstRate} />}
+                    </Field>
+                  </div>
+                )}
+              </div>
+              <div className="rounded-xl border border-[#e3e5ec] bg-[#fafafd] p-4">
+                <label className="flex items-center gap-3 text-sm font-semibold text-[#4d5362]">
+                  <input
+                    className="size-4 accent-[#5555c7]"
+                    type="checkbox"
+                    name="tdsEnabled"
+                    checked={tdsEnabled}
+                    onChange={(event) => setTdsEnabled(event.target.checked)}
+                  />
+                  Tenant deducts TDS
+                </label>
+                {tdsEnabled && (
+                  <div className="mt-3">
+                    <Field label="TDS rate (%)">
+                      <input
+                        className={inputClass}
+                        name="tdsRate"
+                        type="number"
+                        min={0.01}
+                        max={100}
+                        step="any"
+                        value={tdsRate}
+                        onChange={(event) => setTdsRate(event.target.value)}
+                        aria-invalid={Boolean(state.errors?.tdsRate)}
+                      />
+                      {state.errors?.tdsRate && <FieldError message={state.errors.tdsRate} />}
+                    </Field>
+                  </div>
+                )}
+              </div>
+            </div>
+            {baseRent > 0 && (
+              <div className="rounded-xl border border-[#dfe3f4] bg-[#f6f7fd] px-4 py-3">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#777e91]">Monthly bill preview</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#606779]">
+                  <span>Rent {formatCurrency(baseRent)}</span>
+                  {gstEnabled && <span>+ GST {formatCurrency(previewGst)}</span>}
+                  {tdsEnabled && <span>− TDS {formatCurrency(previewTds)}</span>}
+                  <span className="font-extrabold text-[#3f4660]">= {formatCurrency(previewPayable)} payable</span>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="space-y-4 border-t border-[#eff0f4] pt-5">
