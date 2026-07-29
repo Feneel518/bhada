@@ -6,6 +6,7 @@ import { getProperties } from "@/lib/properties";
 import { getTenants } from "@/lib/tenants";
 import { getPayments } from "@/lib/payments";
 import { getRentBilling } from "@/lib/rent-billing";
+import { getElectricityBills } from "@/lib/electricity-billing";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -15,10 +16,11 @@ export default async function DashboardPage() {
   }
 
   const rentBilling = await getRentBilling(session.user.id);
-  const [properties, tenants, payments] = await Promise.all([
+  const [properties, tenants, payments, electricityBills] = await Promise.all([
     getProperties(session.user.id),
     getTenants(session.user.id),
     getPayments(session.user.id),
+    getElectricityBills(session.user.id),
   ]);
 
   return (
@@ -27,6 +29,7 @@ export default async function DashboardPage() {
       tenants={tenants}
       payments={payments}
       rentBilling={rentBilling}
+      electricityBills={electricityBills}
       user={{
         id: session.user.id,
         name: session.user.name,

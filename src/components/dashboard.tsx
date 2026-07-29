@@ -56,10 +56,15 @@ import {
   recordPayment,
   type PaymentActionState,
 } from "@/app/dashboard/payments/actions";
+import {
+  createElectricityBill,
+  type ElectricityBillActionState,
+} from "@/app/dashboard/electricity/actions";
 import { chart } from "@/lib/demo-data";
 import { authClient } from "@/lib/auth-client";
 import type { PaymentRecord } from "@/lib/payments";
 import type { RentBillingSummary } from "@/lib/rent-billing";
+import type { ElectricityBillRecord } from "@/lib/electricity-billing";
 import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -93,6 +98,7 @@ export function Dashboard({
   tenants,
   payments,
   rentBilling,
+  electricityBills,
 }: {
   user: DashboardUser;
   initialSection?: "Overview" | "Profile";
@@ -101,10 +107,12 @@ export function Dashboard({
   tenants: TenantRecord[];
   payments: PaymentRecord[];
   rentBilling: RentBillingSummary;
+  electricityBills: ElectricityBillRecord[];
 }) {
   const [active, setActive] = useState<string>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [electricityBillOpen, setElectricityBillOpen] = useState(false);
   const [propertyOpen, setPropertyOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<PropertyRecord | null>(null);
   const [unitEditor, setUnitEditor] = useState<{
@@ -322,6 +330,7 @@ export function Dashboard({
               section={active}
               payments={visiblePayments}
               rentBilling={rentBilling}
+              electricityBills={electricityBills}
               properties={visibleProperties}
               tenants={visibleTenants}
               onAddProperty={() => openProperty()}
@@ -329,6 +338,7 @@ export function Dashboard({
               onAddUnit={(property) => setUnitEditor({ property, unit: null })}
               onEditUnit={(property, unit) => setUnitEditor({ property, unit })}
               onRecordPayment={() => setPaymentOpen(true)}
+              onAddElectricityBill={() => setElectricityBillOpen(true)}
               onAddTenant={() => openTenant()}
               onEditTenant={openTenant}
             />
@@ -340,6 +350,11 @@ export function Dashboard({
         open={paymentOpen}
         onOpenChange={setPaymentOpen}
         tenants={tenants}
+      />
+      <ElectricityBillDialog
+        open={electricityBillOpen}
+        onOpenChange={setElectricityBillOpen}
+        properties={properties}
       />
       {propertyOpen && (
         <PropertyDialog
@@ -656,6 +671,7 @@ function SectionView({
   section,
   payments: rows,
   rentBilling,
+  electricityBills,
   properties,
   tenants,
   onAddProperty,
@@ -663,12 +679,14 @@ function SectionView({
   onAddUnit,
   onEditUnit,
   onRecordPayment,
+  onAddElectricityBill,
   onAddTenant,
   onEditTenant,
 }: {
   section: string;
   payments: PaymentRecord[];
   rentBilling: RentBillingSummary;
+  electricityBills: ElectricityBillRecord[];
   properties: PropertyRecord[];
   tenants: TenantRecord[];
   onAddProperty: () => void;
@@ -676,6 +694,7 @@ function SectionView({
   onAddUnit: (property: PropertyRecord) => void;
   onEditUnit: (property: PropertyRecord, unit: UnitRecord) => void;
   onRecordPayment: () => void;
+  onAddElectricityBill: () => void;
   onAddTenant: () => void;
   onEditTenant: (tenant: TenantRecord) => void;
 }) {
@@ -693,9 +712,16 @@ function SectionView({
           <h1 className="mt-1 font-display text-[34px] font-extrabold tracking-[-0.045em]">{section}</h1>
           <p className="mt-1 text-sm text-[#747b8b]">{descriptions[section]}</p>
         </div>
-        <Button onClick={section === "Properties" ? onAddProperty : section === "Tenants" ? onAddTenant : onRecordPayment}>
-          <Plus className="size-4" /> {section === "Properties" ? "Add property" : section === "Payments" ? "Record payment" : `Add ${section.slice(0, -1).toLowerCase()}`}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {section === "Payments" && (
+            <Button variant="outline" onClick={onAddElectricityBill}>
+              <Plus className="size-4" /> Add electricity bill
+            </Button>
+          )}
+          <Button onClick={section === "Properties" ? onAddProperty : section === "Tenants" ? onAddTenant : onRecordPayment}>
+            <Plus className="size-4" /> {section === "Properties" ? "Add property" : section === "Payments" ? "Record payment" : `Add ${section.slice(0, -1).toLowerCase()}`}
+          </Button>
+        </div>
       </div>
       <div className="mt-7">
         {section === "Properties" ? (
@@ -728,6 +754,7 @@ function SectionView({
         ) : (
           <div className="space-y-4">
             <RentBillTable bills={rentBilling.bills} />
+            <ElectricityBillTable bills={electricityBills} />
             <PaymentTable rows={rows} />
           </div>
         )}
@@ -783,6 +810,68 @@ function RentBillTable({ bills }: { bills: RentBillingSummary["bills"] }) {
               <tr>
                 <td colSpan={6} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
                   No rent bills are due yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function ElectricityBillTable({ bills }: { bills: ElectricityBillRecord[] }) {
+  return (
+    <section className="overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)]">
+      <div className="p-5 pb-4 sm:px-6">
+        <h2 className="font-display text-base font-bold tracking-[-0.025em]">Electricity bills</h2>
+        <p className="mt-1 text-xs text-[#8b91a0]">Unit-wise electricity charges and outstanding amounts</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] text-left">
+          <thead>
+            <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
+              <th className="px-6 py-3 font-bold">Bill</th>
+              <th className="px-4 py-3 font-bold">Unit</th>
+              <th className="px-4 py-3 font-bold">Tenant</th>
+              <th className="px-4 py-3 font-bold">Amount</th>
+              <th className="px-4 py-3 font-bold">Pending</th>
+              <th className="px-4 py-3 font-bold">Due date</th>
+              <th className="px-4 py-3 font-bold">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bills.length ? bills.map((bill) => (
+              <tr key={bill.id} className="border-b border-[#f0f1f4] last:border-0 hover:bg-[#fcfcfe]">
+                <td className="px-6 py-3.5">
+                  <p className="text-xs font-bold text-[#343a48]">{bill.billNumber}</p>
+                  <p className="mt-0.5 text-[10px] text-[#989eac]">{bill.billingPeriod}</p>
+                </td>
+                <td className="px-4 py-3.5">
+                  <p className="text-xs font-bold text-[#4d5362]">{bill.propertyName}</p>
+                  <p className="mt-0.5 text-[10px] text-[#989eac]">Unit {bill.unitNumber}</p>
+                </td>
+                <td className="px-4 py-3.5 text-xs text-[#5f6676]">{bill.tenantName}</td>
+                <td className="px-4 py-3.5 text-xs font-bold text-[#343a48]">{formatCurrency(bill.amount)}</td>
+                <td className="px-4 py-3.5 text-xs font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</td>
+                <td className="px-4 py-3.5 text-xs text-[#7e8595]">{bill.dueDate}</td>
+                <td className="px-4 py-3.5">
+                  <span className={cn(
+                    "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold",
+                    bill.status === "Paid"
+                      ? statusStyles.Paid
+                      : bill.status === "Overdue"
+                        ? statusStyles.Overdue
+                        : statusStyles.Upcoming,
+                  )}>
+                    {bill.status}
+                  </span>
+                </td>
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
+                  No electricity bills added yet.
                 </td>
               </tr>
             )}
@@ -1072,6 +1161,126 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const inputClass = "h-11 w-full rounded-xl border border-[#dfe2e9] bg-[#fafafd] px-3.5 text-sm outline-none transition focus:border-[#aaaaf0] focus:bg-white focus:ring-4 focus:ring-[#5b5bd6]/10";
+
+const initialElectricityBillState: ElectricityBillActionState = {
+  status: "idle",
+  message: "",
+};
+
+function ElectricityBillDialog({
+  open,
+  onOpenChange,
+  properties,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  properties: PropertyRecord[];
+}) {
+  const [state, formAction, pending] = useActionState(
+    createElectricityBill,
+    initialElectricityBillState,
+  );
+  const units = properties.flatMap((property) =>
+    property.units.map((unit) => ({ property, unit })),
+  );
+  const today = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (state.status !== "success") return;
+    toast.success("Electricity bill added", { description: state.message });
+    onOpenChange(false);
+  }, [onOpenChange, state]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[560px]">
+        <DialogTitle>Add electricity bill</DialogTitle>
+        <DialogDescription>
+          Choose any unit and enter the electricity amount. The active tenant, if any, is linked automatically.
+        </DialogDescription>
+        <form action={formAction} className="mt-6 space-y-4">
+          <Field label="Property and unit">
+            <select
+              required
+              className={inputClass}
+              name="unitId"
+              defaultValue=""
+              aria-invalid={Boolean(state.errors?.unitId)}
+            >
+              <option value="" disabled>Select a unit</option>
+              {units.map(({ property, unit }) => (
+                <option key={unit.id} value={unit.id}>
+                  {property.name} · Unit {unit.unitNumber}
+                  {unit.tenant ? ` · ${unit.tenant.name}` : " · Vacant"}
+                </option>
+              ))}
+            </select>
+            {state.errors?.unitId && <FieldError message={state.errors.unitId} />}
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Billing month">
+              <input
+                required
+                className={inputClass}
+                name="billingPeriod"
+                type="month"
+                defaultValue={today.slice(0, 7)}
+                aria-invalid={Boolean(state.errors?.billingPeriod)}
+              />
+              {state.errors?.billingPeriod && <FieldError message={state.errors.billingPeriod} />}
+            </Field>
+            <Field label="Amount (₹)">
+              <input
+                required
+                className={inputClass}
+                name="amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="0.00"
+                aria-invalid={Boolean(state.errors?.amount)}
+              />
+              {state.errors?.amount && <FieldError message={state.errors.amount} />}
+            </Field>
+            <Field label="Due date">
+              <input
+                required
+                className={inputClass}
+                name="dueDate"
+                type="date"
+                defaultValue={today}
+                aria-invalid={Boolean(state.errors?.dueDate)}
+              />
+              {state.errors?.dueDate && <FieldError message={state.errors.dueDate} />}
+            </Field>
+            <Field label="Note">
+              <input className={inputClass} name="note" placeholder="Meter bill reference, optional" />
+            </Field>
+          </div>
+
+          <div aria-live="polite" className="min-h-5">
+            {state.status === "error" && (
+              <p className="text-xs font-medium text-[#c65c4d]">{state.message}</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending || !units.length}>
+              {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
+              {pending ? "Adding..." : "Add bill"}
+            </Button>
+          </div>
+          {!units.length && (
+            <p className="text-right text-xs text-[#c65c4d]">Add a property unit first.</p>
+          )}
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 type AllocationDraft = {
   id: string;

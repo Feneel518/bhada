@@ -178,6 +178,31 @@ export const rentBill = pgTable(
   ],
 );
 
+export const electricityBill = pgTable(
+  "electricity_bill",
+  {
+    id: text("id").primaryKey(),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id, { onDelete: "cascade" }),
+    unitId: text("unit_id").notNull().references(() => unit.id, { onDelete: "cascade" }),
+    tenantId: text("tenant_id").references(() => tenant.id, { onDelete: "set null" }),
+    billNumber: text("bill_number").notNull(),
+    billingPeriod: text("billing_period").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    dueDate: timestamp("due_date").notNull(),
+    note: text("note"),
+    status: rentBillStatus("status").default("pending").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("electricity_bill_landlord_number_unique").on(table.landlordId, table.billNumber),
+    index("electricity_bill_landlord_id_idx").on(table.landlordId),
+    index("electricity_bill_unit_id_idx").on(table.unitId),
+    index("electricity_bill_tenant_id_idx").on(table.tenantId),
+    index("electricity_bill_due_date_idx").on(table.dueDate),
+  ],
+);
+
 export const lease = pgTable("lease", {
   id: text("id").primaryKey(),
   unitId: text("unit_id").notNull().references(() => unit.id, { onDelete: "cascade" }),
@@ -254,6 +279,7 @@ export const landlordRelations = relations(landlord, ({ one, many }) => ({
   units: many(unit),
   tenants: many(tenant),
   rentBills: many(rentBill),
+  electricityBills: many(electricityBill),
   paymentReceipts: many(paymentReceipt),
 }));
 
@@ -267,6 +293,7 @@ export const unitRelations = relations(unit, ({ one, many }) => ({
   landlord: one(landlord, { fields: [unit.landlordId], references: [landlord.id] }),
   tenants: many(tenant),
   leases: many(lease),
+  electricityBills: many(electricityBill),
 }));
 
 export const tenantRelations = relations(tenant, ({ one, many }) => ({
@@ -274,12 +301,19 @@ export const tenantRelations = relations(tenant, ({ one, many }) => ({
   landlord: one(landlord, { fields: [tenant.landlordId], references: [landlord.id] }),
   leases: many(lease),
   rentBills: many(rentBill),
+  electricityBills: many(electricityBill),
   paymentReceipts: many(paymentReceipt),
 }));
 
 export const rentBillRelations = relations(rentBill, ({ one }) => ({
   landlord: one(landlord, { fields: [rentBill.landlordId], references: [landlord.id] }),
   tenant: one(tenant, { fields: [rentBill.tenantId], references: [tenant.id] }),
+}));
+
+export const electricityBillRelations = relations(electricityBill, ({ one }) => ({
+  landlord: one(landlord, { fields: [electricityBill.landlordId], references: [landlord.id] }),
+  unit: one(unit, { fields: [electricityBill.unitId], references: [unit.id] }),
+  tenant: one(tenant, { fields: [electricityBill.tenantId], references: [tenant.id] }),
 }));
 
 export const leaseRelations = relations(lease, ({ one, many }) => ({
@@ -311,6 +345,7 @@ export const schema = {
   unit,
   tenant,
   rentBill,
+  electricityBill,
   lease,
   payment,
   paymentReceipt,
@@ -321,6 +356,7 @@ export const schema = {
   unitRelations,
   tenantRelations,
   rentBillRelations,
+  electricityBillRelations,
   leaseRelations,
   paymentReceiptRelations,
   paymentAllocationRelations,
