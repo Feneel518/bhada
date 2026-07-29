@@ -9,7 +9,7 @@ import {
   rentBill,
   tenant,
 } from "@/db/schema";
-import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { getCurrentFinancialYear, getFinancialYear } from "@/lib/financial-year";
 
 export type RentBillRecord = {
   id: string;
@@ -167,9 +167,12 @@ export async function ensureRentBills(userId: string, now = new Date()) {
 export async function getRentBilling(
   userId: string,
   now = new Date(),
+  financialYearStart?: number,
 ): Promise<RentBillingSummary> {
   await ensureRentBills(userId, now);
-  const financialYear = getCurrentFinancialYear(now);
+  const financialYear = financialYearStart === undefined
+    ? getCurrentFinancialYear(now)
+    : getFinancialYear(financialYearStart);
 
   const [billRows, rentPayments, openingBalances, priorBillTotals] = await Promise.all([
     db

@@ -11,7 +11,7 @@ import {
   tenant,
   unit,
 } from "@/db/schema";
-import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { getCurrentFinancialYear, getFinancialYear } from "@/lib/financial-year";
 
 export type ElectricityBillRecord = {
   id: string;
@@ -50,8 +50,11 @@ function dateKey(value: Date) {
 export async function getElectricityBills(
   userId: string,
   now = new Date(),
+  financialYearStart?: number,
 ): Promise<ElectricityBillRecord[]> {
-  const financialYear = getCurrentFinancialYear(now);
+  const financialYear = financialYearStart === undefined
+    ? getCurrentFinancialYear(now)
+    : getFinancialYear(financialYearStart);
   const [billRows, payments, priorBillTotals] = await Promise.all([
     db
       .select({

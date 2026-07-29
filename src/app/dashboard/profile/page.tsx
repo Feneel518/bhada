@@ -10,6 +10,8 @@ import { getTenants } from "@/lib/tenants";
 import { getPayments } from "@/lib/payments";
 import { getRentBilling } from "@/lib/rent-billing";
 import { getElectricityBills } from "@/lib/electricity-billing";
+import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { getAvailableFinancialYears } from "@/lib/financial-year-server";
 
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -18,7 +20,9 @@ export default async function ProfilePage() {
     redirect("/sign-in?returnTo=/dashboard/profile");
   }
 
-  const [[profile], properties, tenants, payments, rentBilling, electricityBills] = await Promise.all([
+  const now = new Date();
+  const financialYearStart = getCurrentFinancialYear(now).startYear;
+  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions] = await Promise.all([
     db
       .select()
       .from(landlord)
@@ -27,8 +31,9 @@ export default async function ProfilePage() {
     getProperties(session.user.id),
     getTenants(session.user.id),
     getPayments(session.user.id),
-    getRentBilling(session.user.id),
-    getElectricityBills(session.user.id),
+    getRentBilling(session.user.id, now, financialYearStart),
+    getElectricityBills(session.user.id, now, financialYearStart),
+    getAvailableFinancialYears(session.user.id, financialYearStart, now),
   ]);
 
   return (
@@ -39,6 +44,8 @@ export default async function ProfilePage() {
       payments={payments}
       rentBilling={rentBilling}
       electricityBills={electricityBills}
+      financialYearStart={financialYearStart}
+      financialYearOptions={financialYearOptions}
       user={{
         id: session.user.id,
         name: session.user.name,

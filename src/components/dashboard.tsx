@@ -65,7 +65,7 @@ import { authClient } from "@/lib/auth-client";
 import type { PaymentRecord } from "@/lib/payments";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
-import { formatBillingMonth } from "@/lib/financial-year";
+import { formatBillingMonth, type FinancialYearOption } from "@/lib/financial-year";
 import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -100,15 +100,19 @@ export function Dashboard({
   payments,
   rentBilling,
   electricityBills,
+  financialYearStart,
+  financialYearOptions,
 }: {
   user: DashboardUser;
-  initialSection?: "Overview" | "Profile";
+  initialSection?: "Overview" | "Profile" | "Payments";
   profile?: ProfileValues;
   properties: PropertyRecord[];
   tenants: TenantRecord[];
   payments: PaymentRecord[];
   rentBilling: RentBillingSummary;
   electricityBills: ElectricityBillRecord[];
+  financialYearStart: number;
+  financialYearOptions: FinancialYearOption[];
 }) {
   const [active, setActive] = useState<string>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -332,6 +336,8 @@ export function Dashboard({
               payments={visiblePayments}
               rentBilling={rentBilling}
               electricityBills={electricityBills}
+              financialYearStart={financialYearStart}
+              financialYearOptions={financialYearOptions}
               properties={visibleProperties}
               tenants={visibleTenants}
               onAddProperty={() => openProperty()}
@@ -673,6 +679,8 @@ function SectionView({
   payments: rows,
   rentBilling,
   electricityBills,
+  financialYearStart,
+  financialYearOptions,
   properties,
   tenants,
   onAddProperty,
@@ -688,6 +696,8 @@ function SectionView({
   payments: PaymentRecord[];
   rentBilling: RentBillingSummary;
   electricityBills: ElectricityBillRecord[];
+  financialYearStart: number;
+  financialYearOptions: FinancialYearOption[];
   properties: PropertyRecord[];
   tenants: TenantRecord[];
   onAddProperty: () => void;
@@ -754,6 +764,23 @@ function SectionView({
           <EmptyDocuments />
         ) : (
           <div className="space-y-4">
+            <div className="flex flex-col gap-3 rounded-[20px] border border-[#e7e9ef] bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <div>
+                <p className="text-xs font-bold text-[#4d5362]">Financial year</p>
+                <p className="mt-1 text-[11px] text-[#8b91a0]">Only the selected April–March period is loaded.</p>
+              </div>
+              <select
+                className="h-10 w-full rounded-xl border border-[#dfe2e9] bg-[#fafafd] px-3 text-sm font-semibold outline-none focus:border-[#aaaaf0] sm:w-44"
+                value={financialYearStart}
+                onChange={(event) => {
+                  window.location.assign(`/dashboard?section=Payments&fy=${event.target.value}`);
+                }}
+              >
+                {financialYearOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
             <RentBillTable bills={rentBilling.bills} financialYearLabel={rentBilling.financialYearLabel} />
             <ElectricityBillTable bills={electricityBills} financialYearLabel={rentBilling.financialYearLabel} />
             <PaymentTable rows={rows} />
@@ -781,7 +808,7 @@ function RentBillTable({
       <div className="flex flex-col gap-4 p-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h2 className="font-display text-base font-bold tracking-[-0.025em]">Rent bills · {financialYearLabel}</h2>
-          <p className="mt-1 text-xs text-[#8b91a0]">Current financial year (April–March)</p>
+          <p className="mt-1 text-xs text-[#8b91a0]">Selected financial year (April–March)</p>
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9aa0af]" />
@@ -794,15 +821,15 @@ function RentBillTable({
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left">
+        <table className="w-full min-w-[460px] text-left md:min-w-[720px]">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
               <th className="px-6 py-3 font-bold">Bill</th>
               <th className="px-4 py-3 font-bold">Bill month</th>
-              <th className="px-4 py-3 font-bold">Tenant</th>
-              <th className="px-4 py-3 font-bold">Billed</th>
+              <th className="hidden px-4 py-3 font-bold lg:table-cell">Tenant</th>
+              <th className="hidden px-4 py-3 font-bold md:table-cell">Billed</th>
               <th className="px-4 py-3 font-bold">Pending</th>
-              <th className="px-4 py-3 font-bold">Due date</th>
+              <th className="hidden px-4 py-3 font-bold md:table-cell">Due date</th>
               <th className="px-4 py-3 font-bold">Status</th>
             </tr>
           </thead>
@@ -813,10 +840,10 @@ function RentBillTable({
                   <p className="text-xs font-bold text-[#343a48]">{bill.billNumber}</p>
                 </td>
                 <td className="px-4 py-3.5 text-xs text-[#5f6676]">{formatBillingMonth(bill.billingPeriod)}</td>
-                <td className="px-4 py-3.5 text-xs text-[#5f6676]">{bill.tenantName}</td>
-                <td className="px-4 py-3.5 text-xs font-bold text-[#343a48]">{formatCurrency(bill.amount)}</td>
+                <td className="hidden px-4 py-3.5 text-xs text-[#5f6676] lg:table-cell">{bill.tenantName}</td>
+                <td className="hidden px-4 py-3.5 text-xs font-bold text-[#343a48] md:table-cell">{formatCurrency(bill.amount)}</td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</td>
-                <td className="px-4 py-3.5 text-xs text-[#7e8595]">{bill.dueDate}</td>
+                <td className="hidden px-4 py-3.5 text-xs text-[#7e8595] md:table-cell">{bill.dueDate}</td>
                 <td className="px-4 py-3.5">
                   <span className={cn(
                     "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold",
@@ -861,7 +888,7 @@ function ElectricityBillTable({
       <div className="flex flex-col gap-4 p-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <h2 className="font-display text-base font-bold tracking-[-0.025em]">Electricity bills · {financialYearLabel}</h2>
-          <p className="mt-1 text-xs text-[#8b91a0]">Current financial year (April–March)</p>
+          <p className="mt-1 text-xs text-[#8b91a0]">Selected financial year (April–March)</p>
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9aa0af]" />
@@ -874,17 +901,17 @@ function ElectricityBillTable({
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left">
+        <table className="w-full min-w-[520px] text-left md:min-w-[760px] lg:min-w-[1000px]">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
               <th className="px-6 py-3 font-bold">Bill</th>
               <th className="px-4 py-3 font-bold">Bill month</th>
               <th className="px-4 py-3 font-bold">Unit</th>
-              <th className="px-4 py-3 font-bold">Tenant</th>
-              <th className="px-4 py-3 font-bold">Meter calculation</th>
-              <th className="px-4 py-3 font-bold">Amount</th>
+              <th className="hidden px-4 py-3 font-bold xl:table-cell">Tenant</th>
+              <th className="hidden px-4 py-3 font-bold lg:table-cell">Meter calculation</th>
+              <th className="hidden px-4 py-3 font-bold md:table-cell">Amount</th>
               <th className="px-4 py-3 font-bold">Pending</th>
-              <th className="px-4 py-3 font-bold">Due date</th>
+              <th className="hidden px-4 py-3 font-bold md:table-cell">Due date</th>
               <th className="px-4 py-3 font-bold">Status</th>
             </tr>
           </thead>
@@ -899,14 +926,14 @@ function ElectricityBillTable({
                   <p className="text-xs font-bold text-[#4d5362]">{bill.propertyName}</p>
                   <p className="mt-0.5 text-[10px] text-[#989eac]">Unit {bill.unitNumber}</p>
                 </td>
-                <td className="px-4 py-3.5 text-xs text-[#5f6676]">{bill.tenantName}</td>
-                <td className="px-4 py-3.5">
+                <td className="hidden px-4 py-3.5 text-xs text-[#5f6676] xl:table-cell">{bill.tenantName}</td>
+                <td className="hidden px-4 py-3.5 lg:table-cell">
                   <p className="text-xs font-bold text-[#4d5362]">{bill.previousReading} → {bill.currentReading}</p>
                   <p className="mt-0.5 text-[10px] text-[#989eac]">{bill.unitsConsumed} units × {formatCurrency(bill.unitRate)}</p>
                 </td>
-                <td className="px-4 py-3.5 text-xs font-bold text-[#343a48]">{formatCurrency(bill.amount)}</td>
+                <td className="hidden px-4 py-3.5 text-xs font-bold text-[#343a48] md:table-cell">{formatCurrency(bill.amount)}</td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</td>
-                <td className="px-4 py-3.5 text-xs text-[#7e8595]">{bill.dueDate}</td>
+                <td className="hidden px-4 py-3.5 text-xs text-[#7e8595] md:table-cell">{bill.dueDate}</td>
                 <td className="px-4 py-3.5">
                   <span className={cn(
                     "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold",
