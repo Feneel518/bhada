@@ -1,12 +1,15 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   numeric,
   pgEnum,
   pgTable,
+  real,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
@@ -73,37 +76,107 @@ export const verification = pgTable("verification", {
 export const leaseStatus = pgEnum("lease_status", ["active", "upcoming", "ended"]);
 export const paymentStatus = pgEnum("payment_status", ["paid", "pending", "overdue"]);
 export const paymentMethod = pgEnum("payment_method", ["bank_transfer", "cash", "check", "card"]);
+export const receiptAllocationMode = pgEnum("receipt_allocation_mode", ["lump_sum", "bill_wise"]);
+export const receiptChargeType = pgEnum("receipt_charge_type", ["rent", "light_bill", "other"]);
+export const rentBillStatus = pgEnum("rent_bill_status", ["pending", "paid", "overdue"]);
+export const unitStatus = pgEnum("unit_status", ["vacant", "occupied", "maintenance"]);
 
-export const property = pgTable("property", {
-  id: text("id").primaryKey(),
-  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  address: text("address").notNull(),
-  city: text("city").notNull(),
-  state: text("state"),
-  postalCode: text("postal_code"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const property = pgTable(
+  "property",
+  {
+    id: text("id").primaryKey(),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    address: text("address"),
+    city: text("city"),
+    state: text("state"),
+    postalCode: text("postal_code"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [index("property_landlord_id_idx").on(table.landlordId)],
+);
 
-export const unit = pgTable("unit", {
-  id: text("id").primaryKey(),
-  propertyId: text("property_id").notNull().references(() => property.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
-  bedrooms: integer("bedrooms").default(1).notNull(),
-  bathrooms: numeric("bathrooms", { precision: 3, scale: 1 }).default("1").notNull(),
-  monthlyRent: numeric("monthly_rent", { precision: 12, scale: 2 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const unit = pgTable(
+  "unit",
+  {
+    id: text("id").primaryKey(),
+    propertyId: text("property_id").notNull().references(() => property.id, { onDelete: "cascade" }),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id),
+    unitNumber: text("unit_number").notNull(),
+    floor: text("floor"),
+    areaSqft: real("area_sqft"),
+    status: unitStatus("status").default("vacant").notNull(),
+    lastMeterReading: real("last_meter_reading"),
+    lastMeterReadingDate: timestamp("last_meter_reading_date"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("unit_property_id_unit_number_unique").on(table.propertyId, table.unitNumber),
+    index("unit_landlord_id_idx").on(table.landlordId),
+    index("unit_property_id_idx").on(table.propertyId),
+  ],
+);
 
-export const tenant = pgTable("tenant", {
-  id: text("id").primaryKey(),
-  ownerId: text("owner_id").notNull().references(() => user.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  phone: text("phone"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const tenant = pgTable(
+  "tenant",
+  {
+    id: text("id").primaryKey(),
+    unitId: text("unit_id").notNull().references(() => unit.id, { onDelete: "cascade" }),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    email: text("email"),
+    phone: text("phone"),
+    aadhaarMasked: text("aadhaar_masked"),
+    panMasked: text("pan_masked"),
+    gstin: text("gstin"),
+    emergencyContact: text("emergency_contact"),
+    emergencyPhone: text("emergency_phone"),
+    leaseStart: timestamp("lease_start"),
+    leaseEnd: timestamp("lease_end"),
+    monthlyRent: real("monthly_rent"),
+    rentBillingDay: integer("rent_billing_day").default(1).notNull(),
+    securityDeposit: real("security_deposit"),
+    lockInMonths: integer("lock_in_months"),
+    noticePeriodMonths: integer("notice_period_months"),
+    rentEscalationPct: real("rent_escalation_pct"),
+    rentEscalationMonths: integer("rent_escalation_months"),
+    nextEscalationDate: timestamp("next_escalation_date"),
+    leaseDocUrl: text("lease_doc_url"),
+    isActive: boolean("is_active").default(true).notNull(),
+    creditBalance: real("credit_balance").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("tenant_landlord_id_idx").on(table.landlordId),
+    index("tenant_unit_id_idx").on(table.unitId),
+  ],
+);
+
+export const rentBill = pgTable(
+  "rent_bill",
+  {
+    id: text("id").primaryKey(),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id, { onDelete: "cascade" }),
+    tenantId: text("tenant_id").notNull().references(() => tenant.id, { onDelete: "cascade" }),
+    billNumber: text("bill_number").notNull(),
+    billingPeriod: text("billing_period").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    dueDate: timestamp("due_date").notNull(),
+    status: rentBillStatus("status").default("pending").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("rent_bill_tenant_period_unique").on(table.tenantId, table.billingPeriod),
+    uniqueIndex("rent_bill_landlord_number_unique").on(table.landlordId, table.billNumber),
+    index("rent_bill_landlord_id_idx").on(table.landlordId),
+    index("rent_bill_tenant_id_idx").on(table.tenantId),
+    index("rent_bill_due_date_idx").on(table.dueDate),
+  ],
+);
 
 export const lease = pgTable("lease", {
   id: text("id").primaryKey(),
@@ -130,31 +203,102 @@ export const payment = pgTable("payment", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const paymentReceipt = pgTable(
+  "payment_receipt",
+  {
+    id: text("id").primaryKey(),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id, { onDelete: "cascade" }),
+    tenantId: text("tenant_id").notNull().references(() => tenant.id, { onDelete: "cascade" }),
+    receiptNumber: text("receipt_number").notNull(),
+    allocationMode: receiptAllocationMode("allocation_mode").notNull(),
+    amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    paidAt: timestamp("paid_at").notNull(),
+    method: paymentMethod("method").notNull(),
+    reference: text("reference"),
+    note: text("note"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("payment_receipt_landlord_number_unique").on(table.landlordId, table.receiptNumber),
+    index("payment_receipt_landlord_id_idx").on(table.landlordId),
+    index("payment_receipt_tenant_id_idx").on(table.tenantId),
+    index("payment_receipt_paid_at_idx").on(table.paidAt),
+  ],
+);
+
+export const paymentAllocation = pgTable(
+  "payment_allocation",
+  {
+    id: text("id").primaryKey(),
+    paymentReceiptId: text("payment_receipt_id").notNull().references(() => paymentReceipt.id, { onDelete: "cascade" }),
+    chargeType: receiptChargeType("charge_type").notNull(),
+    description: text("description"),
+    billReference: text("bill_reference"),
+    amountBeforeGst: numeric("amount_before_gst", { precision: 12, scale: 2 }).notNull(),
+    gstRate: numeric("gst_rate", { precision: 5, scale: 2 }).default("0").notNull(),
+    gstAmount: numeric("gst_amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    totalAmount: numeric("total_amount", { precision: 12, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("payment_allocation_receipt_id_idx").on(table.paymentReceiptId)],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
-  properties: many(property),
-  tenants: many(tenant),
 }));
 
-export const landlordRelations = relations(landlord, ({ one }) => ({
+export const landlordRelations = relations(landlord, ({ one, many }) => ({
   user: one(user, { fields: [landlord.userId], references: [user.id] }),
+  properties: many(property),
+  units: many(unit),
+  tenants: many(tenant),
+  rentBills: many(rentBill),
+  paymentReceipts: many(paymentReceipt),
 }));
 
 export const propertyRelations = relations(property, ({ one, many }) => ({
-  owner: one(user, { fields: [property.ownerId], references: [user.id] }),
+  landlord: one(landlord, { fields: [property.landlordId], references: [landlord.id] }),
   units: many(unit),
 }));
 
 export const unitRelations = relations(unit, ({ one, many }) => ({
   property: one(property, { fields: [unit.propertyId], references: [property.id] }),
+  landlord: one(landlord, { fields: [unit.landlordId], references: [landlord.id] }),
+  tenants: many(tenant),
   leases: many(lease),
+}));
+
+export const tenantRelations = relations(tenant, ({ one, many }) => ({
+  unit: one(unit, { fields: [tenant.unitId], references: [unit.id] }),
+  landlord: one(landlord, { fields: [tenant.landlordId], references: [landlord.id] }),
+  leases: many(lease),
+  rentBills: many(rentBill),
+  paymentReceipts: many(paymentReceipt),
+}));
+
+export const rentBillRelations = relations(rentBill, ({ one }) => ({
+  landlord: one(landlord, { fields: [rentBill.landlordId], references: [landlord.id] }),
+  tenant: one(tenant, { fields: [rentBill.tenantId], references: [tenant.id] }),
 }));
 
 export const leaseRelations = relations(lease, ({ one, many }) => ({
   unit: one(unit, { fields: [lease.unitId], references: [unit.id] }),
   tenant: one(tenant, { fields: [lease.tenantId], references: [tenant.id] }),
   payments: many(payment),
+}));
+
+export const paymentReceiptRelations = relations(paymentReceipt, ({ one, many }) => ({
+  landlord: one(landlord, { fields: [paymentReceipt.landlordId], references: [landlord.id] }),
+  tenant: one(tenant, { fields: [paymentReceipt.tenantId], references: [tenant.id] }),
+  allocations: many(paymentAllocation),
+}));
+
+export const paymentAllocationRelations = relations(paymentAllocation, ({ one }) => ({
+  receipt: one(paymentReceipt, {
+    fields: [paymentAllocation.paymentReceiptId],
+    references: [paymentReceipt.id],
+  }),
 }));
 
 export const schema = {
@@ -166,11 +310,18 @@ export const schema = {
   property,
   unit,
   tenant,
+  rentBill,
   lease,
   payment,
+  paymentReceipt,
+  paymentAllocation,
   userRelations,
   landlordRelations,
   propertyRelations,
   unitRelations,
+  tenantRelations,
+  rentBillRelations,
   leaseRelations,
+  paymentReceiptRelations,
+  paymentAllocationRelations,
 };

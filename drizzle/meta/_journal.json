@@ -8,6 +8,41 @@
       "when": 1785262901328,
       "tag": "0000_pink_mariko_yashida",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785264332610,
+      "tag": "0001_property_units",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785265239355,
+      "tag": "0002_tenant_crud",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785265948105,
+      "tag": "0003_tenant_monthly_rent",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785339022458,
+      "tag": "0004_tiny_galactus",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785339585841,
+      "tag": "0005_loving_outlaw_kid",
+      "breakpoints": true
     }
   ]
 }

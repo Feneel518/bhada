@@ -5,6 +5,10 @@ import { db } from "@/db";
 import { landlord } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { Dashboard } from "@/components/dashboard";
+import { getProperties } from "@/lib/properties";
+import { getTenants } from "@/lib/tenants";
+import { getPayments } from "@/lib/payments";
+import { getRentBilling } from "@/lib/rent-billing";
 
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -13,15 +17,25 @@ export default async function ProfilePage() {
     redirect("/sign-in?returnTo=/dashboard/profile");
   }
 
-  const [profile] = await db
-    .select()
-    .from(landlord)
-    .where(eq(landlord.userId, session.user.id))
-    .limit(1);
+  const [[profile], properties, tenants, payments, rentBilling] = await Promise.all([
+    db
+      .select()
+      .from(landlord)
+      .where(eq(landlord.userId, session.user.id))
+      .limit(1),
+    getProperties(session.user.id),
+    getTenants(session.user.id),
+    getPayments(session.user.id),
+    getRentBilling(session.user.id),
+  ]);
 
   return (
     <Dashboard
       initialSection="Profile"
+      properties={properties}
+      tenants={tenants}
+      payments={payments}
+      rentBilling={rentBilling}
       user={{
         id: session.user.id,
         name: session.user.name,

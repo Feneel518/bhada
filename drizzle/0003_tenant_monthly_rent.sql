@@ -1,0 +1,1 @@
+ALTER TABLE "tenant" ADD COLUMN "monthly_rent" real;
