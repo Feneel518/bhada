@@ -32,7 +32,6 @@ body {
   background-image:
     radial-gradient(circle at 82% 0%, rgba(91, 91, 214, 0.055), transparent 27rem),
     radial-gradient(circle at 18% 100%, rgba(22, 163, 154, 0.04), transparent 30rem);
-  background-attachment: fixed;
 }
 
 button,
@@ -72,4 +71,15 @@ button {
 
 .animate-rise-delay {
   animation: rise 450ms 90ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
+import { useActionState, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -36,14 +37,8 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { LineChart } from "@/components/ui/line-chart";
-import {
-  BillDocumentDialog,
-  type BillDocument,
-  type BillIssuer,
-} from "@/components/bill-document";
-import { TenantProfileDialog } from "@/components/tenant-profile-dialog";
-import { ProfileForm, type ProfileValues } from "@/app/dashboard/profile/profile-form";
+import type { BillDocument, BillIssuer } from "@/components/bill-document";
+import type { ProfileValues } from "@/app/dashboard/profile/profile-form";
 import {
   deleteProperty,
   saveProperty,
@@ -77,6 +72,17 @@ import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import type { TenantAnalytics } from "@/lib/tenant-analytics";
 import { cn, formatCurrency } from "@/lib/utils";
+
+const LineChart = dynamic(() => import("@/components/ui/line-chart").then((module) => module.LineChart));
+const BillDocumentDialog = dynamic(
+  () => import("@/components/bill-document").then((module) => module.BillDocumentDialog),
+);
+const TenantProfileDialog = dynamic(
+  () => import("@/components/tenant-profile-dialog").then((module) => module.TenantProfileDialog),
+);
+const ProfileForm = dynamic(
+  () => import("@/app/dashboard/profile/profile-form").then((module) => module.ProfileForm),
+);
 
 const nav = [
   { label: "Overview", icon: Home },
@@ -146,32 +152,33 @@ export function Dashboard({
   const [billDocument, setBillDocument] = useState<BillDocument | null>(null);
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("This year");
+  const deferredSearch = useDeferredValue(search);
 
-  const visiblePayments = useMemo(
-    () =>
-      payments.filter((payment) =>
-        `${payment.tenant} ${payment.property} ${payment.status}`.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [payments, search],
-  );
+  const visiblePayments = useMemo(() => {
+    const query = deferredSearch.trim().toLowerCase();
+    if (!query) return payments;
+    return payments.filter((payment) =>
+      `${payment.tenant} ${payment.property} ${payment.status}`.toLowerCase().includes(query),
+    );
+  }, [deferredSearch, payments]);
   const visibleProperties = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = deferredSearch.trim().toLowerCase();
     if (!query) return properties;
     return properties.filter((item) =>
       `${item.name} ${item.address} ${item.city} ${item.state} ${item.postalCode}`
         .toLowerCase()
         .includes(query),
     );
-  }, [properties, search]);
+  }, [deferredSearch, properties]);
   const visibleTenants = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = deferredSearch.trim().toLowerCase();
     if (!query) return tenants;
     return tenants.filter((item) =>
       `${item.name} ${item.email} ${item.phone} ${item.propertyName} ${item.unitNumber}`
         .toLowerCase()
         .includes(query),
     );
-  }, [search, tenants]);
+  }, [deferredSearch, tenants]);
 
   function selectSection(section: string) {
     setActive(section);
@@ -212,7 +219,7 @@ export function Dashboard({
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-white/70 bg-white/85 px-4 py-5 shadow-[16px_0_50px_rgba(38,42,61,.035)] backdrop-blur-2xl transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-[#eceef4] bg-white/95 px-4 py-5 shadow-[16px_0_50px_rgba(38,42,61,.035)] transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
@@ -302,7 +309,7 @@ export function Dashboard({
       </aside>
 
       <main className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-white/80 bg-white/72 px-4 shadow-[0_1px_20px_rgba(30,36,50,.025)] backdrop-blur-2xl sm:px-7 lg:px-9">
+        <header className="sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-[#eceef4] bg-white/95 px-4 shadow-[0_1px_20px_rgba(30,36,50,.025)] sm:px-7 lg:px-9">
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="size-5" />
           </Button>
@@ -386,16 +393,20 @@ export function Dashboard({
         </div>
       </main>
 
-      <RecordPaymentDialog
-        open={paymentOpen}
-        onOpenChange={setPaymentOpen}
-        tenants={tenants}
-      />
-      <ElectricityBillDialog
-        open={electricityBillOpen}
-        onOpenChange={setElectricityBillOpen}
-        properties={properties}
-      />
+      {paymentOpen && (
+        <RecordPaymentDialog
+          open
+          onOpenChange={setPaymentOpen}
+          tenants={tenants}
+        />
+      )}
+      {electricityBillOpen && (
+        <ElectricityBillDialog
+          open
+          onOpenChange={setElectricityBillOpen}
+          properties={properties}
+        />
+      )}
       {propertyOpen && (
         <PropertyDialog
           property={editingProperty}
@@ -424,22 +435,24 @@ export function Dashboard({
           }}
         />
       )}
-      <BillDocumentDialog
-        document={billDocument}
-        issuer={issuer}
-        onClose={() => setBillDocument(null)}
-      />
-      <TenantProfileDialog
-        tenant={profileTenant}
-        analytics={profileTenant
-          ? tenantAnalytics.find((item) => item.tenantId === profileTenant.id) ?? null
-          : null}
-        payments={payments}
-        rentBills={rentBilling.bills}
-        electricityBills={electricityBills}
-        financialYearLabel={rentBilling.financialYearLabel}
-        onClose={() => setProfileTenant(null)}
-      />
+      {billDocument && (
+        <BillDocumentDialog
+          document={billDocument}
+          issuer={issuer}
+          onClose={() => setBillDocument(null)}
+        />
+      )}
+      {profileTenant && (
+        <TenantProfileDialog
+          tenant={profileTenant}
+          analytics={tenantAnalytics.find((item) => item.tenantId === profileTenant.id) ?? null}
+          payments={payments}
+          rentBills={rentBilling.bills}
+          electricityBills={electricityBills}
+          financialYearLabel={rentBilling.financialYearLabel}
+          onClose={() => setProfileTenant(null)}
+        />
+      )}
     </div>
   );
 }
@@ -592,7 +605,7 @@ function MetricCard({
     pink: "bg-[#f9eaf0] text-[#b85d82]",
   };
   return (
-    <article className="group rounded-[22px] border border-white/80 bg-white/90 p-5 shadow-[0_8px_30px_rgba(32,38,55,.045)] backdrop-blur-sm transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_45px_rgba(32,38,55,.075)]">
+    <article className="group rounded-[22px] border border-white/80 bg-white p-5 shadow-[0_8px_30px_rgba(32,38,55,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_45px_rgba(32,38,55,.075)]">
       <div className="flex items-center justify-between">
         <span className={cn("grid size-10 place-items-center rounded-xl", tones[tone])}>
           <Icon className="size-[19px]" strokeWidth={2.1} />
