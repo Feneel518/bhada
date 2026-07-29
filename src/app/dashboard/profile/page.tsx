@@ -68,6 +68,7 @@ export default async function ProfilePage() {
       }}
       profile={{
         businessName: profile?.businessName ?? session.user.name,
+        rentBillingPeriod: profile?.rentBillingPeriod === "current" ? "current" : "previous",
         phone: profile?.phone ?? "",
         gstin: profile?.gstin ?? "",
         pan: profile?.pan ?? "",

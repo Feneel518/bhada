@@ -44,6 +44,7 @@ export type RentBillingSummary = {
 };
 
 type DateParts = { year: number; month: number; day: number };
+export type RentBillingPeriod = "previous" | "current";
 
 const indiaDate = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Kolkata",
@@ -78,17 +79,10 @@ function dueDate(year: number, month: number, billingDay: number) {
   );
 }
 
-function nextMonth(value: { year: number; month: number }) {
-  return value.month === 12
-    ? { year: value.year + 1, month: 1 }
-    : { year: value.year, month: value.month + 1 };
-}
-
-function isBeforeOrSameMonth(
-  value: { year: number; month: number },
-  other: { year: number; month: number },
-) {
-  return value.year < other.year || (value.year === other.year && value.month <= other.month);
+function previousMonth(value: { year: number; month: number }) {
+  return value.month === 1
+    ? { year: value.year - 1, month: 12 }
+    : { year: value.year, month: value.month - 1 };
 }
 
 function isBeforeDate(value: DateParts, other: DateParts) {
@@ -104,7 +98,15 @@ function asMoney(value: number) {
   return value.toFixed(2);
 }
 
-export async function ensureRentBills(userId: string, now = new Date()) {
+function isAfterMonth(value: DateParts, month: { year: number; month: number }) {
+  return value.year > month.year || (value.year === month.year && value.month > month.month);
+}
+
+function isBeforeMonth(value: DateParts, month: { year: number; month: number }) {
+  return value.year < month.year || (value.year === month.year && value.month < month.month);
+}
+
+export async function generateMonthlyRentBills(now = new Date()) {
   const current = dateParts(now);
   const activeTenants = await db
     .select({
@@ -118,69 +120,60 @@ export async function ensureRentBills(userId: string, now = new Date()) {
       gstRate: tenant.gstRate,
       tdsEnabled: tenant.tdsEnabled,
       tdsRate: tenant.tdsRate,
+      rentBillingPeriod: landlord.rentBillingPeriod,
     })
     .from(tenant)
     .innerJoin(landlord, eq(tenant.landlordId, landlord.id))
-    .where(and(eq(landlord.userId, userId), eq(tenant.isActive, true)));
+    .where(eq(tenant.isActive, true));
 
   const rows: (typeof rentBill.$inferInsert)[] = [];
 
   for (const renter of activeTenants) {
     if (!renter.monthlyRent || renter.monthlyRent <= 0) continue;
 
-    const start = renter.leaseStart ? dateParts(renter.leaseStart) : current;
+    const billingPreference: RentBillingPeriod =
+      renter.rentBillingPeriod === "current" ? "current" : "previous";
+    const billingMonth =
+      billingPreference === "previous" ? previousMonth(current) : current;
+    const start = renter.leaseStart ? dateParts(renter.leaseStart) : null;
     const end = renter.leaseEnd ? dateParts(renter.leaseEnd) : null;
-    let cursor = { year: start.year, month: start.month };
-    let generated = 0;
-
-    while (isBeforeOrSameMonth(cursor, current) && generated < 240) {
-      const billDueDate = dueDate(cursor.year, cursor.month, renter.rentBillingDay);
-      const due = dateParts(billDueDate);
-      const startsAfterDue =
-        renter.leaseStart &&
-        (start.year > due.year ||
-          (start.year === due.year &&
-            (start.month > due.month || (start.month === due.month && start.day > due.day))));
-      const endsBeforeDue =
-        end &&
-        (end.year < due.year ||
-          (end.year === due.year &&
-            (end.month < due.month || (end.month === due.month && end.day < due.day))));
-
-      if (!startsAfterDue && !endsBeforeDue && billDueDate.getTime() <= now.getTime()) {
-        const billingPeriod = period(cursor.year, cursor.month);
-        const basePaise = Math.round(renter.monthlyRent * 100);
-        const gstRate = renter.gstEnabled ? renter.gstRate : 0;
-        const tdsRate = renter.tdsEnabled ? renter.tdsRate : 0;
-        const gstPaise = Math.round((basePaise * gstRate) / 100);
-        const tdsPaise = Math.round(((basePaise + gstPaise) * tdsRate) / 100);
-        rows.push({
-          id: crypto.randomUUID(),
-          landlordId: renter.landlordId,
-          tenantId: renter.id,
-          billNumber: `RENT-${renter.id.slice(0, 8).toUpperCase()}-${billingPeriod.replace("-", "")}`,
-          billingPeriod,
-          baseAmount: asMoney(basePaise / 100),
-          gstRate: gstRate.toFixed(2),
-          gstAmount: asMoney(gstPaise / 100),
-          tdsRate: tdsRate.toFixed(2),
-          tdsAmount: asMoney(tdsPaise / 100),
-          amount: asMoney((basePaise + gstPaise - tdsPaise) / 100),
-          dueDate: billDueDate,
-        });
-      }
-
-      cursor = nextMonth(cursor);
-      generated += 1;
+    if ((start && isAfterMonth(start, billingMonth)) || (end && isBeforeMonth(end, billingMonth))) {
+      continue;
     }
+
+    const billingPeriod = period(billingMonth.year, billingMonth.month);
+    const dueMonth = billingPreference === "previous" ? current : billingMonth;
+    const billDueDate = dueDate(dueMonth.year, dueMonth.month, renter.rentBillingDay);
+    const basePaise = Math.round(renter.monthlyRent * 100);
+    const gstRate = renter.gstEnabled ? renter.gstRate : 0;
+    const tdsRate = renter.tdsEnabled ? renter.tdsRate : 0;
+    const gstPaise = Math.round((basePaise * gstRate) / 100);
+    const tdsPaise = Math.round(((basePaise + gstPaise) * tdsRate) / 100);
+    rows.push({
+      id: crypto.randomUUID(),
+      landlordId: renter.landlordId,
+      tenantId: renter.id,
+      billNumber: `RENT-${renter.id.slice(0, 8).toUpperCase()}-${billingPeriod.replace("-", "")}`,
+      billingPeriod,
+      baseAmount: asMoney(basePaise / 100),
+      gstRate: gstRate.toFixed(2),
+      gstAmount: asMoney(gstPaise / 100),
+      tdsRate: tdsRate.toFixed(2),
+      tdsAmount: asMoney(tdsPaise / 100),
+      amount: asMoney((basePaise + gstPaise - tdsPaise) / 100),
+      dueDate: billDueDate,
+    });
   }
 
-  if (rows.length) {
-    await db
+  if (!rows.length) return 0;
+
+  const inserted = await db
       .insert(rentBill)
       .values(rows)
-      .onConflictDoNothing({ target: [rentBill.tenantId, rentBill.billingPeriod] });
-  }
+      .onConflictDoNothing({ target: [rentBill.tenantId, rentBill.billingPeriod] })
+      .returning({ id: rentBill.id });
+
+  return inserted.length;
 }
 
 export async function getRentBilling(
@@ -188,7 +181,6 @@ export async function getRentBilling(
   now = new Date(),
   financialYearStart?: number,
 ): Promise<RentBillingSummary> {
-  await ensureRentBills(userId, now);
   const financialYear = financialYearStart === undefined
     ? getCurrentFinancialYear(now)
     : getFinancialYear(financialYearStart);

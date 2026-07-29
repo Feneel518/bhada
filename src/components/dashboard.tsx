@@ -88,6 +88,8 @@ const nav = [
 
 const statusStyles: Record<string, string> = {
   Paid: "bg-[#e8f5ef] text-[#328161]",
+  Pending: "bg-[#fff4e8] text-[#b66a45]",
+  Overpaid: "bg-[#eaf3ff] text-[#3974ad]",
   Overdue: "bg-[#fff0ed] text-[#c65c4d]",
   Upcoming: "bg-[#eef0f9] text-[#626a86]",
 };
@@ -629,6 +631,7 @@ function PaymentTable({ rows }: { rows: PaymentRecord[] }) {
               <th className="px-6 py-3 font-bold">Tenant</th>
               <th className="px-4 py-3 font-bold">Amount</th>
               <th className="px-4 py-3 font-bold">Date</th>
+              <th className="px-4 py-3 font-bold">Balance</th>
               <th className="px-4 py-3 font-bold">Status</th>
               <th className="w-12 px-3" />
             </tr>
@@ -650,6 +653,16 @@ function PaymentTable({ rows }: { rows: PaymentRecord[] }) {
                   </td>
                   <td className="px-4 py-3.5 text-xs font-bold text-[#343a48]">{formatCurrency(payment.amount)}</td>
                   <td className="px-4 py-3.5 text-xs text-[#7e8595]">{payment.date}</td>
+                  <td className={cn(
+                    "px-4 py-3.5 text-xs font-bold",
+                    payment.status === "Pending"
+                      ? "text-[#b66a45]"
+                      : payment.status === "Overpaid"
+                        ? "text-[#3974ad]"
+                        : "text-[#328161]",
+                  )}>
+                    {payment.status === "Paid" ? "—" : formatCurrency(payment.balance)}
+                  </td>
                   <td className="px-4 py-3.5">
                     <span className={cn("inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold", statusStyles[payment.status])}>{payment.status}</span>
                   </td>
@@ -657,7 +670,7 @@ function PaymentTable({ rows }: { rows: PaymentRecord[] }) {
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-[#8b91a0]">No payments match your search.</td></tr>
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-[#8b91a0]">No payments match your search.</td></tr>
             )}
           </tbody>
         </table>

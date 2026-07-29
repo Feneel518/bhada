@@ -1,12 +1,14 @@
 import "server-only";
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
+  electricityBill,
   landlord,
   paymentAllocation,
   paymentReceipt,
   property,
+  rentBill,
   tenant,
   unit,
 } from "@/db/schema";
@@ -20,7 +22,8 @@ export type PaymentRecord = {
   amount: number;
   date: string;
   paidAt: string;
-  status: "Paid";
+  status: "Paid" | "Pending" | "Overpaid";
+  balance: number;
   method: string;
   allocationMode: "lump_sum" | "bill_wise";
   summary: string;
@@ -69,14 +72,39 @@ export async function getPayments(userId: string): Promise<PaymentRecord[]> {
 
   if (!receipts.length) return [];
 
-  const allocations = await db
-    .select({
-      receiptId: paymentAllocation.paymentReceiptId,
-      chargeType: paymentAllocation.chargeType,
-      description: paymentAllocation.description,
-    })
-    .from(paymentAllocation)
-    .where(inArray(paymentAllocation.paymentReceiptId, receipts.map((item) => item.id)));
+  const [allocations, tenantBalances] = await Promise.all([
+    db
+      .select({
+        receiptId: paymentAllocation.paymentReceiptId,
+        chargeType: paymentAllocation.chargeType,
+        description: paymentAllocation.description,
+      })
+      .from(paymentAllocation)
+      .where(inArray(paymentAllocation.paymentReceiptId, receipts.map((item) => item.id))),
+    db
+      .select({
+        tenantId: tenant.id,
+        openingBalance: tenant.openingBalance,
+        rentBilled: sql<string>`coalesce((
+          select sum(${rentBill.amount})
+          from ${rentBill}
+          where ${rentBill.tenantId} = ${tenant.id}
+        ), 0)`,
+        electricityBilled: sql<string>`coalesce((
+          select sum(${electricityBill.amount})
+          from ${electricityBill}
+          where ${electricityBill.tenantId} = ${tenant.id}
+        ), 0)`,
+        totalPaid: sql<string>`coalesce((
+          select sum(${paymentReceipt.amount})
+          from ${paymentReceipt}
+          where ${paymentReceipt.tenantId} = ${tenant.id}
+        ), 0)`,
+      })
+      .from(tenant)
+      .innerJoin(landlord, eq(tenant.landlordId, landlord.id))
+      .where(eq(landlord.userId, userId)),
+  ]);
 
   const summaries = new Map<string, string[]>();
   for (const allocation of allocations) {
@@ -88,6 +116,22 @@ export async function getPayments(userId: string): Promise<PaymentRecord[]> {
           : allocation.description || "Other";
     summaries.set(allocation.receiptId, [...(summaries.get(allocation.receiptId) ?? []), label]);
   }
+
+  const balances = new Map(tenantBalances.map((item) => {
+    const totalBilled =
+      Math.max(0, item.openingBalance) +
+      Number(item.rentBilled) +
+      Number(item.electricityBilled);
+    const difference = Number(item.totalPaid) - totalBilled;
+    return [item.tenantId, {
+      status: Math.abs(difference) <= 0.005
+        ? "Paid" as const
+        : difference > 0
+          ? "Overpaid" as const
+          : "Pending" as const,
+      balance: Math.abs(difference),
+    }];
+  }));
 
   return receipts.map((receipt) => ({
     id: receipt.id,
@@ -102,7 +146,8 @@ export async function getPayments(userId: string): Promise<PaymentRecord[]> {
       year: "numeric",
     }).format(receipt.paidAt),
     paidAt: receipt.paidAt.toISOString().slice(0, 10),
-    status: "Paid",
+    status: balances.get(receipt.tenantId)?.status ?? "Paid",
+    balance: balances.get(receipt.tenantId)?.balance ?? 0,
     method: receipt.method,
     allocationMode: receipt.allocationMode,
     summary:

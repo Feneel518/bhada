@@ -1,0 +1,1 @@
+ALTER TABLE "landlord" ADD COLUMN "rent_billing_period" text DEFAULT 'previous' NOT NULL;

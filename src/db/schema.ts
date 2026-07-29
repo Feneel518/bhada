@@ -26,6 +26,7 @@ export const landlord = pgTable("landlord", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().unique().references(() => user.id, { onDelete: "cascade" }),
   businessName: text("business_name").notNull(),
+  rentBillingPeriod: text("rent_billing_period").default("previous").notNull(),
   phone: text("phone"),
   gstin: text("gstin"),
   pan: text("pan"),

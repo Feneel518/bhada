@@ -41,7 +41,10 @@ export function TenantProfileDialog({
   const tenantPayments = payments.filter((item) => item.tenantId === tenant.id);
   const tenantRentBills = rentBills.filter((item) => item.tenantId === tenant.id);
   const tenantElectricityBills = electricityBills.filter((item) => item.tenantId === tenant.id);
-  const due = analytics?.totalPending ?? 0;
+  const balanceStatus = analytics?.balanceStatus ?? "Paid";
+  const balance = balanceStatus === "Overpaid"
+    ? analytics?.totalOverpaid ?? 0
+    : analytics?.totalPending ?? 0;
   const initials = tenant.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   return (
@@ -68,7 +71,19 @@ export function TenantProfileDialog({
         <div className="space-y-4 p-4 sm:p-6">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <ProfileMetric icon={CircleDollarSign} label="Total paid" value={formatCurrency(analytics?.totalPaid ?? 0)} note={`${analytics?.paymentCount ?? 0} payment${analytics?.paymentCount === 1 ? "" : "s"} received`} tone="green" />
-            <ProfileMetric icon={WalletCards} label="Total pending" value={formatCurrency(due)} note={due > 0 ? "Rent and electricity dues" : "No outstanding balance"} tone={due > 0 ? "orange" : "green"} />
+            <ProfileMetric
+              icon={WalletCards}
+              label={balanceStatus === "Overpaid" ? "Overpaid" : balanceStatus === "Pending" ? "Total pending" : "Balance"}
+              value={formatCurrency(balance)}
+              note={
+                balanceStatus === "Overpaid"
+                  ? "Credit after rent and electricity bills"
+                  : balanceStatus === "Pending"
+                    ? "Rent and electricity dues"
+                    : "Fully reconciled"
+              }
+              tone={balanceStatus === "Pending" ? "orange" : "green"}
+            />
             <ProfileMetric icon={ReceiptText} label="Lifetime billed" value={formatCurrency(analytics?.totalBilled ?? 0)} note="Includes opening balance" tone="indigo" />
             <ProfileMetric icon={FileText} label="Collection rate" value={`${analytics?.collectionRate ?? 0}%`} note={analytics?.lastPaymentDate ? `Last paid ${dateLabel(analytics.lastPaymentDate)}` : "No payments recorded"} tone="pink" />
           </div>

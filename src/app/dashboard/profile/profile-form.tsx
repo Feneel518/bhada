@@ -9,6 +9,7 @@ const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 export type ProfileValues = {
   businessName: string;
+  rentBillingPeriod: "previous" | "current";
   phone: string;
   gstin: string;
   pan: string;
@@ -113,6 +114,21 @@ export function ProfileForm({
                 autoComplete="tel"
                 placeholder="+91 98765 43210"
               />
+            </Field>
+
+            <Field label="Monthly rent billing" className="sm:col-span-2 lg:col-span-3">
+              <select
+                className={inputClass}
+                name="rentBillingPeriod"
+                defaultValue={initialValues.rentBillingPeriod}
+              >
+                <option value="previous">Previous month</option>
+                <option value="current">Current month</option>
+              </select>
+              <p className="mt-2 text-xs leading-5 text-[#8b91a0]">
+                On the first of each month, create rent bills for the selected month. New tenants
+                never receive a bill just from being added.
+              </p>
             </Field>
 
             <Field label="GSTIN" hint="15 characters">

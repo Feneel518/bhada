@@ -19,6 +19,7 @@ export async function PUT(request: Request) {
   const value = (name: string) => String(formData.get(name) ?? "").trim();
   const optional = (name: string) => value(name) || null;
   const businessName = value("businessName");
+  const rentBillingPeriod = value("rentBillingPeriod");
   const pan = value("pan").toUpperCase();
 
   if (!businessName) {
@@ -39,8 +40,16 @@ export async function PUT(request: Request) {
     );
   }
 
+  if (!["previous", "current"].includes(rentBillingPeriod)) {
+    return Response.json(
+      { status: "error", message: "Choose a valid monthly rent billing period." },
+      { status: 400 },
+    );
+  }
+
   const profile = {
     businessName,
+    rentBillingPeriod,
     phone: optional("phone"),
     gstin: value("gstin").toUpperCase() || null,
     pan: pan || null,

@@ -23,6 +23,8 @@ export type TenantAnalytics = {
   totalBilled: number;
   totalPaid: number;
   totalPending: number;
+  totalOverpaid: number;
+  balanceStatus: "Paid" | "Pending" | "Overpaid";
   collectionRate: number;
   paymentCount: number;
   lastPaymentDate: string;
@@ -83,6 +85,8 @@ export async function getTenantAnalytics(userId: string): Promise<TenantAnalytic
       totalBilled: 0,
       totalPaid: 0,
       totalPending: 0,
+      totalOverpaid: 0,
+      balanceStatus: "Paid",
       collectionRate: 0,
       paymentCount: 0,
       lastPaymentDate: "",
@@ -119,9 +123,15 @@ export async function getTenantAnalytics(userId: string): Promise<TenantAnalytic
     const appliedRent = Math.min(value.rentBilled, value.rentPaid);
     const appliedElectricity = Math.min(value.electricityBilled, value.electricityPaid);
     const totalBilled = value.rentBilled + value.electricityBilled;
-    const totalPending =
-      Math.max(0, value.rentBilled - value.rentPaid) +
-      Math.max(0, value.electricityBilled - value.electricityPaid);
+    const difference = value.totalPaid - totalBilled;
+    const totalPending = Math.max(0, -difference);
+    const totalOverpaid = Math.max(0, difference);
+    const balanceStatus =
+      Math.abs(difference) <= 0.005
+        ? "Paid"
+        : difference > 0
+          ? "Overpaid"
+          : "Pending";
     return {
       ...value,
       rentPaid: appliedRent,
@@ -130,8 +140,10 @@ export async function getTenantAnalytics(userId: string): Promise<TenantAnalytic
       electricityPending: Math.max(0, value.electricityBilled - value.electricityPaid),
       totalBilled,
       totalPending,
+      totalOverpaid,
+      balanceStatus,
       collectionRate: totalBilled > 0
-        ? Math.round(((appliedRent + appliedElectricity) / totalBilled) * 1000) / 10
+        ? Math.round((Math.min(value.totalPaid, totalBilled) / totalBilled) * 1000) / 10
         : 0,
     };
   });
