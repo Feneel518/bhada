@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   landlord,
@@ -9,6 +9,7 @@ import {
   rentBill,
   tenant,
 } from "@/db/schema";
+import { getCurrentFinancialYear } from "@/lib/financial-year";
 
 export type RentBillRecord = {
   id: string;
@@ -24,6 +25,7 @@ export type RentBillRecord = {
 };
 
 export type RentBillingSummary = {
+  financialYearLabel: string;
   periodLabel: string;
   billedThisMonth: number;
   paidThisMonth: number;
@@ -167,8 +169,9 @@ export async function getRentBilling(
   now = new Date(),
 ): Promise<RentBillingSummary> {
   await ensureRentBills(userId, now);
+  const financialYear = getCurrentFinancialYear(now);
 
-  const [billRows, rentPayments, openingBalances] = await Promise.all([
+  const [billRows, rentPayments, openingBalances, priorBillTotals] = await Promise.all([
     db
       .select({
         id: rentBill.id,
@@ -183,7 +186,13 @@ export async function getRentBilling(
       .from(rentBill)
       .innerJoin(landlord, eq(rentBill.landlordId, landlord.id))
       .innerJoin(tenant, eq(rentBill.tenantId, tenant.id))
-      .where(eq(landlord.userId, userId))
+      .where(
+        and(
+          eq(landlord.userId, userId),
+          gte(rentBill.billingPeriod, financialYear.startPeriod),
+          lte(rentBill.billingPeriod, financialYear.endPeriod),
+        ),
+      )
       .orderBy(asc(rentBill.dueDate), asc(rentBill.createdAt)),
     db
       .select({
@@ -204,6 +213,20 @@ export async function getRentBilling(
       .from(tenant)
       .innerJoin(landlord, eq(tenant.landlordId, landlord.id))
       .where(eq(landlord.userId, userId)),
+    db
+      .select({
+        tenantId: rentBill.tenantId,
+        amount: sql<string>`coalesce(sum(${rentBill.amount}), 0)`,
+      })
+      .from(rentBill)
+      .innerJoin(landlord, eq(rentBill.landlordId, landlord.id))
+      .where(
+        and(
+          eq(landlord.userId, userId),
+          lt(rentBill.billingPeriod, financialYear.startPeriod),
+        ),
+      )
+      .groupBy(rentBill.tenantId),
   ]);
 
   const availableByTenant = new Map<string, number>();
@@ -224,6 +247,18 @@ export async function getRentBilling(
     availableByTenant.set(item.tenantId, Math.max(0, available - openingPaid));
     openingBalancePending += pending;
     if (pending > 0.005) openingBalanceCount += 1;
+  }
+
+  let priorBillsPending = 0;
+  let priorBalanceCount = 0;
+  for (const item of priorBillTotals) {
+    const amount = Number(item.amount);
+    const available = availableByTenant.get(item.tenantId) ?? 0;
+    const paid = Math.min(amount, available);
+    const pending = Math.max(0, amount - paid);
+    availableByTenant.set(item.tenantId, Math.max(0, available - paid));
+    priorBillsPending += pending;
+    if (pending > 0.005) priorBalanceCount += 1;
   }
 
   const today = dateParts(now);
@@ -273,10 +308,11 @@ export async function getRentBilling(
   const billedThisMonth = currentBills.reduce((sum, bill) => sum + bill.amount, 0);
   const pendingThisMonth = currentBills.reduce((sum, bill) => sum + bill.pending, 0);
   const pendingTotal =
-    openingBalancePending + bills.reduce((sum, bill) => sum + bill.pending, 0);
+    openingBalancePending + priorBillsPending + bills.reduce((sum, bill) => sum + bill.pending, 0);
   const overdueBills = bills.filter((bill) => bill.status === "Overdue");
 
   return {
+    financialYearLabel: financialYear.label,
     periodLabel: new Intl.DateTimeFormat("en-IN", {
       timeZone: "Asia/Kolkata",
       month: "long",
@@ -288,8 +324,8 @@ export async function getRentBilling(
     openingBalancePending,
     pendingTotal,
     overdueTotal:
-      openingBalancePending + overdueBills.reduce((sum, bill) => sum + bill.pending, 0),
-    overdueCount: openingBalanceCount + overdueBills.length,
+      openingBalancePending + priorBillsPending + overdueBills.reduce((sum, bill) => sum + bill.pending, 0),
+    overdueCount: openingBalanceCount + priorBalanceCount + overdueBills.length,
     collectionRate:
       billedThisMonth > 0
         ? Math.round(((billedThisMonth - pendingThisMonth) / billedThisMonth) * 1000) / 10

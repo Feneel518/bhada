@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   electricityBill,
@@ -11,6 +11,7 @@ import {
   tenant,
   unit,
 } from "@/db/schema";
+import { getCurrentFinancialYear } from "@/lib/financial-year";
 
 export type ElectricityBillRecord = {
   id: string;
@@ -50,7 +51,8 @@ export async function getElectricityBills(
   userId: string,
   now = new Date(),
 ): Promise<ElectricityBillRecord[]> {
-  const [billRows, payments] = await Promise.all([
+  const financialYear = getCurrentFinancialYear(now);
+  const [billRows, payments, priorBillTotals] = await Promise.all([
     db
       .select({
         id: electricityBill.id,
@@ -75,7 +77,13 @@ export async function getElectricityBills(
       .innerJoin(unit, eq(electricityBill.unitId, unit.id))
       .innerJoin(property, eq(unit.propertyId, property.id))
       .leftJoin(tenant, eq(electricityBill.tenantId, tenant.id))
-      .where(eq(landlord.userId, userId))
+      .where(
+        and(
+          eq(landlord.userId, userId),
+          gte(electricityBill.billingPeriod, financialYear.startPeriod),
+          lte(electricityBill.billingPeriod, financialYear.endPeriod),
+        ),
+      )
       .orderBy(asc(electricityBill.dueDate), asc(electricityBill.createdAt)),
     db
       .select({
@@ -91,6 +99,20 @@ export async function getElectricityBills(
           eq(paymentAllocation.chargeType, "light_bill"),
         ),
       ),
+    db
+      .select({
+        tenantId: electricityBill.tenantId,
+        amount: sql<string>`coalesce(sum(${electricityBill.amount}), 0)`,
+      })
+      .from(electricityBill)
+      .innerJoin(landlord, eq(electricityBill.landlordId, landlord.id))
+      .where(
+        and(
+          eq(landlord.userId, userId),
+          lt(electricityBill.billingPeriod, financialYear.startPeriod),
+        ),
+      )
+      .groupBy(electricityBill.tenantId),
   ]);
 
   const availableByTenant = new Map<string, number>();
@@ -98,6 +120,14 @@ export async function getElectricityBills(
     availableByTenant.set(
       payment.tenantId,
       (availableByTenant.get(payment.tenantId) ?? 0) + Number(payment.totalAmount),
+    );
+  }
+  for (const item of priorBillTotals) {
+    if (!item.tenantId) continue;
+    const available = availableByTenant.get(item.tenantId) ?? 0;
+    availableByTenant.set(
+      item.tenantId,
+      Math.max(0, available - Number(item.amount)),
     );
   }
 

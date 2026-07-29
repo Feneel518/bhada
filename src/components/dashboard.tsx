@@ -65,6 +65,7 @@ import { authClient } from "@/lib/auth-client";
 import type { PaymentRecord } from "@/lib/payments";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
+import { formatBillingMonth } from "@/lib/financial-year";
 import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -753,8 +754,8 @@ function SectionView({
           <EmptyDocuments />
         ) : (
           <div className="space-y-4">
-            <RentBillTable bills={rentBilling.bills} />
-            <ElectricityBillTable bills={electricityBills} />
+            <RentBillTable bills={rentBilling.bills} financialYearLabel={rentBilling.financialYearLabel} />
+            <ElectricityBillTable bills={electricityBills} financialYearLabel={rentBilling.financialYearLabel} />
             <PaymentTable rows={rows} />
           </div>
         )}
@@ -763,18 +764,41 @@ function SectionView({
   );
 }
 
-function RentBillTable({ bills }: { bills: RentBillingSummary["bills"] }) {
+function RentBillTable({
+  bills,
+  financialYearLabel,
+}: {
+  bills: RentBillingSummary["bills"];
+  financialYearLabel: string;
+}) {
+  const [billSearch, setBillSearch] = useState("");
+  const visibleBills = bills.filter((bill) =>
+    bill.billNumber.toLowerCase().includes(billSearch.trim().toLowerCase()),
+  );
+
   return (
     <section className="overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)]">
-      <div className="p-5 pb-4 sm:px-6">
-        <h2 className="font-display text-base font-bold tracking-[-0.025em]">Rent bills</h2>
-        <p className="mt-1 text-xs text-[#8b91a0]">Automatically created on each tenant&apos;s billing day</p>
+      <div className="flex flex-col gap-4 p-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <h2 className="font-display text-base font-bold tracking-[-0.025em]">Rent bills · {financialYearLabel}</h2>
+          <p className="mt-1 text-xs text-[#8b91a0]">Current financial year (April–March)</p>
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9aa0af]" />
+          <input
+            className="h-9 w-full rounded-lg border border-[#e3e5ec] bg-[#fafafd] pl-9 pr-3 text-xs outline-none focus:border-[#aaaaf0]"
+            value={billSearch}
+            onChange={(event) => setBillSearch(event.target.value)}
+            placeholder="Search bill number"
+          />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
               <th className="px-6 py-3 font-bold">Bill</th>
+              <th className="px-4 py-3 font-bold">Bill month</th>
               <th className="px-4 py-3 font-bold">Tenant</th>
               <th className="px-4 py-3 font-bold">Billed</th>
               <th className="px-4 py-3 font-bold">Pending</th>
@@ -783,12 +807,12 @@ function RentBillTable({ bills }: { bills: RentBillingSummary["bills"] }) {
             </tr>
           </thead>
           <tbody>
-            {bills.length ? bills.map((bill) => (
+            {visibleBills.length ? visibleBills.map((bill) => (
               <tr key={bill.id} className="border-b border-[#f0f1f4] last:border-0 hover:bg-[#fcfcfe]">
                 <td className="px-6 py-3.5">
                   <p className="text-xs font-bold text-[#343a48]">{bill.billNumber}</p>
-                  <p className="mt-0.5 text-[10px] text-[#989eac]">{bill.billingPeriod}</p>
                 </td>
+                <td className="px-4 py-3.5 text-xs text-[#5f6676]">{formatBillingMonth(bill.billingPeriod)}</td>
                 <td className="px-4 py-3.5 text-xs text-[#5f6676]">{bill.tenantName}</td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#343a48]">{formatCurrency(bill.amount)}</td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</td>
@@ -808,8 +832,8 @@ function RentBillTable({ bills }: { bills: RentBillingSummary["bills"] }) {
               </tr>
             )) : (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
-                  No rent bills are due yet.
+                <td colSpan={7} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
+                  {billSearch ? "No rent bill matches that bill number." : `No rent bills in ${financialYearLabel}.`}
                 </td>
               </tr>
             )}
@@ -820,18 +844,41 @@ function RentBillTable({ bills }: { bills: RentBillingSummary["bills"] }) {
   );
 }
 
-function ElectricityBillTable({ bills }: { bills: ElectricityBillRecord[] }) {
+function ElectricityBillTable({
+  bills,
+  financialYearLabel,
+}: {
+  bills: ElectricityBillRecord[];
+  financialYearLabel: string;
+}) {
+  const [billSearch, setBillSearch] = useState("");
+  const visibleBills = bills.filter((bill) =>
+    bill.billNumber.toLowerCase().includes(billSearch.trim().toLowerCase()),
+  );
+
   return (
     <section className="overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)]">
-      <div className="p-5 pb-4 sm:px-6">
-        <h2 className="font-display text-base font-bold tracking-[-0.025em]">Electricity bills</h2>
-        <p className="mt-1 text-xs text-[#8b91a0]">Unit-wise electricity charges and outstanding amounts</p>
+      <div className="flex flex-col gap-4 p-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <h2 className="font-display text-base font-bold tracking-[-0.025em]">Electricity bills · {financialYearLabel}</h2>
+          <p className="mt-1 text-xs text-[#8b91a0]">Current financial year (April–March)</p>
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#9aa0af]" />
+          <input
+            className="h-9 w-full rounded-lg border border-[#e3e5ec] bg-[#fafafd] pl-9 pr-3 text-xs outline-none focus:border-[#aaaaf0]"
+            value={billSearch}
+            onChange={(event) => setBillSearch(event.target.value)}
+            placeholder="Search bill number"
+          />
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] text-left">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
               <th className="px-6 py-3 font-bold">Bill</th>
+              <th className="px-4 py-3 font-bold">Bill month</th>
               <th className="px-4 py-3 font-bold">Unit</th>
               <th className="px-4 py-3 font-bold">Tenant</th>
               <th className="px-4 py-3 font-bold">Meter calculation</th>
@@ -842,12 +889,12 @@ function ElectricityBillTable({ bills }: { bills: ElectricityBillRecord[] }) {
             </tr>
           </thead>
           <tbody>
-            {bills.length ? bills.map((bill) => (
+            {visibleBills.length ? visibleBills.map((bill) => (
               <tr key={bill.id} className="border-b border-[#f0f1f4] last:border-0 hover:bg-[#fcfcfe]">
                 <td className="px-6 py-3.5">
                   <p className="text-xs font-bold text-[#343a48]">{bill.billNumber}</p>
-                  <p className="mt-0.5 text-[10px] text-[#989eac]">{bill.billingPeriod}</p>
                 </td>
+                <td className="px-4 py-3.5 text-xs text-[#5f6676]">{formatBillingMonth(bill.billingPeriod)}</td>
                 <td className="px-4 py-3.5">
                   <p className="text-xs font-bold text-[#4d5362]">{bill.propertyName}</p>
                   <p className="mt-0.5 text-[10px] text-[#989eac]">Unit {bill.unitNumber}</p>
@@ -875,8 +922,8 @@ function ElectricityBillTable({ bills }: { bills: ElectricityBillRecord[] }) {
               </tr>
             )) : (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
-                  No electricity bills added yet.
+                <td colSpan={9} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
+                  {billSearch ? "No electricity bill matches that bill number." : `No electricity bills in ${financialYearLabel}.`}
                 </td>
               </tr>
             )}
