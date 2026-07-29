@@ -13,6 +13,8 @@ export type UnitRecord = {
   floor: string;
   areaSqft: number | null;
   status: UnitStatus;
+  openingMeterReading: number | null;
+  openingMeterReadingDate: string;
   lastMeterReading: number | null;
   lastMeterReadingDate: string;
   tenant: {
@@ -58,6 +60,8 @@ export async function getProperties(userId: string): Promise<PropertyRecord[]> {
           floor: unit.floor,
           areaSqft: unit.areaSqft,
           status: unit.status,
+          openingMeterReading: unit.openingMeterReading,
+          openingMeterReadingDate: unit.openingMeterReadingDate,
           lastMeterReading: unit.lastMeterReading,
           lastMeterReadingDate: unit.lastMeterReadingDate,
           tenantId: tenant.id,
@@ -86,6 +90,9 @@ export async function getProperties(userId: string): Promise<PropertyRecord[]> {
         floor: item.floor ?? "",
         areaSqft: item.areaSqft,
         status: item.status,
+        openingMeterReading: item.openingMeterReading ?? item.lastMeterReading,
+        openingMeterReadingDate:
+          (item.openingMeterReadingDate ?? item.lastMeterReadingDate)?.toISOString().slice(0, 7) ?? "",
         lastMeterReading: item.lastMeterReading,
         lastMeterReadingDate: item.lastMeterReadingDate?.toISOString().slice(0, 10) ?? "",
         tenant: item.tenantId

@@ -28,6 +28,7 @@ export type RentBillingSummary = {
   billedThisMonth: number;
   paidThisMonth: number;
   pendingThisMonth: number;
+  openingBalancePending: number;
   pendingTotal: number;
   overdueTotal: number;
   overdueCount: number;
@@ -167,7 +168,7 @@ export async function getRentBilling(
 ): Promise<RentBillingSummary> {
   await ensureRentBills(userId, now);
 
-  const [billRows, rentPayments] = await Promise.all([
+  const [billRows, rentPayments, openingBalances] = await Promise.all([
     db
       .select({
         id: rentBill.id,
@@ -195,6 +196,14 @@ export async function getRentBilling(
       .where(
         and(eq(landlord.userId, userId), eq(paymentAllocation.chargeType, "rent")),
       ),
+    db
+      .select({
+        tenantId: tenant.id,
+        openingBalance: tenant.openingBalance,
+      })
+      .from(tenant)
+      .innerJoin(landlord, eq(tenant.landlordId, landlord.id))
+      .where(eq(landlord.userId, userId)),
   ]);
 
   const availableByTenant = new Map<string, number>();
@@ -203,6 +212,18 @@ export async function getRentBilling(
       item.tenantId,
       (availableByTenant.get(item.tenantId) ?? 0) + Number(item.totalAmount),
     );
+  }
+
+  let openingBalancePending = 0;
+  let openingBalanceCount = 0;
+  for (const item of openingBalances) {
+    const openingBalance = Math.max(0, item.openingBalance);
+    const available = availableByTenant.get(item.tenantId) ?? 0;
+    const openingPaid = Math.min(openingBalance, available);
+    const pending = Math.max(0, openingBalance - openingPaid);
+    availableByTenant.set(item.tenantId, Math.max(0, available - openingPaid));
+    openingBalancePending += pending;
+    if (pending > 0.005) openingBalanceCount += 1;
   }
 
   const today = dateParts(now);
@@ -251,7 +272,8 @@ export async function getRentBilling(
   const currentBills = bills.filter((bill) => bill.billingPeriod === currentPeriod);
   const billedThisMonth = currentBills.reduce((sum, bill) => sum + bill.amount, 0);
   const pendingThisMonth = currentBills.reduce((sum, bill) => sum + bill.pending, 0);
-  const pendingTotal = bills.reduce((sum, bill) => sum + bill.pending, 0);
+  const pendingTotal =
+    openingBalancePending + bills.reduce((sum, bill) => sum + bill.pending, 0);
   const overdueBills = bills.filter((bill) => bill.status === "Overdue");
 
   return {
@@ -263,9 +285,11 @@ export async function getRentBilling(
     billedThisMonth,
     paidThisMonth: Math.max(0, billedThisMonth - pendingThisMonth),
     pendingThisMonth,
+    openingBalancePending,
     pendingTotal,
-    overdueTotal: overdueBills.reduce((sum, bill) => sum + bill.pending, 0),
-    overdueCount: overdueBills.length,
+    overdueTotal:
+      openingBalancePending + overdueBills.reduce((sum, bill) => sum + bill.pending, 0),
+    overdueCount: openingBalanceCount + overdueBills.length,
     collectionRate:
       billedThisMonth > 0
         ? Math.round(((billedThisMonth - pendingThisMonth) / billedThisMonth) * 1000) / 10

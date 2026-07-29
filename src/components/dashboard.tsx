@@ -828,12 +828,13 @@ function ElectricityBillTable({ bills }: { bills: ElectricityBillRecord[] }) {
         <p className="mt-1 text-xs text-[#8b91a0]">Unit-wise electricity charges and outstanding amounts</p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] text-left">
+        <table className="w-full min-w-[900px] text-left">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
               <th className="px-6 py-3 font-bold">Bill</th>
               <th className="px-4 py-3 font-bold">Unit</th>
               <th className="px-4 py-3 font-bold">Tenant</th>
+              <th className="px-4 py-3 font-bold">Meter calculation</th>
               <th className="px-4 py-3 font-bold">Amount</th>
               <th className="px-4 py-3 font-bold">Pending</th>
               <th className="px-4 py-3 font-bold">Due date</th>
@@ -852,6 +853,10 @@ function ElectricityBillTable({ bills }: { bills: ElectricityBillRecord[] }) {
                   <p className="mt-0.5 text-[10px] text-[#989eac]">Unit {bill.unitNumber}</p>
                 </td>
                 <td className="px-4 py-3.5 text-xs text-[#5f6676]">{bill.tenantName}</td>
+                <td className="px-4 py-3.5">
+                  <p className="text-xs font-bold text-[#4d5362]">{bill.previousReading} → {bill.currentReading}</p>
+                  <p className="mt-0.5 text-[10px] text-[#989eac]">{bill.unitsConsumed} units × {formatCurrency(bill.unitRate)}</p>
+                </td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#343a48]">{formatCurrency(bill.amount)}</td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</td>
                 <td className="px-4 py-3.5 text-xs text-[#7e8595]">{bill.dueDate}</td>
@@ -870,7 +875,7 @@ function ElectricityBillTable({ bills }: { bills: ElectricityBillRecord[] }) {
               </tr>
             )) : (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
+                <td colSpan={8} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
                   No electricity bills added yet.
                 </td>
               </tr>
@@ -968,6 +973,7 @@ function TenantCard({
         <p><span className="font-bold text-[#4d5362]">Lease:</span> {item.leaseStart || "—"} to {item.leaseEnd || "—"}</p>
         <p><span className="font-bold text-[#4d5362]">Monthly rent:</span> {item.monthlyRent === null ? "—" : formatInr(item.monthlyRent)}</p>
         <p><span className="font-bold text-[#4d5362]">Billing day:</span> Day {item.rentBillingDay} of each month</p>
+        <p><span className="font-bold text-[#4d5362]">Opening balance:</span> {formatCurrency(item.openingBalance)}</p>
         <p><span className="font-bold text-[#4d5362]">Deposit:</span> {item.securityDeposit === null ? "—" : formatInr(item.securityDeposit)}</p>
       </div>
     </article>
@@ -1120,10 +1126,11 @@ function UnitRow({ unit, onEdit }: { unit: UnitRecord; onEdit: () => void }) {
             {unit.floor ? ` · Floor ${unit.floor}` : ""}
             {unit.areaSqft !== null ? ` · ${unit.areaSqft} sq ft` : ""}
           </p>
-          {unit.lastMeterReading !== null && (
+          {unit.openingMeterReading !== null && (
             <p className="mt-1 flex items-center gap-1 text-[10px] text-[#8c92a1]">
-              <Gauge className="size-3" /> Meter {unit.lastMeterReading}
-              {unit.lastMeterReadingDate ? ` on ${unit.lastMeterReadingDate}` : ""}
+              <Gauge className="size-3" /> Opening {unit.openingMeterReading}
+              {unit.openingMeterReadingDate ? ` (${unit.openingMeterReadingDate})` : ""}
+              {unit.lastMeterReading !== null ? ` · Latest ${unit.lastMeterReading}` : ""}
             </p>
           )}
         </div>
@@ -1184,6 +1191,16 @@ function ElectricityBillDialog({
     property.units.map((unit) => ({ property, unit })),
   );
   const today = new Date().toISOString().slice(0, 10);
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [currentReading, setCurrentReading] = useState("");
+  const [unitRate, setUnitRate] = useState("");
+  const selectedUnit = units.find(({ unit }) => unit.id === selectedUnitId)?.unit;
+  const previousReading = selectedUnit?.lastMeterReading ?? null;
+  const unitsConsumed =
+    previousReading === null || !currentReading
+      ? 0
+      : Math.max(0, Number(currentReading) - previousReading);
+  const calculatedAmount = unitsConsumed * (Number(unitRate) || 0);
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -1196,7 +1213,7 @@ function ElectricityBillDialog({
       <DialogContent className="max-w-[560px]">
         <DialogTitle>Add electricity bill</DialogTitle>
         <DialogDescription>
-          Choose any unit and enter the electricity amount. The active tenant, if any, is linked automatically.
+          Enter this month&apos;s meter reading and rate. Consumption and amount are calculated from the previous reading.
         </DialogDescription>
         <form action={formAction} className="mt-6 space-y-4">
           <Field label="Property and unit">
@@ -1204,7 +1221,11 @@ function ElectricityBillDialog({
               required
               className={inputClass}
               name="unitId"
-              defaultValue=""
+              value={selectedUnitId}
+              onChange={(event) => {
+                setSelectedUnitId(event.target.value);
+                setCurrentReading("");
+              }}
               aria-invalid={Boolean(state.errors?.unitId)}
             >
               <option value="" disabled>Select a unit</option>
@@ -1216,6 +1237,9 @@ function ElectricityBillDialog({
               ))}
             </select>
             {state.errors?.unitId && <FieldError message={state.errors.unitId} />}
+            {selectedUnit && previousReading === null && (
+              <FieldError message="Edit this unit and set its opening meter reading first." />
+            )}
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -1230,18 +1254,35 @@ function ElectricityBillDialog({
               />
               {state.errors?.billingPeriod && <FieldError message={state.errors.billingPeriod} />}
             </Field>
-            <Field label="Amount (₹)">
+            <Field label="Current meter reading">
               <input
                 required
                 className={inputClass}
-                name="amount"
+                name="currentReading"
                 type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="0.00"
-                aria-invalid={Boolean(state.errors?.amount)}
+                min={previousReading ?? 0}
+                step="0.001"
+                value={currentReading}
+                onChange={(event) => setCurrentReading(event.target.value)}
+                placeholder={previousReading === null ? "Set opening reading first" : `Previous: ${previousReading}`}
+                aria-invalid={Boolean(state.errors?.currentReading)}
               />
-              {state.errors?.amount && <FieldError message={state.errors.amount} />}
+              {state.errors?.currentReading && <FieldError message={state.errors.currentReading} />}
+            </Field>
+            <Field label="Rate per unit (₹)">
+              <input
+                required
+                className={inputClass}
+                name="unitRate"
+                type="number"
+                min="0.0001"
+                step="0.0001"
+                value={unitRate}
+                onChange={(event) => setUnitRate(event.target.value)}
+                placeholder="e.g. 8.50"
+                aria-invalid={Boolean(state.errors?.unitRate)}
+              />
+              {state.errors?.unitRate && <FieldError message={state.errors.unitRate} />}
             </Field>
             <Field label="Due date">
               <input
@@ -1259,6 +1300,21 @@ function ElectricityBillDialog({
             </Field>
           </div>
 
+          <div className="grid grid-cols-3 gap-3 rounded-2xl bg-[#f3f3ff] px-4 py-3.5 text-center">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8b91a0]">Previous</p>
+              <p className="mt-1 text-sm font-extrabold text-[#4444b2]">{previousReading ?? "—"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8b91a0]">Units used</p>
+              <p className="mt-1 text-sm font-extrabold text-[#4444b2]">{unitsConsumed.toFixed(3)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8b91a0]">Bill amount</p>
+              <p className="mt-1 text-sm font-extrabold text-[#4444b2]">{formatCurrency(calculatedAmount)}</p>
+            </div>
+          </div>
+
           <div aria-live="polite" className="min-h-5">
             {state.status === "error" && (
               <p className="text-xs font-medium text-[#c65c4d]">{state.message}</p>
@@ -1268,7 +1324,7 @@ function ElectricityBillDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending || !units.length}>
+            <Button type="submit" disabled={pending || !units.length || previousReading === null}>
               {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
               {pending ? "Adding..." : "Add bill"}
             </Button>
@@ -1777,30 +1833,36 @@ function UnitDialog({
             </Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Last meter reading">
+            <Field label="Opening meter reading">
               <input
                 className={inputClass}
-                name="lastMeterReading"
+                name="openingMeterReading"
                 type="number"
                 min="0"
-                step="any"
-                defaultValue={unit?.lastMeterReading ?? ""}
-                aria-invalid={Boolean(state.errors?.lastMeterReading)}
+                step="0.001"
+                defaultValue={unit?.openingMeterReading ?? ""}
+                aria-invalid={Boolean(state.errors?.openingMeterReading)}
                 placeholder="0"
               />
-              {state.errors?.lastMeterReading && <FieldError message={state.errors.lastMeterReading} />}
+              {state.errors?.openingMeterReading && <FieldError message={state.errors.openingMeterReading} />}
             </Field>
-            <Field label="Reading date">
+            <Field label="Opening reading month">
               <input
                 className={inputClass}
-                name="lastMeterReadingDate"
-                type="date"
-                defaultValue={unit?.lastMeterReadingDate}
-                aria-invalid={Boolean(state.errors?.lastMeterReadingDate)}
+                name="openingMeterReadingDate"
+                type="month"
+                defaultValue={unit?.openingMeterReadingDate}
+                aria-invalid={Boolean(state.errors?.openingMeterReadingDate)}
               />
-              {state.errors?.lastMeterReadingDate && <FieldError message={state.errors.lastMeterReadingDate} />}
+              {state.errors?.openingMeterReadingDate && <FieldError message={state.errors.openingMeterReadingDate} />}
             </Field>
           </div>
+          {unit && unit.lastMeterReading !== null && (
+            <p className="rounded-xl bg-[#f7f7fb] px-4 py-3 text-xs text-[#6f7686]">
+              Latest billed reading: <span className="font-bold text-[#4d5362]">{unit.lastMeterReading}</span>
+              {unit.lastMeterReadingDate ? ` (${unit.lastMeterReadingDate.slice(0, 7)})` : ""}
+            </p>
+          )}
           {unit?.tenant && (
             <div className="rounded-xl border border-[#e3eee9] bg-[#f3faf7] px-4 py-3 text-xs text-[#497365]">
               <span className="font-bold">Active tenant:</span> {unit.tenant.name} · {unit.tenant.email}
@@ -1932,6 +1994,7 @@ function TenantDialog({
               <TenantInput label="Security deposit" name="securityDeposit" type="number" value={tenant?.securityDeposit} error={state.errors?.securityDeposit} step="any" />
               <TenantInput label="Lock-in (months)" name="lockInMonths" type="number" value={tenant?.lockInMonths} error={state.errors?.lockInMonths} />
               <TenantInput label="Notice period (months)" name="noticePeriodMonths" type="number" value={tenant?.noticePeriodMonths} error={state.errors?.noticePeriodMonths} />
+              <TenantInput label="Opening outstanding balance" name="openingBalance" type="number" value={tenant?.openingBalance ?? 0} error={state.errors?.openingBalance} step="any" />
               <TenantInput label="Credit balance" name="creditBalance" type="number" value={tenant?.creditBalance ?? 0} error={state.errors?.creditBalance} step="any" />
             </div>
           </section>

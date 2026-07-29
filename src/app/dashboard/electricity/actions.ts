@@ -8,7 +8,12 @@ import { electricityBill, tenant, unit } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
 
-type ElectricityBillField = "unitId" | "billingPeriod" | "amount" | "dueDate";
+type ElectricityBillField =
+  | "unitId"
+  | "billingPeriod"
+  | "currentReading"
+  | "unitRate"
+  | "dueDate";
 
 export type ElectricityBillActionState = {
   status: "idle" | "success" | "error";
@@ -32,7 +37,8 @@ export async function createElectricityBill(
     String(formData.get(name) ?? "").trim().slice(0, maxLength);
   const unitId = text("unitId", 100);
   const billingPeriod = text("billingPeriod", 7);
-  const amountInput = text("amount", 30);
+  const currentReadingInput = text("currentReading", 30);
+  const unitRateInput = text("unitRate", 30);
   const dueDateInput = text("dueDate", 10);
   const errors: ElectricityBillActionState["errors"] = {};
 
@@ -40,8 +46,11 @@ export async function createElectricityBill(
   if (!/^\d{4}-\d{2}$/.test(billingPeriod)) {
     errors.billingPeriod = "Choose a billing month.";
   }
-  if (!/^\d+(?:\.\d{1,2})?$/.test(amountInput) || Number(amountInput) <= 0) {
-    errors.amount = "Enter a positive amount with up to 2 decimal places.";
+  if (!/^\d+(?:\.\d{1,3})?$/.test(currentReadingInput)) {
+    errors.currentReading = "Enter a valid meter reading with up to 3 decimal places.";
+  }
+  if (!/^\d+(?:\.\d{1,4})?$/.test(unitRateInput) || Number(unitRateInput) <= 0) {
+    errors.unitRate = "Enter a positive rate with up to 4 decimal places.";
   }
   const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(dueDateInput)
     ? new Date(`${dueDateInput}T00:00:00+05:30`)
@@ -58,6 +67,8 @@ export async function createElectricityBill(
     .select({
       id: unit.id,
       activeTenantId: tenant.id,
+      lastMeterReading: unit.lastMeterReading,
+      lastMeterReadingDate: unit.lastMeterReadingDate,
     })
     .from(unit)
     .leftJoin(
@@ -76,20 +87,73 @@ export async function createElectricityBill(
       unitId: "Choose one of your units.",
     });
   }
+  if (ownedUnit.lastMeterReading === null || !ownedUnit.lastMeterReadingDate) {
+    return fail("Set an opening meter reading for this unit first.", {
+      unitId: "Edit the unit and add its opening reading and month.",
+    });
+  }
+
+  const previousPeriod = ownedUnit.lastMeterReadingDate.toISOString().slice(0, 7);
+  if (billingPeriod <= previousPeriod) {
+    return fail("The reading month must be after the unit's previous reading month.", {
+      billingPeriod: `Choose a month after ${previousPeriod}.`,
+    });
+  }
+
+  const currentReading = Number(currentReadingInput);
+  if (currentReading < ownedUnit.lastMeterReading) {
+    return fail("The current reading cannot be lower than the previous reading.", {
+      currentReading: `Enter ${ownedUnit.lastMeterReading} or higher.`,
+    });
+  }
+
+  const [duplicate] = await db
+    .select({ id: electricityBill.id })
+    .from(electricityBill)
+    .where(
+      and(
+        eq(electricityBill.unitId, unitId),
+        eq(electricityBill.billingPeriod, billingPeriod),
+      ),
+    )
+    .limit(1);
+  if (duplicate) {
+    return fail("This unit already has an electricity bill for that month.", {
+      billingPeriod: "Choose another month.",
+    });
+  }
 
   const id = crypto.randomUUID();
   const billNumber = `ELEC-${billingPeriod.replace("-", "")}-${id.slice(0, 6).toUpperCase()}`;
-  await db.insert(electricityBill).values({
-    id,
-    landlordId: owner.id,
-    unitId,
-    tenantId: ownedUnit.activeTenantId,
-    billNumber,
-    billingPeriod,
-    amount: Number(amountInput).toFixed(2),
-    dueDate: dueDate!,
-    note: text("note", 1_000) || null,
-  });
+  const unitsConsumed = currentReading - ownedUnit.lastMeterReading;
+  const unitRate = Number(unitRateInput);
+  const amount = unitsConsumed * unitRate;
+  const readingDate = new Date(`${billingPeriod}-01T12:00:00+05:30`);
+  await db.batch([
+    db.insert(electricityBill).values({
+      id,
+      landlordId: owner.id,
+      unitId,
+      tenantId: ownedUnit.activeTenantId,
+      billNumber,
+      billingPeriod,
+      previousReading: ownedUnit.lastMeterReading.toFixed(3),
+      currentReading: currentReading.toFixed(3),
+      unitsConsumed: unitsConsumed.toFixed(3),
+      unitRate: unitRate.toFixed(4),
+      amount: amount.toFixed(2),
+      dueDate: dueDate!,
+      note: text("note", 1_000) || null,
+    }),
+    db
+      .update(unit)
+      .set({
+        lastMeterReading: currentReading,
+        lastMeterReadingDate: readingDate,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(unit.id, unitId), eq(unit.landlordId, owner.id))),
+  ]);
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/profile");

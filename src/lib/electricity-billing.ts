@@ -20,6 +20,10 @@ export type ElectricityBillRecord = {
   unitNumber: string;
   billNumber: string;
   billingPeriod: string;
+  previousReading: number;
+  currentReading: number;
+  unitsConsumed: number;
+  unitRate: number;
   dueDate: string;
   amount: number;
   paid: number;
@@ -57,6 +61,10 @@ export async function getElectricityBills(
         unitNumber: unit.unitNumber,
         billNumber: electricityBill.billNumber,
         billingPeriod: electricityBill.billingPeriod,
+        previousReading: electricityBill.previousReading,
+        currentReading: electricityBill.currentReading,
+        unitsConsumed: electricityBill.unitsConsumed,
+        unitRate: electricityBill.unitRate,
         amount: electricityBill.amount,
         dueDate: electricityBill.dueDate,
         note: electricityBill.note,
@@ -124,6 +132,10 @@ export async function getElectricityBills(
       unitNumber: bill.unitNumber,
       billNumber: bill.billNumber,
       billingPeriod: bill.billingPeriod,
+      previousReading: Number(bill.previousReading),
+      currentReading: Number(bill.currentReading),
+      unitsConsumed: Number(bill.unitsConsumed),
+      unitRate: Number(bill.unitRate),
       dueDate: bill.dueDate.toISOString().slice(0, 10),
       amount,
       paid,

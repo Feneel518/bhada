@@ -26,6 +26,7 @@ type TenantField =
   | "rentEscalationMonths"
   | "nextEscalationDate"
   | "leaseDocUrl"
+  | "openingBalance"
   | "creditBalance";
 
 export type TenantActionState = {
@@ -90,6 +91,7 @@ export async function saveTenant(
   const noticePeriodMonths = optionalNumber(value("noticePeriodMonths"), "Notice period", true);
   const rentEscalationPct = optionalNumber(value("rentEscalationPct"), "Rent increase percentage");
   const rentEscalationMonths = optionalNumber(value("rentEscalationMonths"), "Rent increase interval", true);
+  const openingBalance = optionalNumber(value("openingBalance"), "Opening balance");
   const creditBalance = optionalNumber(value("creditBalance"), "Credit balance");
   const errors: TenantActionState["errors"] = {};
 
@@ -115,6 +117,7 @@ export async function saveTenant(
   if (noticePeriodMonths.error) errors.noticePeriodMonths = noticePeriodMonths.error;
   if (rentEscalationPct.error) errors.rentEscalationPct = rentEscalationPct.error;
   if (rentEscalationMonths.error) errors.rentEscalationMonths = rentEscalationMonths.error;
+  if (openingBalance.error) errors.openingBalance = openingBalance.error;
   if (creditBalance.error) errors.creditBalance = creditBalance.error;
 
   const leaseDocUrl = value("leaseDocUrl");
@@ -183,6 +186,7 @@ export async function saveTenant(
     nextEscalationDate: date(nextEscalationDate),
     leaseDocUrl: optional(leaseDocUrl),
     isActive,
+    openingBalance: openingBalance.value ?? 0,
     creditBalance: creditBalance.value ?? 0,
     updatedAt: new Date(),
   };

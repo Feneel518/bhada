@@ -29,6 +29,7 @@ export type TenantRecord = {
   nextEscalationDate: string;
   leaseDocUrl: string;
   isActive: boolean;
+  openingBalance: number;
   creditBalance: number;
 };
 
@@ -61,6 +62,7 @@ export async function getTenants(userId: string): Promise<TenantRecord[]> {
       nextEscalationDate: tenant.nextEscalationDate,
       leaseDocUrl: tenant.leaseDocUrl,
       isActive: tenant.isActive,
+      openingBalance: tenant.openingBalance,
       creditBalance: tenant.creditBalance,
     })
     .from(tenant)

@@ -14,8 +14,8 @@ type UnitField =
   | "floor"
   | "areaSqft"
   | "status"
-  | "lastMeterReading"
-  | "lastMeterReadingDate";
+  | "openingMeterReading"
+  | "openingMeterReadingDate";
 
 export type UnitActionState = {
   status: "idle" | "success" | "error";
@@ -56,17 +56,24 @@ export async function saveUnit(
   const unitNumber = value("unitNumber");
   const floor = value("floor");
   const area = optionalNumber(value("areaSqft"), "Area");
-  const meterReading = optionalNumber(value("lastMeterReading"), "Meter reading");
+  const openingMeterReading = optionalNumber(value("openingMeterReading"), "Opening meter reading");
   const status = value("status") as UnitStatus;
-  const meterDateRaw = value("lastMeterReadingDate");
+  const openingMeterMonth = value("openingMeterReadingDate");
   const errors: UnitActionState["errors"] = {};
 
   if (!unitNumber) errors.unitNumber = "Unit number is required.";
   if (area.error) errors.areaSqft = area.error;
-  if (meterReading.error) errors.lastMeterReading = meterReading.error;
+  if (openingMeterReading.error) errors.openingMeterReading = openingMeterReading.error;
   if (!statuses.includes(status)) errors.status = "Choose a valid unit status.";
-  if (meterDateRaw && Number.isNaN(new Date(`${meterDateRaw}T00:00:00`).getTime())) {
-    errors.lastMeterReadingDate = "Choose a valid reading date.";
+  if (openingMeterMonth && !/^\d{4}-\d{2}$/.test(openingMeterMonth)) {
+    errors.openingMeterReadingDate = "Choose a valid opening reading month.";
+  }
+  if ((openingMeterReading.value === null) !== !openingMeterMonth) {
+    if (openingMeterReading.value === null) {
+      errors.openingMeterReading = "Enter the opening reading.";
+    } else {
+      errors.openingMeterReadingDate = "Choose the opening reading month.";
+    }
   }
 
   if (!propertyId) return error("A property is required.");
@@ -103,6 +110,28 @@ export async function saveUnit(
     };
   }
 
+  const [existingUnit] = id
+    ? await db
+        .select({
+          openingMeterReading: unit.openingMeterReading,
+          openingMeterReadingDate: unit.openingMeterReadingDate,
+          lastMeterReading: unit.lastMeterReading,
+          lastMeterReadingDate: unit.lastMeterReadingDate,
+        })
+        .from(unit)
+        .where(and(eq(unit.id, id), eq(unit.landlordId, owner.id)))
+        .limit(1)
+    : [];
+  if (id && !existingUnit) return error("Unit not found or you no longer have access to it.");
+
+  const openingDate = openingMeterMonth
+    ? new Date(`${openingMeterMonth}-01T12:00:00+05:30`)
+    : null;
+  const lastReadingIsOpening =
+    !existingUnit?.lastMeterReadingDate ||
+    (existingUnit.openingMeterReading === existingUnit.lastMeterReading &&
+      existingUnit.openingMeterReadingDate?.getTime() === existingUnit.lastMeterReadingDate?.getTime());
+
   const values = {
     propertyId,
     landlordId: owner.id,
@@ -110,8 +139,14 @@ export async function saveUnit(
     floor: floor || null,
     areaSqft: area.value,
     status,
-    lastMeterReading: meterReading.value,
-    lastMeterReadingDate: meterDateRaw ? new Date(`${meterDateRaw}T00:00:00`) : null,
+    openingMeterReading: openingMeterReading.value,
+    openingMeterReadingDate: openingDate,
+    lastMeterReading: !id || lastReadingIsOpening
+      ? openingMeterReading.value
+      : existingUnit?.lastMeterReading,
+    lastMeterReadingDate: !id || lastReadingIsOpening
+      ? openingDate
+      : existingUnit?.lastMeterReadingDate,
     updatedAt: new Date(),
   };
 
