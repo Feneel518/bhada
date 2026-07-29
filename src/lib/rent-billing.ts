@@ -106,8 +106,11 @@ function isBeforeMonth(value: DateParts, month: { year: number; month: number })
   return value.year < month.year || (value.year === month.year && value.month < month.month);
 }
 
-export async function generateMonthlyRentBills(now = new Date()) {
+export async function generateMonthlyRentBills(now = new Date(), userId?: string) {
   const current = dateParts(now);
+  const tenantConditions = [eq(tenant.isActive, true)];
+  if (userId) tenantConditions.push(eq(landlord.userId, userId));
+
   const activeTenants = await db
     .select({
       id: tenant.id,
@@ -120,16 +123,20 @@ export async function generateMonthlyRentBills(now = new Date()) {
       gstRate: tenant.gstRate,
       tdsEnabled: tenant.tdsEnabled,
       tdsRate: tenant.tdsRate,
+      createdAt: tenant.createdAt,
       rentBillingPeriod: landlord.rentBillingPeriod,
     })
     .from(tenant)
     .innerJoin(landlord, eq(tenant.landlordId, landlord.id))
-    .where(eq(tenant.isActive, true));
+    .where(and(...tenantConditions));
 
   const rows: (typeof rentBill.$inferInsert)[] = [];
 
   for (const renter of activeTenants) {
     if (!renter.monthlyRent || renter.monthlyRent <= 0) continue;
+
+    const created = dateParts(renter.createdAt);
+    if (!isBeforeMonth(created, current)) continue;
 
     const billingPreference: RentBillingPeriod =
       renter.rentBillingPeriod === "current" ? "current" : "previous";
@@ -181,6 +188,7 @@ export async function getRentBilling(
   now = new Date(),
   financialYearStart?: number,
 ): Promise<RentBillingSummary> {
+  await generateMonthlyRentBills(now, userId);
   const financialYear = financialYearStart === undefined
     ? getCurrentFinancialYear(now)
     : getFinancialYear(financialYearStart);
