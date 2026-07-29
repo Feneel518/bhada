@@ -16,6 +16,7 @@ import { getCurrentFinancialYear, getFinancialYear } from "@/lib/financial-year"
 export type ElectricityBillRecord = {
   id: string;
   unitId: string;
+  tenantId: string | null;
   tenantName: string;
   propertyName: string;
   unitNumber: string;
@@ -160,6 +161,7 @@ export async function getElectricityBills(
     return {
       id: bill.id,
       unitId: bill.unitId,
+      tenantId: bill.tenantId,
       tenantName: bill.tenantName ?? "No active tenant",
       propertyName: bill.propertyName,
       unitNumber: bill.unitNumber,

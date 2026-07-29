@@ -14,6 +14,7 @@ import {
   CircleDollarSign,
   CreditCard,
   Ellipsis,
+  Eye,
   FileText,
   Gauge,
   HelpCircle,
@@ -36,6 +37,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { LineChart } from "@/components/ui/line-chart";
+import {
+  BillDocumentDialog,
+  type BillDocument,
+  type BillIssuer,
+} from "@/components/bill-document";
+import { TenantProfileDialog } from "@/components/tenant-profile-dialog";
 import { ProfileForm, type ProfileValues } from "@/app/dashboard/profile/profile-form";
 import {
   deleteProperty,
@@ -68,6 +75,7 @@ import type { ElectricityBillRecord } from "@/lib/electricity-billing";
 import { formatBillingMonth, type FinancialYearOption } from "@/lib/financial-year";
 import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
+import type { TenantAnalytics } from "@/lib/tenant-analytics";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const nav = [
@@ -102,6 +110,8 @@ export function Dashboard({
   electricityBills,
   financialYearStart,
   financialYearOptions,
+  issuer,
+  tenantAnalytics,
 }: {
   user: DashboardUser;
   initialSection?: "Overview" | "Profile" | "Payments";
@@ -113,6 +123,8 @@ export function Dashboard({
   electricityBills: ElectricityBillRecord[];
   financialYearStart: number;
   financialYearOptions: FinancialYearOption[];
+  issuer: BillIssuer;
+  tenantAnalytics: TenantAnalytics[];
 }) {
   const [active, setActive] = useState<string>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -126,6 +138,8 @@ export function Dashboard({
   } | null>(null);
   const [tenantOpen, setTenantOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantRecord | null>(null);
+  const [profileTenant, setProfileTenant] = useState<TenantRecord | null>(null);
+  const [billDocument, setBillDocument] = useState<BillDocument | null>(null);
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("This year");
 
@@ -348,6 +362,19 @@ export function Dashboard({
               onAddElectricityBill={() => setElectricityBillOpen(true)}
               onAddTenant={() => openTenant()}
               onEditTenant={openTenant}
+              onViewTenant={setProfileTenant}
+              onViewRentBill={(bill) => setBillDocument({
+                kind: "rent",
+                bill,
+                tenant: tenants.find((item) => item.id === bill.tenantId) ?? null,
+              })}
+              onViewElectricityBill={(bill) => setBillDocument({
+                kind: "electricity",
+                bill,
+                tenant: bill.tenantId
+                  ? tenants.find((item) => item.id === bill.tenantId) ?? null
+                  : null,
+              })}
             />
           )}
         </div>
@@ -391,6 +418,22 @@ export function Dashboard({
           }}
         />
       )}
+      <BillDocumentDialog
+        document={billDocument}
+        issuer={issuer}
+        onClose={() => setBillDocument(null)}
+      />
+      <TenantProfileDialog
+        tenant={profileTenant}
+        analytics={profileTenant
+          ? tenantAnalytics.find((item) => item.tenantId === profileTenant.id) ?? null
+          : null}
+        payments={payments}
+        rentBills={rentBilling.bills}
+        electricityBills={electricityBills}
+        financialYearLabel={rentBilling.financialYearLabel}
+        onClose={() => setProfileTenant(null)}
+      />
     </div>
   );
 }
@@ -691,6 +734,9 @@ function SectionView({
   onAddElectricityBill,
   onAddTenant,
   onEditTenant,
+  onViewTenant,
+  onViewRentBill,
+  onViewElectricityBill,
 }: {
   section: string;
   payments: PaymentRecord[];
@@ -708,6 +754,9 @@ function SectionView({
   onAddElectricityBill: () => void;
   onAddTenant: () => void;
   onEditTenant: (tenant: TenantRecord) => void;
+  onViewTenant: (tenant: TenantRecord) => void;
+  onViewRentBill: (bill: RentBillingSummary["bills"][number]) => void;
+  onViewElectricityBill: (bill: ElectricityBillRecord) => void;
 }) {
   const descriptions: Record<string, string> = {
     Properties: "Manage buildings, units, and occupancy.",
@@ -759,7 +808,12 @@ function SectionView({
             </div>
           )
         ) : section === "Tenants" ? (
-          <TenantList tenants={tenants} onAdd={onAddTenant} onEdit={onEditTenant} />
+          <TenantList
+            tenants={tenants}
+            onAdd={onAddTenant}
+            onEdit={onEditTenant}
+            onView={onViewTenant}
+          />
         ) : section === "Documents" ? (
           <EmptyDocuments />
         ) : (
@@ -781,8 +835,16 @@ function SectionView({
                 ))}
               </select>
             </div>
-            <RentBillTable bills={rentBilling.bills} financialYearLabel={rentBilling.financialYearLabel} />
-            <ElectricityBillTable bills={electricityBills} financialYearLabel={rentBilling.financialYearLabel} />
+            <RentBillTable
+              bills={rentBilling.bills}
+              financialYearLabel={rentBilling.financialYearLabel}
+              onViewBill={onViewRentBill}
+            />
+            <ElectricityBillTable
+              bills={electricityBills}
+              financialYearLabel={rentBilling.financialYearLabel}
+              onViewBill={onViewElectricityBill}
+            />
             <PaymentTable rows={rows} />
           </div>
         )}
@@ -794,9 +856,11 @@ function SectionView({
 function RentBillTable({
   bills,
   financialYearLabel,
+  onViewBill,
 }: {
   bills: RentBillingSummary["bills"];
   financialYearLabel: string;
+  onViewBill: (bill: RentBillingSummary["bills"][number]) => void;
 }) {
   const [billSearch, setBillSearch] = useState("");
   const visibleBills = bills.filter((bill) =>
@@ -831,6 +895,7 @@ function RentBillTable({
               <th className="px-4 py-3 font-bold">Pending</th>
               <th className="hidden px-4 py-3 font-bold md:table-cell">Due date</th>
               <th className="px-4 py-3 font-bold">Status</th>
+              <th className="px-4 py-3 font-bold">Copy</th>
             </tr>
           </thead>
           <tbody>
@@ -865,10 +930,18 @@ function RentBillTable({
                     {bill.status}
                   </span>
                 </td>
+                <td className="px-4 py-3.5">
+                  <button
+                    onClick={() => onViewBill(bill)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfe2e9] px-2.5 py-1.5 text-[10px] font-bold text-[#5555c7] hover:bg-[#efeffd]"
+                  >
+                    <Eye className="size-3.5" /> View
+                  </button>
+                </td>
               </tr>
             )) : (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
+                <td colSpan={8} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
                   {billSearch ? "No rent bill matches that bill number." : `No rent bills in ${financialYearLabel}.`}
                 </td>
               </tr>
@@ -883,9 +956,11 @@ function RentBillTable({
 function ElectricityBillTable({
   bills,
   financialYearLabel,
+  onViewBill,
 }: {
   bills: ElectricityBillRecord[];
   financialYearLabel: string;
+  onViewBill: (bill: ElectricityBillRecord) => void;
 }) {
   const [billSearch, setBillSearch] = useState("");
   const visibleBills = bills.filter((bill) =>
@@ -922,6 +997,7 @@ function ElectricityBillTable({
               <th className="px-4 py-3 font-bold">Pending</th>
               <th className="hidden px-4 py-3 font-bold md:table-cell">Due date</th>
               <th className="px-4 py-3 font-bold">Status</th>
+              <th className="px-4 py-3 font-bold">Copy</th>
             </tr>
           </thead>
           <tbody>
@@ -955,10 +1031,18 @@ function ElectricityBillTable({
                     {bill.status}
                   </span>
                 </td>
+                <td className="px-4 py-3.5">
+                  <button
+                    onClick={() => onViewBill(bill)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfe2e9] px-2.5 py-1.5 text-[10px] font-bold text-[#5555c7] hover:bg-[#efeffd]"
+                  >
+                    <Eye className="size-3.5" /> View
+                  </button>
+                </td>
               </tr>
             )) : (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
+                <td colSpan={10} className="px-6 py-12 text-center text-sm text-[#8b91a0]">
                   {billSearch ? "No electricity bill matches that bill number." : `No electricity bills in ${financialYearLabel}.`}
                 </td>
               </tr>
@@ -974,10 +1058,12 @@ function TenantList({
   tenants,
   onAdd,
   onEdit,
+  onView,
 }: {
   tenants: TenantRecord[];
   onAdd: () => void;
   onEdit: (tenant: TenantRecord) => void;
+  onView: (tenant: TenantRecord) => void;
 }) {
   if (!tenants.length) {
     return (
@@ -995,7 +1081,7 @@ function TenantList({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {tenants.map((item) => (
-        <TenantCard key={item.id} tenant={item} onEdit={onEdit} />
+        <TenantCard key={item.id} tenant={item} onEdit={onEdit} onView={onView} />
       ))}
     </div>
   );
@@ -1011,9 +1097,11 @@ const formatInr = (value: number) =>
 function TenantCard({
   tenant: item,
   onEdit,
+  onView,
 }: {
   tenant: TenantRecord;
   onEdit: (tenant: TenantRecord) => void;
+  onView: (tenant: TenantRecord) => void;
 }) {
   const [deleting, startDeleteTransition] = useTransition();
 
@@ -1065,6 +1153,12 @@ function TenantCard({
         <p><span className="font-bold text-[#4d5362]">Opening balance:</span> {formatCurrency(item.openingBalance)}</p>
         <p><span className="font-bold text-[#4d5362]">Deposit:</span> {item.securityDeposit === null ? "—" : formatInr(item.securityDeposit)}</p>
       </div>
+      <button
+        onClick={() => onView(item)}
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#f2f2fd] py-2.5 text-xs font-bold text-[#5555c7] hover:bg-[#e9e9fb]"
+      >
+        <Eye className="size-4" /> View profile & analytics
+      </button>
     </article>
   );
 }
