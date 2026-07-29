@@ -6,6 +6,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 export type LineChartPoint = {
   label: string;
   value: number;
+  description?: string;
 };
 
 type LineChartProps = {
@@ -122,7 +123,9 @@ export function LineChart({ data, className, markerIndex }: LineChartProps) {
           className="pointer-events-none absolute z-10 min-w-[128px] -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-xl border border-white/10 bg-[#292d3b]/95 px-3 py-2.5 text-white shadow-xl backdrop-blur-md"
           style={{ left: `${(activePoint.x / width) * 100}%`, top: `${(activePoint.y / height) * 100}%` }}
         >
-          <p className="text-[10px] font-medium text-white/55">{activePoint.label} 2026</p>
+          <p className="text-[10px] font-medium text-white/55">
+            {activePoint.description ?? activePoint.label}
+          </p>
           <div className="mt-1 flex items-center gap-2">
             <span className="size-2 rounded-full bg-[#8888f0]" />
             <span className="text-xs font-bold">{formatCurrency(activePoint.value)}</span>

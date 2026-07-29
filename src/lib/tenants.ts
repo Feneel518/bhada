@@ -21,6 +21,7 @@ export type TenantRecord = {
   leaseEnd: string;
   monthlyRent: number | null;
   rentBillingDay: number;
+  rentDueDay: number;
   gstEnabled: boolean;
   gstRate: number;
   tdsEnabled: boolean;
@@ -58,6 +59,7 @@ export async function getTenants(userId: string): Promise<TenantRecord[]> {
       leaseEnd: tenant.leaseEnd,
       monthlyRent: tenant.monthlyRent,
       rentBillingDay: tenant.rentBillingDay,
+      rentDueDay: tenant.rentDueDay,
       gstEnabled: tenant.gstEnabled,
       gstRate: tenant.gstRate,
       tdsEnabled: tenant.tdsEnabled,

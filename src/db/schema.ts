@@ -140,6 +140,7 @@ export const tenant = pgTable(
     leaseEnd: timestamp("lease_end"),
     monthlyRent: real("monthly_rent"),
     rentBillingDay: integer("rent_billing_day").default(1).notNull(),
+    rentDueDay: integer("rent_due_day").default(1).notNull(),
     gstEnabled: boolean("gst_enabled").default(false).notNull(),
     gstRate: real("gst_rate").default(0).notNull(),
     tdsEnabled: boolean("tds_enabled").default(false).notNull(),

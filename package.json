@@ -9,6 +9,7 @@
     "lint": "eslint",
     "build:cloudflare": "opennextjs-cloudflare build",
     "db:generate": "drizzle-kit generate",
+    "db:add-rent-due-day": "node scripts/add-rent-due-day.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

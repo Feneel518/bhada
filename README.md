@@ -16,6 +16,19 @@ Generate `BETTER_AUTH_SECRET` with at least 32 random characters. The public app
 URL must be used for both `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` in
 production.
 
+## Vercel deployment
+
+Add every variable from `.env.example` to the Vercel project. Set
+`CRON_SECRET` to a random value of at least 16 characters; Vercel sends it as a
+Bearer token when invoking the daily rent-billing route.
+
+The cron in `vercel.json` runs every day at 18:35 UTC (00:05 IST). Apply
+the due-day schema update to an existing Bhada database before deploying:
+
+```bash
+npm run db:add-rent-due-day
+```
+
 ## Google OAuth
 
 Create a Google OAuth web client and add this authorized redirect URI:
@@ -59,6 +72,7 @@ tokens expire after Better Auth's default one-hour window.
 npm run lint
 npm run build
 npm run db:generate
+npm run db:add-rent-due-day
 npm run db:push
 npm run db:studio
 ```

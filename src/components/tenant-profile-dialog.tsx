@@ -103,6 +103,7 @@ export function TenantProfileDialog({
                 <Detail label="Security deposit" value={tenant.securityDeposit === null ? "—" : formatCurrency(tenant.securityDeposit)} />
                 <Detail label="Credit balance" value={formatCurrency(tenant.creditBalance)} />
                 <Detail label="Billing day" value={`Day ${tenant.rentBillingDay}`} />
+                <Detail label="Rent due day" value={`Day ${tenant.rentDueDay}`} />
                 <Detail label="GST on rent" value={tenant.gstEnabled ? `${tenant.gstRate}%` : "Not applied"} />
                 <Detail label="TDS" value={tenant.tdsEnabled ? `${tenant.tdsRate}%` : "Not applied"} />
               </dl>

@@ -13,6 +13,7 @@ import { getElectricityBills } from "@/lib/electricity-billing";
 import { resolveFinancialYearStart } from "@/lib/financial-year";
 import { getAvailableFinancialYears } from "@/lib/financial-year-server";
 import { getTenantAnalytics } from "@/lib/tenant-analytics";
+import { getIncomeOverview } from "@/lib/dashboard-analytics";
 
 export default async function DashboardPage({
   searchParams,
@@ -28,7 +29,7 @@ export default async function DashboardPage({
   const params = await searchParams;
   const now = new Date();
   const financialYearStart = resolveFinancialYearStart(params.fy, now);
-  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics] = await Promise.all([
+  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, incomeOverview] = await Promise.all([
     db
       .select()
       .from(landlord)
@@ -41,6 +42,7 @@ export default async function DashboardPage({
     getElectricityBills(session.user.id, now, financialYearStart),
     getAvailableFinancialYears(session.user.id, financialYearStart, now),
     getTenantAnalytics(session.user.id),
+    getIncomeOverview(session.user.id, now),
   ]);
 
   return (
@@ -54,6 +56,7 @@ export default async function DashboardPage({
       financialYearStart={financialYearStart}
       financialYearOptions={financialYearOptions}
       tenantAnalytics={tenantAnalytics}
+      incomeOverview={incomeOverview}
       issuer={{
         businessName: profile?.businessName ?? session.user.name,
         email: session.user.email,

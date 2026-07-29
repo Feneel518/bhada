@@ -67,8 +67,8 @@ import {
   createElectricityBill,
   type ElectricityBillActionState,
 } from "@/app/dashboard/electricity/actions";
-import { chart } from "@/lib/demo-data";
 import { authClient } from "@/lib/auth-client";
+import type { IncomeOverviewPoint } from "@/lib/dashboard-analytics";
 import type { PaymentRecord } from "@/lib/payments";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
@@ -80,7 +80,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 
 const nav = [
   { label: "Overview", icon: Home },
-  { label: "Properties", icon: Building2, count: "4" },
+  { label: "Properties", icon: Building2 },
   { label: "Tenants", icon: Users },
   { label: "Payments", icon: CreditCard },
   { label: "Documents", icon: FileText },
@@ -114,6 +114,7 @@ export function Dashboard({
   financialYearOptions,
   issuer,
   tenantAnalytics,
+  incomeOverview,
 }: {
   user: DashboardUser;
   initialSection?: "Overview" | "Profile" | "Payments";
@@ -127,6 +128,7 @@ export function Dashboard({
   financialYearOptions: FinancialYearOption[];
   issuer: BillIssuer;
   tenantAnalytics: TenantAnalytics[];
+  incomeOverview: IncomeOverviewPoint[];
 }) {
   const [active, setActive] = useState<string>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -242,9 +244,9 @@ export function Dashboard({
             >
               <item.icon className="size-[18px]" strokeWidth={active === item.label ? 2.3 : 1.9} />
               <span>{item.label}</span>
-              {(item.count || item.label === "Properties" || item.label === "Tenants") && (
+              {(item.label === "Properties" || item.label === "Tenants") && (
                 <span className="ml-auto rounded-md bg-white/80 px-2 py-0.5 text-[11px] font-bold text-[#83899a]">
-                  {item.label === "Properties" ? properties.length : item.label === "Tenants" ? tenants.length : item.count}
+                  {item.label === "Properties" ? properties.length : tenants.length}
                 </span>
               )}
             </button>
@@ -339,8 +341,10 @@ export function Dashboard({
               payments={visiblePayments}
               rentBilling={rentBilling}
               properties={visibleProperties}
+              totalProperties={properties.length}
+              incomeOverview={incomeOverview}
               onAddProperty={() => openProperty()}
-              onRecordPayment={() => setPaymentOpen(true)}
+              onViewPayments={() => selectSection("Payments")}
               onViewProperties={() => selectSection("Properties")}
               firstName={firstName}
             />
@@ -446,8 +450,10 @@ function Overview({
   payments: rows,
   rentBilling,
   properties,
+  totalProperties,
+  incomeOverview,
   onAddProperty,
-  onRecordPayment,
+  onViewPayments,
   onViewProperties,
   firstName,
 }: {
@@ -456,8 +462,10 @@ function Overview({
   payments: PaymentRecord[];
   rentBilling: RentBillingSummary;
   properties: PropertyRecord[];
+  totalProperties: number;
+  incomeOverview: IncomeOverviewPoint[];
   onAddProperty: () => void;
-  onRecordPayment: () => void;
+  onViewPayments: () => void;
   onViewProperties: () => void;
   firstName: string;
 }) {
@@ -468,13 +476,23 @@ function Overview({
     day: "numeric",
   }).format(new Date());
 
+  const hour = Number(
+    new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(new Date()),
+  );
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
   return (
     <>
       <div className="animate-rise flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
           <p className="mb-1 text-sm font-medium text-[#888e9d]">{todayLabel}</p>
           <h1 className="font-display text-[29px] leading-tight tracking-[-0.045em] text-[#222836] sm:text-[34px]">
-            Good evening, {firstName}
+            {greeting}, {firstName}
           </h1>
           <p className="mt-1.5 text-sm text-[#747b8b]">Here&apos;s how your portfolio is doing this month.</p>
         </div>
@@ -487,7 +505,7 @@ function Overview({
         <MetricCard icon={WalletCards} label="Billed this month" value={formatCurrency(rentBilling.billedThisMonth)} note={`${rentBilling.periodLabel} rent bills`} trend="up" tone="indigo" />
         <MetricCard icon={CircleDollarSign} label="Collected" value={formatCurrency(rentBilling.paidThisMonth)} note={`${rentBilling.collectionRate}% collection rate`} trend="up" tone="green" />
         <MetricCard icon={CalendarDays} label="Pending rent" value={formatCurrency(rentBilling.pendingTotal)} note={`${rentBilling.overdueCount} overdue bill${rentBilling.overdueCount === 1 ? "" : "s"}`} trend="down" tone="orange" />
-        <MetricCard icon={Building2} label="Active properties" value={String(properties.length)} note="Across your portfolio" trend="up" tone="pink" />
+        <MetricCard icon={Building2} label="Active properties" value={String(totalProperties)} note="Across your portfolio" trend="up" tone="pink" />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
@@ -507,7 +525,7 @@ function Overview({
               <option>This quarter</option>
             </select>
           </div>
-          <IncomeChart period={period} />
+          <IncomeChart period={period} data={incomeOverview} />
         </section>
 
         <section className="rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)] sm:p-6">
@@ -538,14 +556,14 @@ function Overview({
               <Legend dot="#ea6f62" label="Overdue" value={formatCurrency(rentBilling.overdueTotal)} />
             </div>
           </div>
-          <Button onClick={onRecordPayment} variant="outline" className="mt-7 w-full">
+          <Button onClick={onViewPayments} variant="outline" className="mt-7 w-full">
             View all payments
           </Button>
         </section>
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <PaymentTable rows={rows} />
+        <PaymentTable rows={rows} onViewAll={onViewPayments} />
         <PropertyList properties={properties} onAdd={onAddProperty} onViewAll={onViewProperties} />
       </div>
     </>
@@ -593,15 +611,16 @@ function MetricCard({
   );
 }
 
-function IncomeChart({ period }: { period: string }) {
-  const months = ["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
-  const fullData = chart.map((value, index) => ({
-    label: months[index],
-    value: Math.round(9200 + value * 82),
-  }));
+function IncomeChart({
+  period,
+  data,
+}: {
+  period: string;
+  data: IncomeOverviewPoint[];
+}) {
   const count = period === "This quarter" ? 3 : period === "Last 6 months" ? 6 : 12;
-  const visibleData = fullData.slice(-count);
-  return <LineChart key={period} data={visibleData} markerIndex={count > 6 ? 7 : undefined} />;
+  const visibleData = data.slice(-count);
+  return <LineChart key={period} data={visibleData} />;
 }
 
 function Legend({ dot, label, value }: { dot: string; label: string; value: string }) {
@@ -614,7 +633,13 @@ function Legend({ dot, label, value }: { dot: string; label: string; value: stri
   );
 }
 
-function PaymentTable({ rows }: { rows: PaymentRecord[] }) {
+function PaymentTable({
+  rows,
+  onViewAll,
+}: {
+  rows: PaymentRecord[];
+  onViewAll?: () => void;
+}) {
   return (
     <section className="overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)]">
       <div className="flex items-center justify-between p-5 pb-4 sm:px-6">
@@ -622,7 +647,11 @@ function PaymentTable({ rows }: { rows: PaymentRecord[] }) {
           <h2 className="font-display text-base font-bold tracking-[-0.025em]">Recent payments</h2>
           <p className="mt-1 text-xs text-[#8b91a0]">Latest activity from your tenants</p>
         </div>
-        <button className="text-xs font-bold text-[#5b5bd6] hover:text-[#4646b8]">View all</button>
+        {onViewAll && (
+          <button onClick={onViewAll} className="text-xs font-bold text-[#5b5bd6] hover:text-[#4646b8]">
+            View all
+          </button>
+        )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[600px] text-left">
@@ -1156,7 +1185,7 @@ function TenantCard({
         <p className="truncate"><span className="font-bold text-[#4d5362]">Phone:</span> {item.phone || "Not provided"}</p>
         <p><span className="font-bold text-[#4d5362]">Lease:</span> {item.leaseStart || "—"} to {item.leaseEnd || "—"}</p>
         <p><span className="font-bold text-[#4d5362]">Monthly rent:</span> {item.monthlyRent === null ? "—" : formatInr(item.monthlyRent)}</p>
-        <p><span className="font-bold text-[#4d5362]">Billing day:</span> Day {item.rentBillingDay} of each month</p>
+        <p><span className="font-bold text-[#4d5362]">Billing:</span> Day {item.rentBillingDay} · due day {item.rentDueDay}</p>
         <p>
           <span className="font-bold text-[#4d5362]">Tax on rent:</span>{" "}
           {item.gstEnabled ? `${item.gstRate}% GST` : "No GST"}
@@ -2209,7 +2238,8 @@ function TenantDialog({
                 />
                 {state.errors?.monthlyRent && <FieldError message={state.errors.monthlyRent} />}
               </Field>
-              <TenantInput label="Bill rent on day" name="rentBillingDay" type="number" value={tenant?.rentBillingDay ?? 1} error={state.errors?.rentBillingDay} />
+              <TenantInput label="Bill rent on day" name="rentBillingDay" type="number" value={tenant?.rentBillingDay ?? 1} error={state.errors?.rentBillingDay} min={1} max={31} />
+              <TenantInput label="Rent due on day" name="rentDueDay" type="number" value={tenant?.rentDueDay ?? tenant?.rentBillingDay ?? 1} error={state.errors?.rentDueDay} min={1} max={31} />
               <TenantInput label="Security deposit" name="securityDeposit" type="number" value={tenant?.securityDeposit} error={state.errors?.securityDeposit} step="any" />
               <TenantInput label="Lock-in (months)" name="lockInMonths" type="number" value={tenant?.lockInMonths} error={state.errors?.lockInMonths} />
               <TenantInput label="Notice period (months)" name="noticePeriodMonths" type="number" value={tenant?.noticePeriodMonths} error={state.errors?.noticePeriodMonths} />
@@ -2348,6 +2378,8 @@ function TenantInput({
   value,
   error,
   step,
+  min,
+  max,
 }: {
   label: string;
   name: string;
@@ -2355,10 +2387,12 @@ function TenantInput({
   value?: string | number | null;
   error?: string;
   step?: string;
+  min?: number;
+  max?: number;
 }) {
   return (
     <Field label={label}>
-      <input className={inputClass} name={name} type={type} min={type === "number" ? 0 : undefined} step={step} defaultValue={value ?? ""} aria-invalid={Boolean(error)} />
+      <input className={inputClass} name={name} type={type} min={type === "number" ? (min ?? 0) : undefined} max={max} step={step} defaultValue={value ?? ""} aria-invalid={Boolean(error)} />
       {error && <FieldError message={error} />}
     </Field>
   );

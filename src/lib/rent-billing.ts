@@ -119,6 +119,7 @@ export async function generateMonthlyRentBills(now = new Date(), userId?: string
       leaseEnd: tenant.leaseEnd,
       monthlyRent: tenant.monthlyRent,
       rentBillingDay: tenant.rentBillingDay,
+      rentDueDay: tenant.rentDueDay,
       gstEnabled: tenant.gstEnabled,
       gstRate: tenant.gstRate,
       tdsEnabled: tenant.tdsEnabled,
@@ -135,6 +136,13 @@ export async function generateMonthlyRentBills(now = new Date(), userId?: string
   for (const renter of activeTenants) {
     if (!renter.monthlyRent || renter.monthlyRent <= 0) continue;
 
+    const effectiveBillingDay = Math.min(
+      renter.rentBillingDay,
+      daysInMonth(current.year, current.month),
+    );
+    // Running daily with a "<" check lets a later run safely catch up after an outage.
+    if (current.day < effectiveBillingDay) continue;
+
     const created = dateParts(renter.createdAt);
     if (!isBeforeMonth(created, current)) continue;
 
@@ -150,7 +158,11 @@ export async function generateMonthlyRentBills(now = new Date(), userId?: string
 
     const billingPeriod = period(billingMonth.year, billingMonth.month);
     const dueMonth = billingPreference === "previous" ? current : billingMonth;
-    const billDueDate = dueDate(dueMonth.year, dueMonth.month, renter.rentBillingDay);
+    const billDueDate = dueDate(
+      dueMonth.year,
+      dueMonth.month,
+      Math.max(renter.rentBillingDay, renter.rentDueDay),
+    );
     const basePaise = Math.round(renter.monthlyRent * 100);
     const gstRate = renter.gstEnabled ? renter.gstRate : 0;
     const tdsRate = renter.tdsEnabled ? renter.tdsRate : 0;

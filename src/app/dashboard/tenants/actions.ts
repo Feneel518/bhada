@@ -19,6 +19,7 @@ type TenantField =
   | "leaseEnd"
   | "monthlyRent"
   | "rentBillingDay"
+  | "rentDueDay"
   | "gstRate"
   | "tdsRate"
   | "securityDeposit"
@@ -90,6 +91,7 @@ export async function saveTenant(
   const tdsEnabled = formData.get("tdsEnabled") === "on";
   const monthlyRent = optionalNumber(value("monthlyRent"), "Monthly rent");
   const rentBillingDay = optionalNumber(value("rentBillingDay"), "Rent billing day", true);
+  const rentDueDay = optionalNumber(value("rentDueDay"), "Rent due day", true);
   const gstRate = optionalNumber(value("gstRate"), "GST rate");
   const tdsRate = optionalNumber(value("tdsRate"), "TDS rate");
   const securityDeposit = optionalNumber(value("securityDeposit"), "Security deposit");
@@ -117,6 +119,16 @@ export async function saveTenant(
   if (monthlyRent.error) errors.monthlyRent = monthlyRent.error;
   if (rentBillingDay.error || rentBillingDay.value === null || rentBillingDay.value < 1 || rentBillingDay.value > 31) {
     errors.rentBillingDay = "Rent billing day must be between 1 and 31.";
+  }
+  if (rentDueDay.error || rentDueDay.value === null || rentDueDay.value < 1 || rentDueDay.value > 31) {
+    errors.rentDueDay = "Rent due day must be between 1 and 31.";
+  } else if (
+    rentBillingDay.value !== null &&
+    rentBillingDay.value >= 1 &&
+    rentBillingDay.value <= 31 &&
+    rentDueDay.value < rentBillingDay.value
+  ) {
+    errors.rentDueDay = "Rent due day must be on or after the billing day.";
   }
   if (gstRate.error || (gstEnabled && (!gstRate.value || gstRate.value > 100))) {
     errors.gstRate = "GST rate must be greater than 0 and at most 100.";
@@ -190,6 +202,7 @@ export async function saveTenant(
     leaseEnd: date(leaseEnd),
     monthlyRent: monthlyRent.value,
     rentBillingDay: rentBillingDay.value ?? 1,
+    rentDueDay: rentDueDay.value ?? rentBillingDay.value ?? 1,
     gstEnabled,
     gstRate: gstEnabled ? (gstRate.value ?? 0) : 0,
     tdsEnabled,

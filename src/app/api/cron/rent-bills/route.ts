@@ -1,6 +1,6 @@
 import { generateMonthlyRentBills } from "@/lib/rent-billing";
 
-export async function POST(request: Request) {
+async function handleCron(request: Request) {
   const secret = process.env.CRON_SECRET;
   const authorization = request.headers.get("authorization");
 
@@ -18,4 +18,14 @@ export async function POST(request: Request) {
     generated,
     billingRunAt: now.toISOString(),
   });
+}
+
+// Vercel Cron invokes production routes with GET. POST remains available for
+// the existing Cloudflare worker wrapper and local authenticated testing.
+export async function GET(request: Request) {
+  return handleCron(request);
+}
+
+export async function POST(request: Request) {
+  return handleCron(request);
 }
