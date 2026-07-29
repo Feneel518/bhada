@@ -314,7 +314,10 @@ export async function getRentBilling(
       tenantName: bill.tenantName,
       billNumber: bill.billNumber,
       billingPeriod: bill.billingPeriod,
-      dueDate: bill.dueDate.toISOString().slice(0, 10),
+      dueDate: (() => {
+        const due = dateParts(bill.dueDate);
+        return `${period(due.year, due.month)}-${String(due.day).padStart(2, "0")}`;
+      })(),
       baseAmount: Number(bill.baseAmount),
       gstRate: Number(bill.gstRate),
       gstAmount: Number(bill.gstAmount),
