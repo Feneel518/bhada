@@ -107,13 +107,13 @@ export function DatePickerInput({
             aria-invalid={invalid}
             aria-required={required}
             className={cn(
-              "h-11 w-full justify-start rounded-xl border-[#dfe2e9] bg-[#fafafd] px-3.5 text-left text-sm font-normal shadow-none hover:translate-y-0 hover:bg-white",
-              !date && "text-[#9ca2b1]",
-              invalid && "border-[#d98b82]",
+              "h-11 w-full justify-start rounded-none border-white/[0.09] bg-white/[0.018] px-3.5 text-left text-sm font-normal text-[#edede8]/85 shadow-none hover:translate-y-0 hover:border-white/15 hover:bg-white/[0.025]",
+              !date && "text-white/25",
+              invalid && "border-[#c96a4e]/55",
               className,
             )}
           >
-            <CalendarDays className="size-4 text-[#7d8392]" />
+            <CalendarDays className="size-4 text-white/35" />
             {date ? format(date, monthOnly ? "MMMM yyyy" : "dd MMM yyyy") : placeholder}
           </Button>
         </PopoverTrigger>

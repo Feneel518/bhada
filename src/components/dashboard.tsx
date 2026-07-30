@@ -424,7 +424,12 @@ export function Dashboard({
 
         <div className="mt-4 flex items-center gap-3 rounded-xl px-2 py-2">
           <div
-            className="grid size-9 place-items-center overflow-hidden rounded-full bg-[#272b3a] bg-cover bg-center text-xs font-bold text-white"
+            className={cn(
+              "grid size-9 place-items-center overflow-hidden rounded-full bg-cover bg-center text-xs font-bold",
+              user.image
+                ? "bg-[#272b3a] text-white"
+                : "border border-[#e4c77a]/25 bg-[#e4c77a]/[0.08] text-[#e4c77a]",
+            )}
             style={user.image ? { backgroundImage: `url("${user.image.replace(/"/g, "%22")}")` } : undefined}
           >
             {!user.image && initials}
@@ -813,7 +818,7 @@ function PaymentTable({
                 <tr key={payment.id} className="border-b border-[#f0f1f4] last:border-0 hover:bg-[#fcfcfe]">
                   <td className="px-6 py-3.5">
                     <div className="flex items-center gap-3">
-                      <span className="grid size-8 place-items-center rounded-full text-[10px] font-extrabold text-[#53596a]" style={{ background: payment.color }}>
+                      <span className="grid size-8 place-items-center rounded-full border border-[#e4c77a]/25 bg-[#e4c77a]/[0.08] text-[10px] font-extrabold text-[#e4c77a]">
                         {payment.initials}
                       </span>
                       <div>
@@ -1298,7 +1303,7 @@ function TenantCard({
   return (
     <article className="rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)]">
       <div className="flex items-start gap-3">
-        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#e8f5ef] text-sm font-extrabold text-[#328161]">
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-[#e4c77a]/25 bg-[#e4c77a]/[0.08] text-sm font-extrabold text-[#e4c77a]">
           {item.name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
@@ -1337,10 +1342,15 @@ function TenantCard({
         <p><span className="font-bold text-[#4d5362]">Deposit:</span> {item.securityDeposit === null ? "—" : formatInr(item.securityDeposit)}</p>
       </div>
       <button
+        type="button"
         onClick={() => onView(item)}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#f2f2fd] py-2.5 text-xs font-bold text-[#5555c7] hover:bg-[#e9e9fb]"
+        className="group mt-5 flex h-11 w-full items-center justify-between border border-white/15 bg-white/[0.025] px-4 text-xs font-semibold tracking-[0.01em] text-[#edede8] transition-[border-color,background-color,color] hover:border-[#e4c77a]/55 hover:bg-[#e4c77a]/[0.06] hover:text-[#e4c77a]"
       >
-        <Eye className="size-4" /> View profile & analytics
+        <span className="flex items-center gap-2.5">
+          <Eye className="size-4 text-white/40 transition-colors group-hover:text-[#e4c77a]" />
+          View analytics
+        </span>
+        <ArrowUpRight className="size-4 text-white/25 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#e4c77a]" />
       </button>
     </article>
   );
@@ -1652,13 +1662,13 @@ function HelpCenter() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-bold text-[#4d5362]">{label}</span>
+      <span className="mb-2 block text-xs font-semibold text-white/65">{label}</span>
       {children}
     </label>
   );
 }
 
-const inputClass = "h-11 w-full rounded-xl border border-[#dfe2e9] bg-[#fafafd] px-3.5 text-sm outline-none transition focus:border-[#aaaaf0] focus:bg-white focus:ring-4 focus:ring-[#5b5bd6]/10";
+const inputClass = "h-11 w-full rounded-none border border-white/[0.09] bg-white/[0.018] px-3.5 text-sm text-[#edede8]/85 outline-none transition-[border-color,background-color,color] placeholder:text-white/25 focus:border-white/20 focus:bg-white/[0.028] focus:ring-0 aria-invalid:border-[#c96a4e]/55";
 
 const initialElectricityBillState: ElectricityBillActionState = {
   status: "idle",
@@ -1790,15 +1800,15 @@ function ElectricityBillDialog({
 
           <div className="grid grid-cols-3 gap-3 rounded-2xl bg-[#f3f3ff] px-4 py-3.5 text-center">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8b91a0]">Previous</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">Previous</p>
               <p className="mt-1 text-sm font-extrabold text-[#4444b2]">{previousReading ?? "—"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8b91a0]">Units used</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">Units used</p>
               <p className="mt-1 text-sm font-extrabold text-[#4444b2]">{unitsConsumed.toFixed(3)}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8b91a0]">Bill amount</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">Bill amount</p>
               <p className="mt-1 text-sm font-extrabold text-[#4444b2]">{formatCurrency(calculatedAmount)}</p>
             </div>
           </div>
@@ -1919,7 +1929,7 @@ function RecordPaymentDialog({
           </Field>
 
           <div>
-            <p className="mb-2 text-xs font-bold text-[#4d5362]">Allocation</p>
+            <p className="mb-2 text-xs font-semibold text-white/65">Allocation</p>
             <div className="grid grid-cols-2 rounded-xl bg-[#f4f4f9] p-1">
               {([
                 ["lump_sum", "Lump sum"],
@@ -1949,7 +1959,7 @@ function RecordPaymentDialog({
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-bold text-[#4d5362]">Bills paid</p>
+                  <p className="text-xs font-semibold text-white/65">Bills paid</p>
                   <p className="mt-1 text-[11px] text-[#8b91a0]">Add rent, light bill, or any other charge.</p>
                 </div>
                 <Button
@@ -1964,7 +1974,7 @@ function RecordPaymentDialog({
               {allocations.map((allocation, index) => (
                 <div key={allocation.id} className="rounded-2xl border border-[#e4e6ed] bg-[#fcfcfe] p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#9298a7]">Bill {index + 1}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">Bill {index + 1}</p>
                     {allocations.length > 1 && (
                       <button
                         type="button"
@@ -2101,7 +2111,7 @@ function PaymentAmountFields({
         />
       </Field>
       <div className={compact ? "" : "grid gap-3 sm:grid-cols-2"}>
-        <label className="flex h-11 items-center gap-3 rounded-xl border border-[#dfe2e9] bg-[#fafafd] px-3.5 text-xs font-bold text-[#606777]">
+        <label className="flex h-11 items-center gap-3 rounded-none border border-white/[0.09] bg-white/[0.018] px-3.5 text-xs font-semibold text-white/65">
           <input
             className="size-4 accent-[#5555c7]"
             type="checkbox"
@@ -2435,16 +2445,16 @@ function TenantDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[760px] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-[760px] overflow-y-auto overscroll-contain">
         <DialogTitle>{editing ? `Edit ${tenant?.name}` : "Add a tenant"}</DialogTitle>
         <DialogDescription>
-          Store contact, lease, escalation, and carry-forward credit details. Sensitive IDs remain masked.
+          Add the tenant first, then set up their lease and monthly rent. Optional tax and rent increase rules are grouped below.
         </DialogDescription>
         <form action={formAction} className="mt-6 space-y-5">
           <input type="hidden" name="id" value={tenant?.id ?? ""} />
 
           <section className="space-y-4">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b91a0]">Tenant & unit</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e4c77a]/70">Tenant & unit</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Full name">
                 <input required className={inputClass} name="name" defaultValue={tenant?.name} aria-invalid={Boolean(state.errors?.name)} autoComplete="name" placeholder="Tenant name" />
@@ -2479,8 +2489,8 @@ function TenantDialog({
             </div>
           </section>
 
-          <section className="space-y-4 border-t border-[#eff0f4] pt-5">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b91a0]">Masked identity details</p>
+          <section className="space-y-4 border-t border-white/10 pt-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e4c77a]/70">Masked identity details</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="Aadhaar last 4">
                 <input className={inputClass} name="aadhaarLast4" inputMode="numeric" maxLength={4} defaultValue={tenant?.aadhaarMasked.slice(-4)} aria-invalid={Boolean(state.errors?.aadhaarLast4)} placeholder="1234" />
@@ -2498,7 +2508,7 @@ function TenantDialog({
                   placeholder="ABCDE1234F"
                 />
                 {state.errors?.panMasked && <FieldError message={state.errors.panMasked} />}
-                {!state.errors?.panMasked && <p className="mt-1.5 text-[10px] text-[#8b91a0]">Automatically stored as AB***1234F.</p>}
+                {!state.errors?.panMasked && <p className="mt-1.5 text-[10px] text-white/35">Automatically stored as AB***1234F.</p>}
               </Field>
               <Field label="GSTIN">
                 <input className={inputClass} name="gstin" maxLength={15} defaultValue={tenant?.gstin} placeholder="Optional" />
@@ -2506,46 +2516,132 @@ function TenantDialog({
             </div>
           </section>
 
-          <section className="space-y-4 border-t border-[#eff0f4] pt-5">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b91a0]">Lease terms</p>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <TenantInput label="Lease start" name="leaseStart" type="date" value={tenant?.leaseStart} error={state.errors?.leaseStart} />
-              <TenantInput label="Lease end" name="leaseEnd" type="date" value={tenant?.leaseEnd} error={state.errors?.leaseEnd} />
-              <Field label="Monthly rent (₹)">
-                <input
-                  className={inputClass}
-                  name="monthlyRent"
-                  type="number"
-                  min={0}
-                  step="any"
-                  value={monthlyRent}
-                  onChange={(event) => setMonthlyRent(event.target.value)}
-                  aria-invalid={Boolean(state.errors?.monthlyRent)}
-                />
-                {state.errors?.monthlyRent && <FieldError message={state.errors.monthlyRent} />}
-              </Field>
-              <TenantInput label="Bill rent on day" name="rentBillingDay" type="number" value={tenant?.rentBillingDay ?? 1} error={state.errors?.rentBillingDay} min={1} max={31} />
-              <TenantInput label="Rent due on day" name="rentDueDay" type="number" value={tenant?.rentDueDay ?? tenant?.rentBillingDay ?? 1} error={state.errors?.rentDueDay} min={1} max={31} />
-              <TenantInput label="Security deposit" name="securityDeposit" type="number" value={tenant?.securityDeposit} error={state.errors?.securityDeposit} step="any" />
-              <TenantInput label="Lock-in (months)" name="lockInMonths" type="number" value={tenant?.lockInMonths} error={state.errors?.lockInMonths} />
-              <TenantInput label="Notice period (months)" name="noticePeriodMonths" type="number" value={tenant?.noticePeriodMonths} error={state.errors?.noticePeriodMonths} />
-              <TenantInput label="Opening outstanding balance" name="openingBalance" type="number" value={tenant?.openingBalance ?? 0} error={state.errors?.openingBalance} step="any" />
-              <TenantInput label="Credit balance" name="creditBalance" type="number" value={tenant?.creditBalance ?? 0} error={state.errors?.creditBalance} step="any" />
+          <section className="space-y-4 border-t border-white/10 pt-5">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e4c77a]/70">Lease & rent setup</p>
+              <p className="mt-1.5 text-xs leading-5 text-white/40">
+                Work through each group in order. Leave any optional field blank when it does not apply.
+              </p>
             </div>
+
+            <LeaseFieldGroup
+              icon={<CalendarDays className="size-4" />}
+              title="1. Lease duration"
+              description="Set the agreement dates and the rules for ending the tenancy."
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TenantInput label="Lease starts on" name="leaseStart" type="date" value={tenant?.leaseStart} error={state.errors?.leaseStart} />
+                <TenantInput label="Lease ends on" name="leaseEnd" type="date" value={tenant?.leaseEnd} error={state.errors?.leaseEnd} />
+                <TenantInput
+                  label="Minimum stay / lock-in"
+                  name="lockInMonths"
+                  type="number"
+                  value={tenant?.lockInMonths}
+                  error={state.errors?.lockInMonths}
+                  hint="Number of months before the tenant can end the lease."
+                />
+                <TenantInput
+                  label="Move-out notice"
+                  name="noticePeriodMonths"
+                  type="number"
+                  value={tenant?.noticePeriodMonths}
+                  error={state.errors?.noticePeriodMonths}
+                  hint="Number of months' notice required before leaving."
+                />
+              </div>
+            </LeaseFieldGroup>
+
+            <LeaseFieldGroup
+              icon={<CircleDollarSign className="size-4" />}
+              title="2. Monthly rent & billing"
+              description="Enter the base rent and choose when each month's bill is created and due."
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Monthly base rent (₹)">
+                  <input
+                    className={inputClass}
+                    name="monthlyRent"
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={monthlyRent}
+                    onChange={(event) => setMonthlyRent(event.target.value)}
+                    aria-invalid={Boolean(state.errors?.monthlyRent)}
+                    placeholder="e.g. 25000"
+                  />
+                  {state.errors?.monthlyRent && <FieldError message={state.errors.monthlyRent} />}
+                </Field>
+                <TenantInput
+                  label="Create bill on day"
+                  name="rentBillingDay"
+                  type="number"
+                  value={tenant?.rentBillingDay ?? 1}
+                  error={state.errors?.rentBillingDay}
+                  min={1}
+                  max={31}
+                  hint="Day of the month, from 1 to 31."
+                />
+                <TenantInput
+                  label="Payment due on day"
+                  name="rentDueDay"
+                  type="number"
+                  value={tenant?.rentDueDay ?? tenant?.rentBillingDay ?? 1}
+                  error={state.errors?.rentDueDay}
+                  min={1}
+                  max={31}
+                  hint="The monthly deadline for rent."
+                />
+              </div>
+            </LeaseFieldGroup>
+
+            <LeaseFieldGroup
+              icon={<WalletCards className="size-4" />}
+              title="3. Deposit & starting balance"
+              description="Record money already held or owed when adding this tenant to Bhada."
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                <TenantInput
+                  label="Refundable security deposit (₹)"
+                  name="securityDeposit"
+                  type="number"
+                  value={tenant?.securityDeposit}
+                  error={state.errors?.securityDeposit}
+                  step="any"
+                />
+                <TenantInput
+                  label="Tenant already owes (₹)"
+                  name="openingBalance"
+                  type="number"
+                  value={tenant?.openingBalance ?? 0}
+                  error={state.errors?.openingBalance}
+                  step="any"
+                  hint="Past unpaid amount to carry forward."
+                />
+                <TenantInput
+                  label="Tenant paid in advance (₹)"
+                  name="creditBalance"
+                  type="number"
+                  value={tenant?.creditBalance ?? 0}
+                  error={state.errors?.creditBalance}
+                  step="any"
+                  hint="Unused advance payment or credit."
+                />
+              </div>
+            </LeaseFieldGroup>
           </section>
 
-          <section className="space-y-4 border-t border-[#eff0f4] pt-5">
+          <section className="space-y-4 border-t border-white/10 pt-5">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b91a0]">Rent bill taxes</p>
-              <p className="mt-1.5 text-xs leading-5 text-[#858b9a]">
-                Choose these per tenant. TDS is calculated on the GST-inclusive invoice total.
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e4c77a]/70">Optional: rent bill taxes</p>
+              <p className="mt-1.5 text-xs leading-5 text-white/40">
+                Turn these on only when they apply to this tenant. TDS is calculated on the GST-inclusive invoice total.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[#e3e5ec] bg-[#fafafd] p-4">
-                <label className="flex items-center gap-3 text-sm font-semibold text-[#4d5362]">
+              <div className="border border-white/10 bg-white/[0.018] p-4">
+                <label className="flex items-center gap-3 text-sm font-semibold text-white/70">
                   <input
-                    className="size-4 accent-[#5555c7]"
+                    className="size-4 accent-[#e4c77a]"
                     type="checkbox"
                     name="gstEnabled"
                     checked={gstEnabled}
@@ -2583,16 +2679,16 @@ function TenantDialog({
                       />
                       {state.errors?.gstTaxablePercent && <FieldError message={state.errors.gstTaxablePercent} />}
                     </Field>
-                    <p className="text-[10px] leading-4 text-[#8b91a0] sm:col-span-2">
+                    <p className="text-[10px] leading-4 text-white/35 sm:col-span-2">
                       Use 50% when half the rent is billed with GST and half without GST.
                     </p>
                   </div>
                 )}
               </div>
-              <div className="rounded-xl border border-[#e3e5ec] bg-[#fafafd] p-4">
-                <label className="flex items-center gap-3 text-sm font-semibold text-[#4d5362]">
+              <div className="border border-white/10 bg-white/[0.018] p-4">
+                <label className="flex items-center gap-3 text-sm font-semibold text-white/70">
                   <input
-                    className="size-4 accent-[#5555c7]"
+                    className="size-4 accent-[#e4c77a]"
                     type="checkbox"
                     name="tdsEnabled"
                     checked={tdsEnabled}
@@ -2621,9 +2717,9 @@ function TenantDialog({
               </div>
             </div>
             {baseRent > 0 && (
-              <div className="rounded-xl border border-[#dfe3f4] bg-[#f6f7fd] px-4 py-3">
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#777e91]">Monthly bill preview</p>
-                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#606779]">
+              <div className="border border-[#e4c77a]/20 bg-[#e4c77a]/[0.045] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#e4c77a]/70">Monthly bill preview</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/45">
                   <span>Rent {formatCurrency(baseRent)}</span>
                   {gstEnabled && (
                     <span>
@@ -2631,16 +2727,16 @@ function TenantDialog({
                     </span>
                   )}
                   {tdsEnabled && <span>− TDS {formatCurrency(previewTds)}</span>}
-                  <span className="font-extrabold text-[#3f4660]">= {formatCurrency(previewPayable)} payable</span>
+                  <span className="font-semibold text-[#e4c77a]">= {formatCurrency(previewPayable)} payable</span>
                 </div>
               </div>
             )}
           </section>
 
-          <section className="space-y-4 border-t border-[#eff0f4] pt-5">
+          <section className="space-y-4 border-t border-white/10 pt-5">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b91a0]">Scheduled rent increase</p>
-              <p className="mt-1.5 text-xs leading-5 text-[#858b9a]">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e4c77a]/70">Optional: scheduled rent increase</p>
+              <p className="mt-1.5 text-xs leading-5 text-white/40">
                 Example: increase the rent by 5% every 12 months, with the next increase on 1 April 2027.
               </p>
             </div>
@@ -2649,15 +2745,15 @@ function TenantDialog({
               <TenantInput label="Increase rent every (months)" name="rentEscalationMonths" type="number" value={tenant?.rentEscalationMonths} error={state.errors?.rentEscalationMonths} />
               <TenantInput label="Next rent increase date" name="nextEscalationDate" type="date" value={tenant?.nextEscalationDate} error={state.errors?.nextEscalationDate} />
             </div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b91a0]">Lease document</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e4c77a]/70">Lease document</p>
             <Field label="Lease document URL">
               <input className={inputClass} name="leaseDocUrl" type="url" defaultValue={tenant?.leaseDocUrl} aria-invalid={Boolean(state.errors?.leaseDocUrl)} placeholder="https://..." />
               {state.errors?.leaseDocUrl && <FieldError message={state.errors.leaseDocUrl} />}
             </Field>
           </section>
 
-          <label className="flex items-center gap-3 rounded-xl border border-[#e3eee9] bg-[#f3faf7] px-4 py-3 text-sm font-semibold text-[#497365]">
-            <input className="size-4 accent-[#5555c7]" type="checkbox" name="isActive" defaultChecked={tenant?.isActive ?? true} />
+          <label className="flex items-center gap-3 border border-[#7aa18b]/25 bg-[#7aa18b]/[0.07] px-4 py-3 text-sm font-semibold text-[#9bc4ab]">
+            <input className="size-4 accent-[#9bc4ab]" type="checkbox" name="isActive" defaultChecked={tenant?.isActive ?? true} />
             Active tenant (marks the unit occupied)
           </label>
 
@@ -2684,6 +2780,7 @@ function TenantInput({
   type,
   value,
   error,
+  hint,
   step,
   min,
   max,
@@ -2693,6 +2790,7 @@ function TenantInput({
   type: "date" | "number";
   value?: string | number | null;
   error?: string;
+  hint?: string;
   step?: string;
   min?: number;
   max?: number;
@@ -2711,6 +2809,34 @@ function TenantInput({
         <input className={inputClass} name={name} type={type} min={min ?? 0} max={max} step={step} defaultValue={value ?? ""} aria-invalid={Boolean(error)} />
       )}
       {error && <FieldError message={error} />}
+      {!error && hint && <p className="mt-1.5 text-[10px] leading-4 text-white/35">{hint}</p>}
     </Field>
+  );
+}
+
+function LeaseFieldGroup({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-white/10 bg-white/[0.018] p-4 sm:p-5">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="grid size-8 shrink-0 place-items-center border border-[#e4c77a]/20 bg-[#e4c77a]/[0.06] text-[#e4c77a]/80">
+          {icon}
+        </span>
+        <div>
+          <h3 className="text-sm font-semibold text-white/75">{title}</h3>
+          <p className="mt-1 text-[11px] leading-4 text-white/40">{description}</p>
+        </div>
+      </div>
+      {children}
+    </div>
   );
 }
