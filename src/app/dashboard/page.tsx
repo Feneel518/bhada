@@ -16,6 +16,7 @@ import { getTenantAnalytics } from "@/lib/tenant-analytics";
 import { getIncomeOverview } from "@/lib/dashboard-analytics";
 import { getNotifications } from "@/lib/notifications";
 import { hasPortfolioAccess } from "@/lib/plans";
+import { getSubscriptionReceipts } from "@/lib/subscription-receipts";
 
 const dashboardSections = new Set([
   "Overview",
@@ -45,7 +46,7 @@ export default async function DashboardPage({
     : "Overview";
   const now = new Date();
   const financialYearStart = resolveFinancialYearStart(params.fy, now);
-  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, incomeOverview] = await Promise.all([
+  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, incomeOverview, subscriptionReceipts] = await Promise.all([
     db
       .select()
       .from(landlord)
@@ -59,6 +60,7 @@ export default async function DashboardPage({
     getAvailableFinancialYears(session.user.id, financialYearStart, now),
     getTenantAnalytics(session.user.id),
     getIncomeOverview(session.user.id, now),
+    getSubscriptionReceipts(session.user.id),
   ]);
   const notifications = await getNotifications(
     session.user.id,
@@ -79,6 +81,7 @@ export default async function DashboardPage({
       tenantAnalytics={tenantAnalytics}
       incomeOverview={incomeOverview}
       notifications={notifications}
+      subscriptionReceipts={subscriptionReceipts}
       subscription={{
         active: Boolean(profile && hasPortfolioAccess(profile)),
         status: profile?.subscriptionStatus ?? "none",

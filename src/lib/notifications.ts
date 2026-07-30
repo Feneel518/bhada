@@ -16,6 +16,13 @@ import { formatCurrency } from "@/lib/utils";
 
 export type NotificationKind = "payment" | "overdue" | "due_soon" | "lease" | "rent_increase";
 
+export type NotificationTarget =
+  | { type: "payment"; paymentId: string }
+  | { type: "rent_bill"; billId: string }
+  | { type: "electricity_bill"; billId: string }
+  | { type: "tenant"; tenantId: string }
+  | { type: "subscription_receipt"; paymentId: string };
+
 export type NotificationItem = {
   id: string;
   kind: NotificationKind;
@@ -23,6 +30,7 @@ export type NotificationItem = {
   description: string;
   date: string;
   section: "Payments" | "Tenants" | "Profile";
+  target: NotificationTarget;
   read: boolean;
 };
 
@@ -118,6 +126,7 @@ export async function getNotifications(
       description: `${formatCurrency(Number(receipt.amount))} received from ${receipt.tenantName} · ${receipt.receiptNumber}.`,
       date: dateKey(receipt.createdAt),
       section: "Payments",
+      target: { type: "payment", paymentId: receipt.id },
     });
   }
 
@@ -129,6 +138,7 @@ export async function getNotifications(
       description: `${formatCurrency(payment.amountPaise / 100)} Razorpay payment captured for your Portfolio plan.`,
       date: dateKey(payment.occurredAt),
       section: "Profile",
+      target: { type: "subscription_receipt", paymentId: payment.id },
     });
   }
 
@@ -144,6 +154,7 @@ export async function getNotifications(
       description: `${bill.tenantName} has ${formatCurrency(bill.pending)} ${overdue ? "overdue" : "due"} on ${dateLabel(bill.dueDate)}.`,
       date: bill.dueDate,
       section: "Payments",
+      target: { type: "rent_bill", billId: bill.id },
     });
   }
 
@@ -159,6 +170,7 @@ export async function getNotifications(
       description: `${bill.tenantName} · ${bill.propertyName} ${bill.unitNumber}: ${formatCurrency(bill.pending)} ${overdue ? "was due" : "is due"} on ${dateLabel(bill.dueDate)}.`,
       date: bill.dueDate,
       section: "Payments",
+      target: { type: "electricity_bill", billId: bill.id },
     });
   }
 
@@ -175,6 +187,7 @@ export async function getNotifications(
           description: `${renter.name}'s lease for ${renter.propertyName} ${renter.unitNumber} ends on ${dateLabel(renter.leaseEnd)}.`,
           date: renter.leaseEnd,
           section: "Tenants",
+          target: { type: "tenant", tenantId: renter.id },
         });
       }
     }
@@ -189,6 +202,7 @@ export async function getNotifications(
           description: `${renter.name}'s rent increases by ${renter.rentEscalationPct}% on ${dateLabel(renter.nextEscalationDate)}.`,
           date: renter.nextEscalationDate,
           section: "Tenants",
+          target: { type: "tenant", tenantId: renter.id },
         });
       }
     }

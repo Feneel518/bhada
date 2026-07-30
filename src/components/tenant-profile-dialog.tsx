@@ -49,7 +49,7 @@ export function TenantProfileDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-h-[94vh] max-w-[1080px] overflow-y-auto border-white/10 bg-[#111111] p-0 text-[#edede8] shadow-[0_32px_120px_rgba(0,0,0,.72)]">
+      <DialogContent className="max-h-[94vh] max-w-[1080px] overflow-y-auto border-white/10 bg-[#111111] p-0 text-[#edede8] shadow-[0_24px_72px_rgba(0,0,0,.55)]">
         <div className="border-b border-white/10 bg-[#171717] px-5 py-5 sm:px-7 sm:py-6">
           <div className="flex items-start gap-4 pr-8">
             <span className="grid size-14 shrink-0 place-items-center border border-[#e4c77a]/35 bg-[#e4c77a]/[0.07] text-sm font-semibold tracking-[0.08em] text-[#e4c77a]">{initials}</span>

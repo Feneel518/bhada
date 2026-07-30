@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   Bell,
   CalendarClock,
@@ -17,11 +17,11 @@ import type { NotificationItem, NotificationKind } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 const kindStyles: Record<NotificationKind, { icon: typeof Bell; className: string }> = {
-  payment: { icon: CircleCheck, className: "bg-[#e8f5ef] text-[#328161]" },
-  overdue: { icon: CircleAlert, className: "bg-[#fff0ed] text-[#c65c4d]" },
-  due_soon: { icon: IndianRupee, className: "bg-[#fff4e8] text-[#b66a45]" },
-  lease: { icon: CalendarClock, className: "bg-[#eef0ff] text-[#5555c7]" },
-  rent_increase: { icon: TrendingUp, className: "bg-[#e8f5ef] text-[#328161]" },
+  payment: { icon: CircleCheck, className: "border-[#7aa18b]/25 bg-[#7aa18b]/10 text-[#9bc4ab]" },
+  overdue: { icon: CircleAlert, className: "border-[#c96a4e]/25 bg-[#c96a4e]/10 text-[#df8a70]" },
+  due_soon: { icon: IndianRupee, className: "border-[#dda676]/25 bg-[#dda676]/10 text-[#dda676]" },
+  lease: { icon: CalendarClock, className: "border-[#e4c77a]/25 bg-[#e4c77a]/10 text-[#e4c77a]" },
+  rent_increase: { icon: TrendingUp, className: "border-[#7aa18b]/25 bg-[#7aa18b]/10 text-[#9bc4ab]" },
 };
 
 const formatDate = new Intl.DateTimeFormat("en-IN", {
@@ -35,18 +35,22 @@ export function NotificationCenter({
   onNavigate,
 }: {
   initialNotifications: NotificationItem[];
-  onNavigate: (section: "Payments" | "Tenants" | "Profile") => void;
+  onNavigate: (notification: NotificationItem) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [optimisticReadIds, setOptimisticReadIds] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
-  const notifications = initialNotifications.map((item) =>
-    optimisticReadIds.includes(item.id) ? { ...item, read: true } : item,
-  );
+  const notifications = useMemo(() => {
+    const readIds = new Set(optimisticReadIds);
+    return initialNotifications.map((item) =>
+      readIds.has(item.id) ? { ...item, read: true } : item,
+    );
+  }, [initialNotifications, optimisticReadIds]);
   const unread = notifications.filter((item) => !item.read);
 
   useEffect(() => {
+    if (!open) return;
     function closeOnOutsideClick(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     }
@@ -59,7 +63,7 @@ export function NotificationCenter({
       document.removeEventListener("mousedown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, []);
+  }, [open]);
 
   function persistRead(keys: string[]) {
     if (!keys.length) return;
@@ -79,7 +83,7 @@ export function NotificationCenter({
 
   function openNotification(item: NotificationItem) {
     if (!item.read) persistRead([item.id]);
-    onNavigate(item.section);
+    onNavigate(item);
     setOpen(false);
   }
 
@@ -101,7 +105,7 @@ export function NotificationCenter({
         <Bell className="size-[18px]" />
         {unread.length > 0 && (
           <>
-            <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-[#ed7864] ring-2 ring-white" />
+            <span className="absolute right-1.5 top-1.5 size-2 bg-[#ed7864] ring-2 ring-[#111111]" />
             <span className="sr-only">{unread.length} unread notifications</span>
           </>
         )}
@@ -111,12 +115,12 @@ export function NotificationCenter({
         <section
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 top-12 z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-[#e5e7ef] bg-white shadow-[0_22px_70px_rgba(34,38,56,.18)]"
+          className="bhada-popover-surface absolute right-0 top-12 z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden border border-white/10 bg-[#171717] shadow-[0_22px_60px_rgba(0,0,0,.42)]"
         >
-          <div className="flex items-center justify-between border-b border-[#eff0f4] px-4 py-3.5">
+          <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3.5">
             <div>
-              <h2 className="text-sm font-extrabold text-[#292f3d]">Notifications</h2>
-              <p className="mt-0.5 text-[11px] text-[#9298a7]">
+              <h2 className="text-sm font-extrabold text-[#edede8]">Notifications</h2>
+              <p className="mt-0.5 text-[11px] text-white/35">
                 {unread.length ? `${unread.length} unread` : "You're all caught up"}
               </p>
             </div>
@@ -125,7 +129,7 @@ export function NotificationCenter({
                 type="button"
                 disabled={pending}
                 onClick={() => persistRead(unread.map((item) => item.id))}
-                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-bold text-[#5555c7] hover:bg-[#f1f1fd] disabled:opacity-50"
+                className="flex items-center gap-1.5 px-2 py-1.5 text-[11px] font-bold text-[#e4c77a] hover:bg-[#e4c77a]/10 disabled:opacity-50"
               >
                 <Check className="size-3.5" />
                 Mark all read
@@ -144,22 +148,22 @@ export function NotificationCenter({
                     type="button"
                     onClick={() => openNotification(item)}
                     className={cn(
-                      "flex w-full gap-3 border-b border-[#f0f1f5] px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-[#fafafd]",
-                      !item.read && "bg-[#f8f8ff]",
+                      "flex w-full gap-3 border-b border-white/[0.07] px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-white/[0.035]",
+                      !item.read && "bg-[#e4c77a]/[0.035]",
                     )}
                   >
-                    <span className={cn("mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl", style.className)}>
+                    <span className={cn("mt-0.5 grid size-9 shrink-0 place-items-center border", style.className)}>
                       <Icon className="size-4" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-start gap-2">
-                        <span className="flex-1 text-xs font-bold text-[#353b4a]">{item.title}</span>
-                        {!item.read && <span className="mt-1 size-2 shrink-0 rounded-full bg-[#6363d7]" />}
+                        <span className="flex-1 text-xs font-bold text-[#edede8]">{item.title}</span>
+                        {!item.read && <span className="mt-1 size-2 shrink-0 bg-[#e4c77a]" />}
                       </span>
-                      <span className="mt-1 block text-[11px] leading-[1.55] text-[#767d8e]">
+                      <span className="mt-1 block text-[11px] leading-[1.55] text-white/45">
                         {item.description}
                       </span>
-                      <span className="mt-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-[#a0a5b2]">
+                      <span className="mt-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-white/30">
                         {formatDate.format(new Date(`${item.date}T12:00:00+05:30`))}
                       </span>
                     </span>
@@ -169,11 +173,11 @@ export function NotificationCenter({
             </div>
           ) : (
             <div className="px-6 py-10 text-center">
-              <span className="mx-auto grid size-11 place-items-center rounded-2xl bg-[#f1f2f7] text-[#8c92a2]">
+              <span className="mx-auto grid size-11 place-items-center border border-white/10 bg-white/[0.035] text-white/40">
                 <Bell className="size-5" />
               </span>
-              <p className="mt-3 text-sm font-bold text-[#404655]">No notifications</p>
-              <p className="mt-1 text-xs leading-5 text-[#8c92a2]">
+              <p className="mt-3 text-sm font-bold text-[#edede8]">No notifications</p>
+              <p className="mt-1 text-xs leading-5 text-white/40">
                 Payments, upcoming dues, lease dates, and rent increases will appear here.
               </p>
             </div>

@@ -111,7 +111,21 @@ export async function POST(request: Request) {
     revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/owner");
-    return Response.json({ message: "Portfolio is now active." });
+    return Response.json({
+      message: "Portfolio is now active.",
+      receipt: {
+        receiptNumber: `BHADA-${payment.id.slice(4).toUpperCase()}`,
+        paymentId: payment.id,
+        subscriptionId,
+        amountPaise: Math.max(0, Math.round(payment.amount)),
+        currency: payment.currency || "INR",
+        status: payment.status,
+        paidAt: new Date(payment.created_at * 1_000).toISOString(),
+        customerName: session.user.name,
+        customerEmail: session.user.email,
+        description: "Bhada Portfolio plan - monthly subscription",
+      },
+    });
   } catch (error) {
     console.error("Unable to verify Razorpay subscription", error);
     return Response.json({ message: "Unable to verify the subscription." }, { status: 503 });

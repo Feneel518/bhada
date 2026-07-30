@@ -170,6 +170,109 @@ button {
   display: none;
 }
 
+/*
+ * Dialog motion stays on opacity and transforms so opening a modal does not
+ * repaint and blur the full dashboard underneath it.
+ */
+.bhada-dialog-overlay {
+  animation: bhada-dialog-overlay-in 100ms linear both;
+}
+
+.bhada-dialog-overlay[data-state="closed"] {
+  animation: bhada-dialog-overlay-out 80ms linear both;
+}
+
+.bhada-dialog-content {
+  animation: bhada-dialog-content-in 120ms cubic-bezier(.2, .8, .2, 1) both;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.bhada-dialog-content[data-state="closed"] {
+  animation: bhada-dialog-content-out 80ms ease-in both;
+}
+
+.bhada-popover-surface {
+  animation: bhada-popover-in 100ms cubic-bezier(.2, .8, .2, 1) both;
+  transform-origin: top right;
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="default"] {
+  border-color: #e4c77a;
+  background: #e4c77a;
+  color: #111111;
+  box-shadow: 0 8px 24px rgba(228, 199, 122, 0.09);
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="default"]:hover {
+  border-color: #f0da9d;
+  background: #f0da9d;
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="outline"] {
+  border-color: rgba(228, 199, 122, 0.42);
+  background: rgba(228, 199, 122, 0.045);
+  color: #e4c77a;
+  box-shadow: none;
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="outline"]:hover {
+  border-color: #e4c77a;
+  background: rgba(228, 199, 122, 0.1);
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="ghost"] {
+  color: rgba(237, 237, 232, 0.55);
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="ghost"]:hover {
+  background: rgba(255, 255, 255, 0.055);
+  color: #e4c77a;
+}
+
+@keyframes bhada-dialog-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bhada-dialog-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes bhada-dialog-content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -49%) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes bhada-dialog-content-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -49.5%) scale(.99);
+  }
+}
+
+@keyframes bhada-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px) scale(.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes rise {
   from {
     opacity: 0;
