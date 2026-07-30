@@ -1,37 +1,118 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import {
   ArrowRight,
-  BarChart3,
   BellRing,
   Building2,
   Check,
-  FileCheck2,
+  FileText,
+  Gauge,
+  HelpCircle,
+  LayoutDashboard,
+  Layers,
+  Receipt,
   ShieldCheck,
-  Sparkles,
-  Users,
+  Share2,
   WalletCards,
+  Zap,
 } from "lucide-react";
 import { auth } from "@/lib/auth";
+import { LandingFaq } from "@/components/landing-faq";
 
-const benefits = [
+export const metadata: Metadata = {
+  title: "Rent management for independent landlords",
+  description:
+    "Manage rent, GST and TDS invoices, submeter electricity, payments, reminders, and PDF bills from one calm landlord dashboard.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Bhada — Rent management, without the runaround",
+    description:
+      "Rent billing, submeter electricity, payments, and reminders in one dashboard for independent landlords.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Bhada — Rent management, without the runaround",
+    description:
+      "Rent billing, submeter electricity, payments, and reminders in one calm dashboard.",
+  },
+};
+
+const capabilities = [
+  { icon: Receipt, value: "GST + TDS", label: "Compliant billing, out of the box" },
+  { icon: Zap, value: "Rent + Electricity", label: "One combined monthly bill" },
+  { icon: LayoutDashboard, value: "One dashboard", label: "Every property, every tenant" },
+];
+
+const features = [
   {
-    icon: WalletCards,
-    title: "Rent tracking that stays current",
-    copy: "See paid, pending, and overdue rent at a glance. No spreadsheet archaeology required.",
-    tone: "bg-[#eeefff] text-[#5656c9]",
+    icon: Receipt,
+    num: "01",
+    title: "GST & TDS-ready invoicing",
+    desc: "Configure GST and TDS per tenant, and every rent bill calculates and applies them automatically — no manual math, no surprises.",
   },
   {
-    icon: Users,
-    title: "Every tenant, lease, and unit",
-    copy: "Keep the details connected, searchable, and ready whenever you need them.",
-    tone: "bg-[#e7f6f1] text-[#277c68]",
+    icon: Zap,
+    num: "02",
+    title: "Submeter electricity billing",
+    desc: "Log a meter reading each month and get an accurate, auto-calculated electricity charge for that unit alone.",
+  },
+  {
+    icon: Layers,
+    num: "03",
+    title: "Combined monthly bills",
+    desc: "Rent, electricity, and other charges roll into one bill the moment the billing period starts — nothing to assemble by hand.",
+  },
+  {
+    icon: WalletCards,
+    num: "04",
+    title: "Flexible payment allocation",
+    desc: "Record a payment as a lump sum or split it bill-by-bill. Partial payments are tracked and the remainder carries forward as credit.",
+  },
+  {
+    icon: FileText,
+    num: "05",
+    title: "PDF bills, shareable anywhere",
+    desc: "Download or share a polished PDF bill straight from the dashboard, in one tap — ready for WhatsApp, email, or print.",
   },
   {
     icon: BellRing,
-    title: "Less chasing, more clarity",
-    copy: "Know what needs attention today and keep your rental operation moving.",
-    tone: "bg-[#fff0e5] text-[#b96d37]",
+    num: "06",
+    title: "Built-in reminders",
+    desc: "In-app notifications flag overdue rent, upcoming dues, lease expiries, and rent escalations before they slip through.",
+  },
+];
+
+const units = [
+  { name: "Unit 2A", tenant: "R. Mehta", amount: "₹18,500", status: "PAID", statusColor: "rgba(237,237,232,0.4)" },
+  { name: "Unit 3B", tenant: "S. Iyer", amount: "₹24,850", status: "DUE", statusColor: "#E4C77A" },
+  { name: "Unit 1C", tenant: "A. Khanna", amount: "₹21,000", status: "PAID", statusColor: "rgba(237,237,232,0.4)" },
+  { name: "Unit 4D", tenant: "P. Nair", amount: "₹19,200", status: "OVERDUE", statusColor: "#C96A4E" },
+];
+
+const lineItems = [
+  { label: "Rent", amount: "₹20,000" },
+  { label: "Electricity (submeter)", amount: "₹2,400" },
+  { label: "GST", amount: "₹2,240" },
+  { label: "TDS deducted", amount: "−₹200" },
+];
+
+const reasons = [
+  {
+    icon: Receipt,
+    title: "No more spreadsheet math",
+    desc: "GST, TDS, and submeter electricity charges calculate themselves, correctly, every single month.",
+  },
+  {
+    icon: Gauge,
+    title: "Nothing falls through",
+    desc: "In-app reminders surface overdue rent, upcoming dues, and expiring leases before they become a problem.",
+  },
+  {
+    icon: Layers,
+    title: "One place for every property",
+    desc: "Properties, units, tenants, and payments — all connected in a single, calm dashboard.",
   },
 ];
 
@@ -41,124 +122,314 @@ export default async function Home() {
   const primaryLabel = session ? "Open dashboard" : "Start for free";
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fbfbfd] text-[#202635]">
-      <nav className="relative z-20 mx-auto flex h-20 max-w-7xl items-center justify-between px-5 sm:px-8">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="Bhada home">
-          <Logo />
-        </Link>
-        <div className="hidden items-center gap-8 text-sm font-semibold text-[#6e7585] md:flex">
-          <a href="#features" className="transition hover:text-[#4f4fc2]">Features</a>
-          <a href="#how-it-works" className="transition hover:text-[#4f4fc2]">How it works</a>
-          <a href="#security" className="transition hover:text-[#4f4fc2]">Security</a>
-        </div>
-        <div className="flex items-center gap-2">
-          {!session && (
-            <Link href="/sign-in" className="hidden rounded-xl px-4 py-2.5 text-sm font-bold text-[#515767] transition hover:bg-white sm:block">
-              Sign in
-            </Link>
-          )}
-          <Link href={primaryHref} className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#5656ce] px-4 text-sm font-bold text-white shadow-lg shadow-indigo-200/70 transition hover:-translate-y-0.5 hover:bg-[#4949bd]">
-            {primaryLabel} <ArrowRight className="size-4" />
+    <main className="min-h-screen overflow-x-clip bg-[#111111] font-sans text-[#EDEDE8] selection:bg-[#E4C77A] selection:text-[#111111]">
+      <a
+        href="#main-content"
+        className="fixed top-3 left-3 z-[100] -translate-y-20 bg-[#EDEDE8] px-4 py-2 text-sm font-semibold text-[#111111] transition focus:translate-y-0"
+      >
+        Skip to content
+      </a>
+      <div className="h-px w-full bg-linear-to-r from-transparent via-[#E4C77A]/50 to-transparent" />
+      <header className="border-b border-white/10">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-5 sm:px-10 sm:py-6 lg:px-[72px]">
+          <Link href="/" className="flex items-center gap-2.5" aria-label="Bhada home">
+            <Logo />
           </Link>
-        </div>
-      </nav>
-
-      <section className="relative">
-        <div className="absolute left-[-12rem] top-20 size-[28rem] rounded-full bg-[#e7e7ff] blur-3xl" />
-        <div className="absolute right-[-14rem] top-[-5rem] size-[32rem] rounded-full bg-[#e8f8f3] blur-3xl" />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-5 pb-24 pt-16 sm:px-8 sm:pt-24 lg:grid-cols-[.92fr_1.08fr] lg:pb-32">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#deddfa] bg-white/80 px-3.5 py-2 text-xs font-bold text-[#5656c6] shadow-sm backdrop-blur">
-              <Sparkles className="size-3.5" /> Built for independent landlords
-            </div>
-            <h1 className="mt-7 font-display text-5xl leading-[1.08] tracking-[-0.06em] text-[#202635] sm:text-6xl lg:text-[68px]">
-              Rent management, without the runaround.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[#6f7687]">
-              Bhada brings your properties, tenants, leases, and payments into one calm workspace—so you always know what&apos;s happening and what comes next.
-            </p>
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <Link href={primaryHref} className="inline-flex h-13 items-center justify-center gap-2 rounded-xl bg-[#5656ce] px-6 text-sm font-bold text-white shadow-xl shadow-indigo-200/70 transition hover:-translate-y-0.5 hover:bg-[#4949bd]">
-                {primaryLabel} <ArrowRight className="size-4" />
+          <nav aria-label="Primary navigation" className="hidden items-center gap-10 text-xs tracking-[0.5px] text-white/55 uppercase md:flex">
+            <a href="#features" className="transition hover:text-white">Features</a>
+            <a href="#how-it-works" className="transition hover:text-white">How it works</a>
+            <a href="#faq" className="transition hover:text-white">FAQ</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            {!session && (
+              <Link href="/sign-in" className="hidden text-xs tracking-[0.5px] text-white/55 uppercase transition hover:text-white sm:block">
+                Sign in
               </Link>
-              <a href="#features" className="inline-flex h-13 items-center justify-center rounded-xl border border-[#dfe2e9] bg-white px-6 text-sm font-bold text-[#4f5666] transition hover:border-[#c9c9ef] hover:text-[#4e4ec0]">
-                See how it works
-              </a>
+            )}
+            <Link
+              href={primaryHref}
+              className="border border-white/30 px-4 py-2.5 text-[11px] font-semibold tracking-[0.5px] uppercase transition hover:border-white/60 hover:bg-white/[0.04] sm:px-5 sm:text-xs"
+            >
+              <span className="sm:hidden">{session ? "Dashboard" : "Start free"}</span>
+              <span className="hidden sm:inline">{session ? "Dashboard" : "Start free"}</span>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* HERO */}
+      <section id="main-content" className="relative scroll-mt-8 overflow-hidden border-b border-white/10 px-5 pt-16 pb-14 sm:px-10 sm:pt-24 sm:pb-20 lg:px-[72px] lg:pt-[124px] lg:pb-24">
+        <div className="pointer-events-none absolute -top-40 -right-40 size-[32rem] rounded-full bg-[#E4C77A]/[0.06] blur-[120px]" />
+        <div className="pointer-events-none absolute -bottom-56 -left-40 size-[28rem] rounded-full bg-white/[0.03] blur-[120px]" />
+        <div className="relative mx-auto grid max-w-[1296px] items-end gap-10 lg:grid-cols-[minmax(0,2.1fr)_minmax(280px,1fr)] lg:gap-16">
+          <div className="min-w-0">
+            <p className="mb-6 text-[11px] font-semibold tracking-[2px] text-[#E4C77A] uppercase sm:mb-7 sm:text-xs">For independent landlords</p>
+            <h1 className="max-w-[900px] font-display text-[clamp(2.75rem,11.5vw,5.5rem)] leading-[1.02] tracking-[-1px] lg:tracking-[-1.5px]">
+              Rent management,
+              <br />
+              without the runaround.
+            </h1>
+          </div>
+          <div className="max-w-md pb-1 lg:pb-2">
+            <p className="mb-8 text-[15px] leading-7 text-white/60 sm:text-[17px]">
+              GST &amp; TDS-ready invoicing, submeter electricity billing, in-app reminders, and one-tap PDF bills — one dashboard, every property.
+            </p>
+            <div className="flex flex-wrap gap-3.5">
+              <Link href={primaryHref} className="group inline-flex min-h-12 items-center gap-2 bg-[#EDEDE8] px-7 py-3.5 text-sm font-semibold text-[#111111] transition hover:bg-white">
+                {primaryLabel} <ArrowRight className="size-4 transition duration-300 group-hover:translate-x-0.5" />
+              </Link>
             </div>
-            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold text-[#7a8191]">
-              {["Free to get started", "Setup in minutes", "Your data stays yours"].map((item) => (
-                <span key={item} className="flex items-center gap-2"><Check className="size-3.5 text-[#45a185]" /> {item}</span>
+            <div className="mt-7 grid gap-2 text-xs text-white/45 sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-2">
+              {["Free to get started", "Set up in minutes", "Your data stays yours"].map((item) => (
+                <span key={item} className="flex items-center gap-1.5">
+                  <Check className="size-3.5 text-[#E4C77A]" /> {item}
+                </span>
               ))}
             </div>
           </div>
-
-          <HeroDashboard />
         </div>
       </section>
 
-      <section id="features" className="border-y border-[#ebecef] bg-white py-24">
-        <div className="mx-auto max-w-7xl px-5 sm:px-8">
-          <div className="max-w-2xl">
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#5959cb]">Everything in one place</p>
-            <h2 className="mt-4 font-display text-4xl tracking-[-0.05em] sm:text-5xl">A clearer view of every rental.</h2>
-            <p className="mt-5 text-base leading-7 text-[#747b8b]">Built around the work you do every month, without the clutter of software made for giant property companies.</p>
+      {/* CAPABILITY STRIP */}
+      <section aria-label="Core capabilities" className="border-b border-white/10">
+        <div className="mx-auto grid max-w-[1440px] grid-cols-1 sm:grid-cols-3">
+          {capabilities.map((c, index) => (
+          <div
+            key={c.value}
+            className={`group px-5 py-9 transition duration-300 hover:bg-white/[0.02] sm:px-8 sm:py-11 lg:px-12 ${index < capabilities.length - 1 ? "border-b border-white/10 sm:border-r sm:border-b-0" : ""}`}
+          >
+            <span className="mb-6 grid size-10 place-items-center border border-white/15 text-[#E4C77A] transition duration-300 group-hover:border-[#E4C77A]/50 group-hover:bg-[#E4C77A]/5">
+              <c.icon className="size-5" />
+            </span>
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-[34px]">{c.value}</h2>
+            <p className="mt-2 text-[11px] leading-5 tracking-[0.8px] text-white/45 uppercase">{c.label}</p>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {benefits.map(({ icon: Icon, title, copy, tone }) => (
-              <article key={title} className="rounded-[24px] border border-[#e8e9ee] bg-[#fdfdfe] p-7 transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_50px_rgba(35,40,55,.07)]">
-                <span className={`grid size-12 place-items-center rounded-2xl ${tone}`}><Icon className="size-5" /></span>
-                <h3 className="mt-6 font-display text-xl tracking-[-0.035em]">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-[#777e8e]">{copy}</p>
+          ))}
+        </div>
+      </section>
+
+      {/* FEATURES */}
+      <section id="features" className="scroll-mt-8 border-b border-white/10 px-5 py-20 sm:px-10 sm:py-24 lg:px-[72px] lg:py-[112px]">
+        <div className="mx-auto max-w-[1296px]">
+          <div className="mb-14 grid gap-6 sm:mb-16 lg:grid-cols-[1fr_0.8fr] lg:items-end">
+            <div>
+              <p className="mb-5 text-[11px] font-semibold tracking-[1.8px] text-[#E4C77A] uppercase">
+                From bill to payment
+              </p>
+              <h2 className="max-w-2xl font-display text-3xl leading-tight tracking-[-0.5px] sm:text-4xl lg:text-[44px]">
+                One place for the entire rent cycle.
+              </h2>
+            </div>
+            <p className="max-w-lg text-sm leading-6 text-white/50 sm:text-[15px] sm:leading-7 lg:justify-self-end">
+              The recurring work stays connected—from calculating the month&apos;s charges to recording the final payment.
+            </p>
+          </div>
+
+          <div className="grid gap-px bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map(({ icon: Icon, num, title, desc }) => (
+              <article
+                key={num}
+                className="group flex min-h-[260px] flex-col bg-[#111111] p-7 transition duration-300 hover:bg-white/[0.025] sm:p-8"
+              >
+                <div className="flex items-start justify-between">
+                  <span className="grid size-11 place-items-center border border-white/15 text-[#E4C77A] transition duration-300 group-hover:border-[#E4C77A]/50 group-hover:bg-[#E4C77A]/5">
+                    <Icon className="size-5" />
+                  </span>
+                  <span className="font-display text-sm text-white/20 transition duration-300 group-hover:text-white/35">
+                    {num}
+                  </span>
+                </div>
+                <div className="mt-auto pt-10">
+                  <h3 className="font-display text-xl leading-snug sm:text-[22px]">{title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-white/50">{desc}</p>
+                </div>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" className="py-24">
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 sm:px-8 lg:grid-cols-[.8fr_1.2fr] lg:items-center">
-          <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#5959cb]">Quietly powerful</p>
-            <h2 className="mt-4 font-display text-4xl tracking-[-0.05em] sm:text-5xl">Your month, under control.</h2>
-            <p className="mt-5 text-base leading-7 text-[#747b8b]">Start with a property, connect its tenants, and let Bhada give you a useful picture of rent collection from day one.</p>
-            <Link href={primaryHref} className="mt-7 inline-flex items-center gap-2 text-sm font-extrabold text-[#5353c6] hover:underline">
-              Build your workspace <ArrowRight className="size-4" />
-            </Link>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {[
-              ["01", "Add your properties", "Bring buildings and units into one tidy portfolio."],
-              ["02", "Connect tenants", "Keep lease and contact details close at hand."],
-              ["03", "Track every payment", "See collection progress and follow up with confidence."],
-            ].map(([number, title, copy]) => (
-              <div key={number} className="rounded-[22px] bg-[#272752] p-6 text-white">
-                <span className="text-xs font-black text-[#aaaaf0]">{number}</span>
-                <h3 className="mt-12 font-display text-lg">{title}</h3>
-                <p className="mt-3 text-sm leading-6 text-[#c9cadb]">{copy}</p>
+      {/* APP MOCKUPS */}
+      <div id="how-it-works" className="scroll-mt-8 border-b border-white/10 px-5 py-20 sm:px-10 sm:py-24 lg:px-[72px] lg:py-[112px]">
+        <div className="mx-auto grid max-w-[1296px] grid-cols-1 gap-px bg-white/10 lg:grid-cols-2">
+          {/* Dashboard mockup */}
+          <article className="flex h-full flex-col bg-[#111111] p-7 sm:p-11">
+            <div className="mb-1.5 font-display text-xl sm:text-2xl">One dashboard, every property</div>
+            <div className="mb-8 text-sm text-white/50 sm:mb-9">Live rent status across all units, at a glance.</div>
+            <div className="flex flex-1 flex-col overflow-hidden border border-white/15 bg-linear-to-b from-white/[0.025] to-transparent">
+              <div className="flex items-center justify-between border-b border-white/10 px-5 py-5 sm:px-6">
+                <div className="text-xs tracking-[1px] text-white/50 uppercase">This Month&apos;s Collections</div>
+                <div className="font-display text-xl sm:text-2xl">₹4,82,000</div>
               </div>
+              {units.map((u) => (
+                <div key={u.name} className="flex flex-1 items-center justify-between border-t border-white/[0.06] px-5 py-4 sm:px-6">
+                  <div>
+                    <div className="text-sm font-medium">{u.name}</div>
+                    <div className="mt-0.5 text-xs text-white/40">{u.tenant}</div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm">{u.amount}</div>
+                    <div className="text-[11px] tracking-[0.5px]" style={{ color: u.statusColor }}>{u.status}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          {/* Bill mockup */}
+          <article className="flex h-full flex-col bg-[#111111] p-7 sm:p-11">
+            <div className="mb-1.5 font-display text-xl sm:text-2xl">Rent, electricity, and tax in one bill</div>
+            <div className="mb-8 text-sm text-white/50 sm:mb-9">GST and TDS calculated automatically, ready to share as a PDF.</div>
+            <div className="flex flex-1 flex-col border border-white/15 bg-linear-to-b from-white/[0.025] to-transparent p-6 sm:p-7">
+              <div className="mb-5 flex items-start justify-between">
+                <div>
+                  <div className="font-display text-base sm:text-[17px]">Bill #RB-2607-014</div>
+                  <div className="mt-1 text-xs text-white/40">Sunrise Apartments · Unit 3B</div>
+                </div>
+                <div className="text-[11px] tracking-[0.5px] text-[#E4C77A]">DUE JUL 05</div>
+              </div>
+              <div className="border-t border-white/10 pt-4">
+                {lineItems.map((li) => (
+                  <div key={li.label} className="flex justify-between py-1.5 text-[13px] text-white/65">
+                    <div>{li.label}</div>
+                    <div>{li.amount}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3.5 flex items-center justify-between border-t border-white/15 pt-4">
+                <div className="text-xs tracking-[1px] text-white/50 uppercase">Total Due</div>
+                <div className="font-display text-2xl">₹24,440</div>
+              </div>
+              <div className="mt-auto flex gap-3 pt-6">
+                <div className="flex flex-1 items-center justify-center gap-2 border border-[#EDEDE8] py-3 text-[13px] transition hover:bg-white hover:text-[#111111]">
+                  <FileText className="size-3.5" /> Download PDF
+                </div>
+                <div className="flex flex-1 items-center justify-center gap-2 border border-transparent py-3 text-[13px] text-white/60">
+                  <Share2 className="size-3.5" /> Share
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      {/* WHY IT WORKS */}
+      <div className="border-b border-white/10 px-5 py-20 sm:px-10 sm:py-24 lg:px-[72px] lg:py-[112px]">
+        <div className="mx-auto max-w-[1296px]">
+        <div className="mb-14 font-display text-3xl sm:mb-16 sm:text-4xl lg:text-[44px]">
+          No more chasing rent by memory.
+        </div>
+        <div className="grid grid-cols-1 gap-px bg-white/10 sm:grid-cols-3">
+          {reasons.map(({ icon: Icon, title, desc }, index) => (
+            <div key={title} className="group relative bg-[#111111] p-7 transition duration-300 hover:bg-white/[0.02] sm:p-9">
+              <div className="flex items-center justify-between">
+                <span className="grid size-11 place-items-center border border-white/15 text-[#E4C77A] transition duration-300 group-hover:border-[#E4C77A]/50 group-hover:bg-[#E4C77A]/5">
+                  <Icon className="size-5" />
+                </span>
+                <span className="font-display text-2xl text-white/10">0{index + 1}</span>
+              </div>
+              <div className="mt-7 text-base font-semibold sm:text-lg">{title}</div>
+              <div className="mt-2.5 text-sm leading-relaxed text-white/55">{desc}</div>
+            </div>
+          ))}
+        </div>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <section id="faq" className="scroll-mt-8 border-b border-white/10 px-5 py-20 sm:px-10 sm:py-24 lg:px-[72px] lg:py-[112px]">
+        <div className="mx-auto grid max-w-[1296px] gap-12 lg:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.28fr)] lg:gap-24">
+          <div className="lg:sticky lg:top-10 lg:self-start">
+            <span className="mb-6 grid size-10 place-items-center border border-white/15 text-[#E4C77A]">
+              <HelpCircle className="size-[18px]" />
+            </span>
+            <p className="text-[11px] font-semibold tracking-[1.8px] text-[#E4C77A] uppercase">
+              Good to know
+            </p>
+            <h2 className="mt-5 max-w-md font-display text-3xl leading-tight sm:text-4xl lg:text-[44px]">
+              The details, without the fine print.
+            </h2>
+            <p className="mt-5 max-w-sm text-sm leading-6 text-white/50 sm:text-[15px] sm:leading-7">
+              Straight answers about billing, payments, documents, and privacy before you add your first property.
+            </p>
+          </div>
+
+          <div>
+            <LandingFaq />
+            <div className="mt-8 flex flex-col items-start justify-between gap-5 border-t border-white/10 pt-7 sm:flex-row sm:items-center">
+              <p className="max-w-md text-sm leading-6 text-white/50">
+                Ready to see it with your own properties and tenants?
+              </p>
+              <Link
+                href={primaryHref}
+                className="group inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-[#E4C77A] transition hover:text-[#f0da9d]"
+              >
+                {primaryLabel}
+                <ArrowRight className="size-4 transition duration-300 group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <div className="relative overflow-hidden px-6 py-20 text-center sm:px-10 sm:py-24 lg:py-[120px]">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 size-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#E4C77A]/[0.06] blur-[140px]" />
+        <div className="relative">
+          <div className="mx-auto mb-6 max-w-2xl font-display text-4xl tracking-[-1px] sm:text-5xl lg:text-[56px]">
+            Stop tracking rent in your head.
+          </div>
+          <div className="mb-10 text-base text-white/55 sm:text-[17px]">Set up your first property in under 3 minutes.</div>
+          <div className="mb-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/45">
+            {["GST & TDS ready", "Submeter billing", "One-tap PDF bills"].map((item) => (
+              <span key={item} className="flex items-center gap-1.5">
+                <Check className="size-3.5 text-[#E4C77A]" /> {item}
+              </span>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section id="security" className="mx-auto max-w-7xl px-5 pb-24 sm:px-8">
-        <div className="relative overflow-hidden rounded-[30px] bg-[#eeefff] px-7 py-12 sm:px-12 lg:flex lg:items-center lg:justify-between">
-          <div className="absolute right-[-5rem] top-[-8rem] size-72 rounded-full border-[42px] border-white/35" />
-          <div className="relative max-w-2xl">
-            <div className="flex items-center gap-2 text-sm font-bold text-[#5151bb]"><ShieldCheck className="size-5" /> Private by design</div>
-            <h2 className="mt-4 font-display text-3xl tracking-[-0.045em]">Your dashboard belongs only to you.</h2>
-            <p className="mt-4 leading-7 text-[#686e83]">Secure sessions, verified email accounts, and user-scoped portfolio data keep each workspace separate.</p>
-          </div>
-          <Link href={primaryHref} className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-xl bg-[#252550] px-5 text-sm font-bold text-white lg:mt-0">
-            {primaryLabel} <ArrowRight className="size-4" />
+          <Link href={primaryHref} className="group inline-flex items-center gap-2 bg-[#EDEDE8] px-9 py-[18px] text-sm font-semibold text-[#111111] transition hover:bg-white">
+            {primaryLabel} <ArrowRight className="size-4 transition duration-300 group-hover:translate-x-0.5" />
           </Link>
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-white/40">
+            <ShieldCheck className="size-3.5 text-[#E4C77A]" /> Your data stays private, scoped to your account alone.
+          </div>
         </div>
-      </section>
+      </div>
 
-      <footer className="border-t border-[#e8e9ed] bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-5 py-8 text-sm text-[#838998] sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <Logo />
-          <p>© 2026 Bhada. Rent, without the runaround.</p>
+      {/* FOOTER */}
+      <footer className="px-5 py-16 sm:px-10 sm:py-20 lg:px-[72px]">
+        <div className="mx-auto max-w-[1296px]">
+        <div className="grid gap-12 sm:grid-cols-[1.3fr_1fr_1fr]">
+          <div>
+            <div className="flex items-center gap-2 font-display text-lg text-[#EDEDE8]">
+              <Building2 className="size-4" /> bhada
+            </div>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/45">
+              Rent, GST &amp; TDS billing, submeter electricity, and payments — one calm dashboard for independent landlords.
+            </p>
+          </div>
+          <div>
+            <div className="mb-5 text-xs tracking-[1px] text-white/40 uppercase">Product</div>
+            <div className="flex flex-col gap-3.5 text-sm text-white/60">
+              <a href="#features" className="transition hover:text-white">Features</a>
+              <a href="#how-it-works" className="transition hover:text-white">How it works</a>
+              <a href="#faq" className="transition hover:text-white">FAQ</a>
+            </div>
+          </div>
+          <div>
+            <div className="mb-5 text-xs tracking-[1px] text-white/40 uppercase">Account</div>
+            <div className="flex flex-col gap-3.5 text-sm text-white/60">
+              {!session && (
+                <Link href="/sign-in" className="transition hover:text-white">Sign in</Link>
+              )}
+              <Link href={primaryHref} className="transition hover:text-white">{primaryLabel}</Link>
+            </div>
+          </div>
+        </div>
+        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-xs text-white/40 sm:flex-row">
+          <div>© 2026 Bhada. Rent, without the runaround.</div>
+          <div>Built for independent landlords.</div>
+        </div>
         </div>
       </footer>
     </main>
@@ -168,49 +439,10 @@ export default async function Home() {
 function Logo() {
   return (
     <>
-      <span className="grid size-10 place-items-center rounded-xl bg-[#5656ce] text-white shadow-md shadow-indigo-200"><Building2 className="size-5" /></span>
-      <span className="font-display text-xl tracking-[-0.045em] text-[#202635]">bhada</span>
+      <span className="grid size-8 place-items-center border border-white/20">
+        <Building2 className="size-4" />
+      </span>
+      <span className="font-display text-lg tracking-[0.5px] text-[#EDEDE8]">bhada</span>
     </>
-  );
-}
-
-function HeroDashboard() {
-  return (
-    <div className="relative mx-auto w-full max-w-[650px]">
-      <div className="absolute -inset-6 rounded-[34px] bg-gradient-to-br from-[#dcdcff] to-[#dff5ee] opacity-70 blur-2xl" />
-      <div className="relative overflow-hidden rounded-[26px] border border-white bg-[#f6f7fb] shadow-[0_32px_90px_rgba(44,48,75,.18)]">
-        <div className="flex h-14 items-center border-b border-[#e8e9ef] bg-white px-5">
-          <div className="flex items-center gap-2"><span className="size-2.5 rounded-full bg-[#ff8d79]" /><span className="size-2.5 rounded-full bg-[#ffc76b]" /><span className="size-2.5 rounded-full bg-[#64c59f]" /></div>
-          <div className="mx-auto h-7 w-44 rounded-lg bg-[#f4f4f8]" />
-        </div>
-        <div className="grid grid-cols-[74px_1fr] sm:grid-cols-[150px_1fr]">
-          <div className="border-r border-[#e8e9ef] bg-white p-3 sm:p-4">
-            <div className="mb-8 flex items-center gap-2 text-[#5555c7]"><Building2 className="size-5" /><span className="hidden text-xs font-black sm:block">BHADA</span></div>
-            {[BarChart3, Building2, Users, FileCheck2].map((Icon, index) => <div key={index} className={`mb-2 flex h-9 items-center gap-2 rounded-lg px-2 ${index === 0 ? "bg-[#efeffd] text-[#5555c7]" : "text-[#a3a8b5]"}`}><Icon className="size-4" /><span className="hidden text-[9px] font-bold sm:block">{["Overview", "Properties", "Tenants", "Documents"][index]}</span></div>)}
-          </div>
-          <div className="min-w-0 p-4 sm:p-6">
-            <p className="text-[9px] font-semibold text-[#9197a5]">Tuesday, July 28</p>
-            <h3 className="mt-1 font-display text-lg tracking-[-0.04em] sm:text-xl">Good evening, Jamie</h3>
-            <div className="mt-5 grid grid-cols-2 gap-2.5">
-              {[["Monthly income", "$16,845", "#eeeeff"], ["Collected", "$14,905", "#e8f6f1"], ["Outstanding", "$1,940", "#fff1e3"], ["Occupancy", "83.3%", "#f9eaf0"]].map(([label, value, color]) => (
-                <div key={label} className="rounded-xl border border-white bg-white p-3 shadow-sm">
-                  <span className="block size-5 rounded-md" style={{ background: color }} />
-                  <p className="mt-3 text-[8px] text-[#9298a5]">{label}</p>
-                  <p className="mt-0.5 text-xs font-extrabold text-[#343947] sm:text-sm">{value}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 rounded-xl bg-white p-4">
-              <div className="flex justify-between"><span className="text-[9px] font-bold">Income overview</span><span className="text-[7px] text-[#989dab]">This year</span></div>
-              <svg viewBox="0 0 420 105" className="mt-3 w-full" aria-hidden="true">
-                <defs><linearGradient id="heroFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#6969df" stopOpacity=".24" /><stop offset="1" stopColor="#6969df" stopOpacity="0" /></linearGradient></defs>
-                <path d="M0 88 C45 78 54 70 90 73 S135 52 170 57 S220 42 250 48 S302 22 330 30 S375 16 420 18 L420 105 L0 105Z" fill="url(#heroFill)" />
-                <path d="M0 88 C45 78 54 70 90 73 S135 52 170 57 S220 42 250 48 S302 22 330 30 S375 16 420 18" fill="none" stroke="#5b5bd6" strokeWidth="4" strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }

@@ -1,0 +1,211 @@
+.shell {
+  --chart-line-primary: #e4c77a;
+  --chart-crosshair: #e4c77a;
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  background: #111111;
+  color: #edede8;
+}
+
+.shell::before {
+  position: fixed;
+  z-index: -1;
+  top: -15rem;
+  right: -12rem;
+  width: 34rem;
+  height: 34rem;
+  border-radius: 999px;
+  background: rgba(228, 199, 122, 0.055);
+  filter: blur(120px);
+  content: "";
+  pointer-events: none;
+}
+
+.sidebar {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(17, 17, 17, 0.98);
+  box-shadow: none;
+}
+
+.sidebar nav {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar nav > p {
+  color: rgba(255, 255, 255, 0.32);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+}
+
+.topbar {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(17, 17, 17, 0.88);
+  box-shadow: none;
+  backdrop-filter: blur(18px);
+}
+
+.content {
+  min-height: calc(100vh - 72px);
+}
+
+.shell :global(.font-display) {
+  letter-spacing: -0.025em;
+}
+
+.shell :global(section),
+.shell :global(article),
+.shell :global(form) {
+  border-color: rgba(255, 255, 255, 0.11) !important;
+  border-radius: 0 !important;
+  background-color: #171717 !important;
+  box-shadow: none !important;
+}
+
+.shell :global(table) {
+  color: rgba(237, 237, 232, 0.72);
+}
+
+.shell :global(thead tr) {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+  color: rgba(255, 255, 255, 0.36) !important;
+}
+
+.shell :global(tbody tr) {
+  border-color: rgba(255, 255, 255, 0.075) !important;
+}
+
+.shell :global(tbody tr:hover) {
+  background: rgba(255, 255, 255, 0.025) !important;
+}
+
+.shell :global(input),
+.shell :global(textarea),
+.shell :global(select) {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  border-radius: 0 !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+  color: #edede8 !important;
+  box-shadow: none !important;
+}
+
+.shell :global(input::placeholder),
+.shell :global(textarea::placeholder) {
+  color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.shell :global(input:focus),
+.shell :global(textarea:focus),
+.shell :global(select:focus) {
+  border-color: rgba(228, 199, 122, 0.65) !important;
+  outline: none;
+}
+
+.shell :global([class*="rounded-xl"]),
+.shell :global([class*="rounded-2xl"]),
+.shell :global([class*="rounded-[18px]"]),
+.shell :global([class*="rounded-[20px]"]),
+.shell :global([class*="rounded-[22px]"]),
+.shell :global([class*="rounded-[24px]"]) {
+  border-radius: 0 !important;
+}
+
+.shell :global([class*="border-[#e"]),
+.shell :global([class*="border-[#d"]) {
+  border-color: rgba(255, 255, 255, 0.11) !important;
+}
+
+.shell :global([class*="bg-white"]),
+.shell :global([class*="bg-[#fafafd]"]),
+.shell :global([class*="bg-[#f7f7"]),
+.shell :global([class*="bg-[#f4f4"]),
+.shell :global([class*="bg-[#f3f3"]),
+.shell :global([class*="bg-[#f2f3"]),
+.shell :global([class*="bg-[#fcfc"]) {
+  background-color: #171717 !important;
+}
+
+.shell :global([class*="text-[#202"]),
+.shell :global([class*="text-[#222"]),
+.shell :global([class*="text-[#242"]),
+.shell :global([class*="text-[#292"]),
+.shell :global([class*="text-[#2d"]),
+.shell :global([class*="text-[#2e"]),
+.shell :global([class*="text-[#343"]),
+.shell :global([class*="text-[#353"]),
+.shell :global([class*="text-[#404"]),
+.shell :global([class*="text-[#4d"]) {
+  color: #edede8 !important;
+}
+
+.shell :global([class*="text-[#697"]),
+.shell :global([class*="text-[#6f"]),
+.shell :global([class*="text-[#747"]),
+.shell :global([class*="text-[#767"]),
+.shell :global([class*="text-[#777"]),
+.shell :global([class*="text-[#7d"]),
+.shell :global([class*="text-[#7e"]),
+.shell :global([class*="text-[#7f"]),
+.shell :global([class*="text-[#838"]),
+.shell :global([class*="text-[#858"]),
+.shell :global([class*="text-[#888"]),
+.shell :global([class*="text-[#8a"]),
+.shell :global([class*="text-[#8b"]),
+.shell :global([class*="text-[#929"]),
+.shell :global([class*="text-[#969"]),
+.shell :global([class*="text-[#989"]),
+.shell :global([class*="text-[#9a"]),
+.shell :global([class*="text-[#9c"]),
+.shell :global([class*="text-[#a0"]),
+.shell :global([class*="text-[#a1"]) {
+  color: rgba(237, 237, 232, 0.46) !important;
+}
+
+.shell :global([class*="text-[#5555c7]"]),
+.shell :global([class*="text-[#5656c9]"]),
+.shell :global([class*="text-[#5b5bd6]"]),
+.shell :global([class*="text-[#4e4ec4]"]),
+.shell :global([class*="text-[#4f4fba]"]) {
+  color: #e4c77a !important;
+}
+
+.shell :global(button[class*="bg-[#5b5bd6]"]) {
+  border: 1px solid #edede8 !important;
+  border-radius: 0 !important;
+  background: #edede8 !important;
+  color: #111111 !important;
+  box-shadow: none !important;
+}
+
+.shell :global(button[class*="bg-[#5b5bd6]"]:hover) {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+.shell :global(button[class*="border-[#e1e3eb]"]),
+.shell :global(button[class*="border-[#e4e6ed]"]) {
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #edede8 !important;
+  box-shadow: none !important;
+}
+
+.shell :global(button[class*="border-[#e1e3eb]"]:hover),
+.shell :global(button[class*="border-[#e4e6ed]"]:hover) {
+  border-color: rgba(228, 199, 122, 0.65) !important;
+  background: rgba(228, 199, 122, 0.06) !important;
+  color: #e4c77a !important;
+}
+
+.shell :global([class*="hover:-translate-y"]) {
+  transform: none !important;
+}
+
+@media (max-width: 1023px) {
+  .sidebar {
+    box-shadow: 24px 0 80px rgba(0, 0, 0, 0.45);
+  }
+}

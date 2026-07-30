@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DatePickerInput, FormSelect } from "@/components/ui/form-controls";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { BillDocument, BillIssuer } from "@/components/bill-document";
 import type { ProfileValues } from "@/app/dashboard/profile/profile-form";
@@ -73,6 +74,7 @@ import type { TenantAnalytics } from "@/lib/tenant-analytics";
 import type { NotificationItem } from "@/lib/notifications";
 import { NotificationCenter } from "@/components/notification-center";
 import { cn, formatCurrency } from "@/lib/utils";
+import styles from "./dashboard.module.css";
 
 const LineChart = dynamic(() => import("@/components/ui/line-chart").then((module) => module.LineChart));
 const BillDocumentDialog = dynamic(
@@ -94,11 +96,11 @@ const nav = [
 ];
 
 const statusStyles: Record<string, string> = {
-  Paid: "bg-[#e8f5ef] text-[#328161]",
-  Pending: "bg-[#fff4e8] text-[#b66a45]",
-  Overpaid: "bg-[#eaf3ff] text-[#3974ad]",
-  Overdue: "bg-[#fff0ed] text-[#c65c4d]",
-  Upcoming: "bg-[#eef0f9] text-[#626a86]",
+  Paid: "border border-[#6f927f]/40 bg-[#6f927f]/10 text-[#9bc4ab]",
+  Pending: "border border-[#e4c77a]/40 bg-[#e4c77a]/10 text-[#e4c77a]",
+  Overpaid: "border border-[#9aa9c4]/40 bg-[#9aa9c4]/10 text-[#b8c5dd]",
+  Overdue: "border border-[#c96a4e]/40 bg-[#c96a4e]/10 text-[#df8a70]",
+  Upcoming: "border border-white/15 bg-white/5 text-white/60",
 };
 
 type DashboardUser = {
@@ -212,7 +214,7 @@ export function Dashboard({
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-transparent lg:grid lg:grid-cols-[248px_1fr]">
+    <div className={cn("dashboard-shell min-h-screen lg:grid lg:grid-cols-[248px_1fr]", styles.shell)}>
       {sidebarOpen && (
         <button
           aria-label="Close menu"
@@ -222,17 +224,17 @@ export function Dashboard({
       )}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r border-[#eceef4] bg-white/95 px-4 py-5 shadow-[16px_0_50px_rgba(38,42,61,.035)] transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r px-4 py-5 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
+          styles.sidebar,
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-11 items-center justify-between px-2">
           <button onClick={() => selectSection("Overview")} className="flex items-center gap-2.5">
-            <span className="relative grid size-9 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-[#6969e7] to-[#4848bd] text-white shadow-md shadow-indigo-200/70">
-              <Building2 className="size-[18px]" strokeWidth={2.4} />
-              <span className="absolute -bottom-2 -right-2 size-4 rounded-full bg-[#7e7ee7]" />
+            <span className="relative grid size-9 place-items-center overflow-hidden border border-white/20 text-[#e4c77a]">
+              <Building2 className="size-[18px]" strokeWidth={2} />
             </span>
-            <span className="font-display text-[18px] tracking-[-0.04em] text-[#202636]">bhada</span>
+            <span className="font-display text-[18px] tracking-[0.02em] text-[#edede8]">bhada</span>
           </button>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="size-5" />
@@ -248,14 +250,14 @@ export function Dashboard({
               className={cn(
                 "flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
                 active === item.label
-                  ? "bg-[#efeffd] text-[#4e4ec4]"
-                  : "text-[#697081] hover:bg-[#f6f7fa] hover:text-[#2e3443]",
+                  ? "bg-[#e4c77a]/10 text-[#e4c77a]"
+                  : "text-white/50 hover:bg-white/[0.04] hover:text-white",
               )}
             >
               <item.icon className="size-[18px]" strokeWidth={active === item.label ? 2.3 : 1.9} />
               <span>{item.label}</span>
               {(item.label === "Properties" || item.label === "Tenants") && (
-                <span className="ml-auto rounded-md bg-white/80 px-2 py-0.5 text-[11px] font-bold text-[#83899a]">
+                <span className="ml-auto border border-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/40">
                   {item.label === "Properties" ? properties.length : tenants.length}
                 </span>
               )}
@@ -270,25 +272,25 @@ export function Dashboard({
             className={cn(
               "flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
               active === "Profile"
-                ? "bg-[#efeffd] text-[#4e4ec4]"
-                : "text-[#697081] hover:bg-[#f6f7fa] hover:text-[#2e3443]",
+                ? "bg-[#e4c77a]/10 text-[#e4c77a]"
+                : "text-white/50 hover:bg-white/[0.04] hover:text-white",
             )}
           >
             <Settings className="size-[18px]" /> Settings
           </Link>
-          <button className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#697081] hover:bg-[#f6f7fa]">
+          <button className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/50 hover:bg-white/[0.04] hover:text-white">
             <HelpCircle className="size-[18px]" /> Help center
           </button>
         </nav>
 
-        <div className="mt-auto rounded-2xl border border-[#e8e5fb] bg-[#f7f6ff] p-3.5">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#4f4fba]">
+        <div className="mt-auto border border-[#e4c77a]/25 bg-[#e4c77a]/[0.05] p-3.5">
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.08em] text-[#e4c77a] uppercase">
             <Sparkles className="size-4" /> Bhada Pro
           </div>
-          <p className="mt-2 text-[11px] leading-4 text-[#777795]">Automate reminders and payment receipts.</p>
+          <p className="mt-2 text-[11px] leading-4 text-white/40">Automate reminders and payment receipts.</p>
           <button
             onClick={() => toast("You’re on the demo plan", { description: "Billing is ready to connect when you are." })}
-            className="mt-3 text-[11px] font-bold text-[#5555c7] hover:underline"
+            className="mt-3 text-[11px] font-semibold text-[#e4c77a] hover:text-[#f0da9d]"
           >
             Explore features →
           </button>
@@ -302,17 +304,17 @@ export function Dashboard({
             {!user.image && initials}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#292f3d]">{user.name}</p>
-            <p className="truncate text-[11px] text-[#969baa]">{user.email}</p>
+            <p className="truncate text-sm font-semibold text-[#edede8]">{user.name}</p>
+            <p className="truncate text-[11px] text-white/35">{user.email}</p>
           </div>
-          <button onClick={signOut} aria-label="Sign out" title="Sign out" className="grid size-8 place-items-center rounded-lg text-[#9298a7] hover:bg-white hover:text-[#5555c7]">
+          <button onClick={signOut} aria-label="Sign out" title="Sign out" className="grid size-8 place-items-center text-white/35 hover:bg-white/5 hover:text-[#e4c77a]">
             <LogOut className="size-4" />
           </button>
         </div>
       </aside>
 
       <main className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b border-[#eceef4] bg-white/95 px-4 shadow-[0_1px_20px_rgba(30,36,50,.025)] sm:px-7 lg:px-9">
+        <header className={cn("sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b px-4 sm:px-7 lg:px-9", styles.topbar)}>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu className="size-5" />
           </Button>
@@ -322,7 +324,7 @@ export function Dashboard({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search tenants, properties..."
-              className="h-10 w-full rounded-xl border border-[#e3e5ec] bg-[#fafafd] pl-10 pr-4 text-sm outline-none transition focus:border-[#b6b6ed] focus:bg-white focus:ring-4 focus:ring-[#5b5bd6]/10"
+              className="h-10 w-full border border-white/15 bg-white/[0.025] pl-10 pr-4 text-sm text-[#edede8] outline-none transition placeholder:text-white/30 focus:border-[#e4c77a]/60 focus:bg-white/[0.04]"
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
@@ -338,7 +340,7 @@ export function Dashboard({
           </div>
         </header>
 
-        <div className="mx-auto max-w-[1440px] px-4 py-7 sm:px-7 lg:px-9 lg:py-9">
+        <div className={cn("mx-auto max-w-[1440px] px-4 py-7 sm:px-7 lg:px-9 lg:py-9", styles.content)}>
           {active === "Overview" ? (
             <Overview
               period={period}
@@ -526,15 +528,16 @@ function Overview({
               <h2 className="font-display text-base font-bold tracking-[-0.025em]">Income overview</h2>
               <p className="mt-1 text-xs text-[#8b91a0]">Rent collected across all properties</p>
             </div>
-            <select
+            <FormSelect
               value={period}
-              onChange={(event) => setPeriod(event.target.value)}
-              className="h-9 rounded-lg border border-[#e3e5ec] bg-white px-3 text-xs font-semibold text-[#5f6676] outline-none"
-            >
-              <option>This year</option>
-              <option>Last 6 months</option>
-              <option>This quarter</option>
-            </select>
+              onValueChange={setPeriod}
+              className="h-9 w-[132px] rounded-lg border-[#e3e5ec] bg-white px-3 text-xs font-semibold text-[#5f6676]"
+              options={[
+                { value: "This year", label: "This year" },
+                { value: "Last 6 months", label: "Last 6 months" },
+                { value: "This quarter", label: "This quarter" },
+              ]}
+            />
           </div>
           <IncomeChart period={period} data={incomeOverview} />
         </section>
@@ -552,7 +555,7 @@ function Overview({
           <div className="mt-7 flex items-center gap-6">
             <div
               className="relative grid size-[118px] shrink-0 place-items-center rounded-full"
-              style={{ background: `conic-gradient(#5b5bd6 0 ${rentBilling.collectionRate}%, #eeeff5 ${rentBilling.collectionRate}% 100%)` }}
+              style={{ background: `conic-gradient(#e4c77a 0 ${rentBilling.collectionRate}%, #2a2a28 ${rentBilling.collectionRate}% 100%)` }}
             >
               <div className="grid size-[88px] place-items-center rounded-full bg-white text-center">
                 <div>
@@ -562,7 +565,7 @@ function Overview({
               </div>
             </div>
             <div className="flex-1 space-y-3">
-              <Legend dot="#5b5bd6" label="Paid" value={formatCurrency(rentBilling.paidThisMonth)} />
+              <Legend dot="#e4c77a" label="Paid" value={formatCurrency(rentBilling.paidThisMonth)} />
               <Legend dot="#eea05a" label="Pending" value={formatCurrency(rentBilling.pendingThisMonth)} />
               <Legend dot="#ea6f62" label="Overdue" value={formatCurrency(rentBilling.overdueTotal)} />
             </div>
@@ -597,10 +600,10 @@ function MetricCard({
   tone: "indigo" | "green" | "orange" | "pink";
 }) {
   const tones = {
-    indigo: "bg-[#eeeeff] text-[#5656c9]",
-    green: "bg-[#e8f6f1] text-[#27836d]",
-    orange: "bg-[#fff1e3] text-[#bf7840]",
-    pink: "bg-[#f9eaf0] text-[#b85d82]",
+    indigo: "border border-[#e4c77a]/30 bg-[#e4c77a]/10 text-[#e4c77a]",
+    green: "border border-[#7aa18b]/30 bg-[#7aa18b]/10 text-[#9bc4ab]",
+    orange: "border border-[#c99162]/30 bg-[#c99162]/10 text-[#dda676]",
+    pink: "border border-[#b77f96]/30 bg-[#b77f96]/10 text-[#d29bb2]",
   };
   return (
     <article className="group rounded-[22px] border border-white/80 bg-white p-5 shadow-[0_8px_30px_rgba(32,38,55,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_45px_rgba(32,38,55,.075)]">
@@ -876,17 +879,17 @@ function SectionView({
                 <p className="text-xs font-bold text-[#4d5362]">Financial year</p>
                 <p className="mt-1 text-[11px] text-[#8b91a0]">Only the selected April–March period is loaded.</p>
               </div>
-              <select
+              <FormSelect
                 className="h-10 w-full rounded-xl border border-[#dfe2e9] bg-[#fafafd] px-3 text-sm font-semibold outline-none focus:border-[#aaaaf0] sm:w-44"
-                value={financialYearStart}
-                onChange={(event) => {
-                  window.location.assign(`/dashboard?section=Payments&fy=${event.target.value}`);
+                value={String(financialYearStart)}
+                onValueChange={(value) => {
+                  window.location.assign(`/dashboard?section=Payments&fy=${value}`);
                 }}
-              >
-                {financialYearOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+                options={financialYearOptions.map((option) => ({
+                  value: String(option.value),
+                  label: option.label,
+                }))}
+              />
             </div>
             <RentBillTable
               bills={rentBilling.bills}
@@ -1455,25 +1458,22 @@ function ElectricityBillDialog({
         </DialogDescription>
         <form action={formAction} className="mt-6 space-y-4">
           <Field label="Property and unit">
-            <select
+            <FormSelect
               required
               className={inputClass}
               name="unitId"
               value={selectedUnitId}
-              onChange={(event) => {
-                setSelectedUnitId(event.target.value);
+              onValueChange={(value) => {
+                setSelectedUnitId(value);
                 setCurrentReading("");
               }}
-              aria-invalid={Boolean(state.errors?.unitId)}
-            >
-              <option value="" disabled>Select a unit</option>
-              {units.map(({ property, unit }) => (
-                <option key={unit.id} value={unit.id}>
-                  {property.name} · Unit {unit.unitNumber}
-                  {unit.tenant ? ` · ${unit.tenant.name}` : " · Vacant"}
-                </option>
-              ))}
-            </select>
+              invalid={Boolean(state.errors?.unitId)}
+              placeholder="Select a unit"
+              options={units.map(({ property, unit }) => ({
+                value: unit.id,
+                label: `${property.name} · Unit ${unit.unitNumber}${unit.tenant ? ` · ${unit.tenant.name}` : " · Vacant"}`,
+              }))}
+            />
             {state.errors?.unitId && <FieldError message={state.errors.unitId} />}
             {selectedUnit && previousReading === null && (
               <FieldError message="Edit this unit and set its opening meter reading first." />
@@ -1482,13 +1482,14 @@ function ElectricityBillDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Billing month">
-              <input
-                required
-                className={inputClass}
+              <DatePickerInput
                 name="billingPeriod"
-                type="month"
                 defaultValue={today.slice(0, 7)}
-                aria-invalid={Boolean(state.errors?.billingPeriod)}
+                className={inputClass}
+                invalid={Boolean(state.errors?.billingPeriod)}
+                required
+                monthOnly
+                placeholder="Pick a billing month"
               />
               {state.errors?.billingPeriod && <FieldError message={state.errors.billingPeriod} />}
             </Field>
@@ -1523,13 +1524,12 @@ function ElectricityBillDialog({
               {state.errors?.unitRate && <FieldError message={state.errors.unitRate} />}
             </Field>
             <Field label="Due date">
-              <input
-                required
-                className={inputClass}
+              <DatePickerInput
                 name="dueDate"
-                type="date"
                 defaultValue={today}
-                aria-invalid={Boolean(state.errors?.dueDate)}
+                className={inputClass}
+                invalid={Boolean(state.errors?.dueDate)}
+                required
               />
               {state.errors?.dueDate && <FieldError message={state.errors.dueDate} />}
             </Field>
@@ -1653,14 +1653,18 @@ function RecordPaymentDialog({
             })))}
           />
           <Field label="Tenant">
-            <select required className={inputClass} name="tenantId" defaultValue="" aria-invalid={Boolean(state.errors?.tenantId)}>
-              <option value="" disabled>Select a tenant</option>
-              {tenants.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} — {item.propertyName} · Unit {item.unitNumber}
-                </option>
-              ))}
-            </select>
+            <FormSelect
+              required
+              className={inputClass}
+              name="tenantId"
+              defaultValue=""
+              invalid={Boolean(state.errors?.tenantId)}
+              placeholder="Select a tenant"
+              options={tenants.map((item) => ({
+                value: item.id,
+                label: `${item.name} — ${item.propertyName} · Unit ${item.unitNumber}`,
+              }))}
+            />
             {state.errors?.tenantId && <FieldError message={state.errors.tenantId} />}
           </Field>
 
@@ -1724,17 +1728,18 @@ function RecordPaymentDialog({
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Field label="Charge type">
-                      <select
+                      <FormSelect
                         className={inputClass}
                         value={allocation.chargeType}
-                        onChange={(event) => updateAllocation(allocation.id, {
-                          chargeType: event.target.value as AllocationDraft["chargeType"],
+                        onValueChange={(value) => updateAllocation(allocation.id, {
+                          chargeType: value as AllocationDraft["chargeType"],
                         })}
-                      >
-                        <option value="rent">Rent</option>
-                        <option value="light_bill">Light bill</option>
-                        <option value="other">Other</option>
-                      </select>
+                        options={[
+                          { value: "rent", label: "Rent" },
+                          { value: "light_bill", label: "Light bill" },
+                          { value: "other", label: "Other" },
+                        ]}
+                      />
                     </Field>
                     <Field label="Bill number / month">
                       <input
@@ -1769,23 +1774,27 @@ function RecordPaymentDialog({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Payment date">
-              <input
-                required
-                className={inputClass}
+              <DatePickerInput
                 name="paidAt"
-                type="date"
                 defaultValue={new Date().toISOString().slice(0, 10)}
-                aria-invalid={Boolean(state.errors?.paidAt)}
+                className={inputClass}
+                invalid={Boolean(state.errors?.paidAt)}
+                required
               />
               {state.errors?.paidAt && <FieldError message={state.errors.paidAt} />}
             </Field>
             <Field label="Payment method">
-              <select className={inputClass} name="method" defaultValue="bank_transfer">
-                <option value="bank_transfer">Bank transfer / UPI</option>
-                <option value="cash">Cash</option>
-                <option value="check">Cheque</option>
-                <option value="card">Card</option>
-              </select>
+              <FormSelect
+                className={inputClass}
+                name="method"
+                defaultValue="bank_transfer"
+                options={[
+                  { value: "bank_transfer", label: "Bank transfer / UPI" },
+                  { value: "cash", label: "Cash" },
+                  { value: "check", label: "Cheque" },
+                  { value: "card", label: "Card" },
+                ]}
+              />
             </Field>
             <Field label="Transaction reference">
               <input className={inputClass} name="reference" placeholder="UTR, cheque no., etc." />
@@ -2034,16 +2043,18 @@ function UnitDialog({
               {state.errors?.unitNumber && <FieldError message={state.errors.unitNumber} />}
             </Field>
             <Field label="Status">
-              <select
+              <FormSelect
+                key={`status-${unit?.id ?? "new"}`}
                 className={inputClass}
                 name="status"
                 defaultValue={unit?.status ?? "vacant"}
-                aria-invalid={Boolean(state.errors?.status)}
-              >
-                <option value="vacant">Vacant</option>
-                <option value="occupied">Occupied</option>
-                <option value="maintenance">Maintenance</option>
-              </select>
+                invalid={Boolean(state.errors?.status)}
+                options={[
+                  { value: "vacant", label: "Vacant" },
+                  { value: "occupied", label: "Occupied" },
+                  { value: "maintenance", label: "Maintenance" },
+                ]}
+              />
               {state.errors?.status && <FieldError message={state.errors.status} />}
             </Field>
           </div>
@@ -2085,12 +2096,14 @@ function UnitDialog({
               {state.errors?.openingMeterReading && <FieldError message={state.errors.openingMeterReading} />}
             </Field>
             <Field label="Opening reading month">
-              <input
-                className={inputClass}
+              <DatePickerInput
+                key={`opening-month-${unit?.id ?? "new"}`}
                 name="openingMeterReadingDate"
-                type="month"
                 defaultValue={unit?.openingMeterReadingDate}
-                aria-invalid={Boolean(state.errors?.openingMeterReadingDate)}
+                className={inputClass}
+                invalid={Boolean(state.errors?.openingMeterReadingDate)}
+                monthOnly
+                placeholder="Pick an opening month"
               />
               {state.errors?.openingMeterReadingDate && <FieldError message={state.errors.openingMeterReadingDate} />}
             </Field>
@@ -2188,10 +2201,16 @@ function TenantDialog({
                 {state.errors?.name && <FieldError message={state.errors.name} />}
               </Field>
               <Field label="Unit">
-                <select required className={inputClass} name="unitId" defaultValue={tenant?.unitId ?? ""} aria-invalid={Boolean(state.errors?.unitId)}>
-                  <option value="" disabled>Select a unit</option>
-                  {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.label}</option>)}
-                </select>
+                <FormSelect
+                  key={`tenant-unit-${tenant?.id ?? "new"}`}
+                  required
+                  className={inputClass}
+                  name="unitId"
+                  defaultValue={tenant?.unitId ?? ""}
+                  invalid={Boolean(state.errors?.unitId)}
+                  placeholder="Select a unit"
+                  options={units.map((unit) => ({ value: unit.id, label: unit.label }))}
+                />
                 {state.errors?.unitId && <FieldError message={state.errors.unitId} />}
               </Field>
               <Field label="Email">
@@ -2430,7 +2449,17 @@ function TenantInput({
 }) {
   return (
     <Field label={label}>
-      <input className={inputClass} name={name} type={type} min={type === "number" ? (min ?? 0) : undefined} max={max} step={step} defaultValue={value ?? ""} aria-invalid={Boolean(error)} />
+      {type === "date" ? (
+        <DatePickerInput
+          key={`${name}-${value ?? ""}`}
+          className={inputClass}
+          name={name}
+          defaultValue={typeof value === "string" ? value : undefined}
+          invalid={Boolean(error)}
+        />
+      ) : (
+        <input className={inputClass} name={name} type={type} min={min ?? 0} max={max} step={step} defaultValue={value ?? ""} aria-invalid={Boolean(error)} />
+      )}
       {error && <FieldError message={error} />}
     </Field>
   );

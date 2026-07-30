@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, LoaderCircle, Save, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FormSelect } from "@/components/ui/form-controls";
 
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -117,14 +118,15 @@ export function ProfileForm({
             </Field>
 
             <Field label="Monthly rent billing" className="sm:col-span-2 lg:col-span-3">
-              <select
+              <FormSelect
                 className={inputClass}
                 name="rentBillingPeriod"
                 defaultValue={initialValues.rentBillingPeriod}
-              >
-                <option value="previous">Previous month</option>
-                <option value="current">Current month</option>
-              </select>
+                options={[
+                  { value: "previous", label: "Previous month" },
+                  { value: "current", label: "Current month" },
+                ]}
+              />
               <p className="mt-2 text-xs leading-5 text-[#8b91a0]">
                 On the first of each month, create rent bills for the selected month. New tenants
                 never receive a bill just from being added.
