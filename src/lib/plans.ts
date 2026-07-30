@@ -8,7 +8,7 @@ export const PORTFOLIO_PLAN = {
   name: "Portfolio",
   monthlyPrice: 49,
   propertyLimit: 5,
-  unitLimit: 15,
+  unitLimit: 25,
 } as const;
 
 export type PlanAccount = {
