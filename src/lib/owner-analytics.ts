@@ -12,7 +12,6 @@ import {
   user,
 } from "@/db/schema";
 import { hasPortfolioAccess, PORTFOLIO_PLAN } from "@/lib/plans";
-import { OWNER_EMAIL } from "@/lib/owner";
 
 const CHURN_STATUSES = new Set(["cancelled", "completed", "expired", "halted"]);
 const CHURN_EVENTS = new Set([
@@ -83,9 +82,9 @@ export async function getOwnerAnalytics(now = new Date()) {
       .from(tenant),
   ]);
 
-  const customers = accounts.filter(
-    (account) => account.email.trim().toLowerCase() !== OWNER_EMAIL,
-  );
+  // The owner also uses Bhada as a real landlord workspace, so the account
+  // belongs in product adoption and customer totals.
+  const customers = accounts;
   const customerUserIds = new Set(customers.map((account) => account.userId));
   const customerLandlordIds = new Set(
     customers.flatMap((account) => account.landlordId ? [account.landlordId] : []),
