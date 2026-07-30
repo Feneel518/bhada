@@ -95,6 +95,27 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const saasBillingEvent = pgTable(
+  "saas_billing_event",
+  {
+    id: text("id").primaryKey(),
+    landlordId: text("landlord_id").references(() => landlord.id, { onDelete: "set null" }),
+    provider: text("provider").default("razorpay").notNull(),
+    eventType: text("event_type").notNull(),
+    subscriptionId: text("subscription_id"),
+    amountPaise: integer("amount_paise").default(0).notNull(),
+    currency: text("currency").default("INR").notNull(),
+    status: text("status"),
+    occurredAt: timestamp("occurred_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("saas_billing_event_landlord_id_idx").on(table.landlordId),
+    index("saas_billing_event_occurred_at_idx").on(table.occurredAt),
+    index("saas_billing_event_event_type_idx").on(table.eventType),
+  ],
+);
+
 export const leaseStatus = pgEnum("lease_status", ["active", "upcoming", "ended"]);
 export const paymentStatus = pgEnum("payment_status", ["paid", "pending", "overdue"]);
 export const paymentMethod = pgEnum("payment_method", ["bank_transfer", "cash", "check", "card"]);
@@ -323,6 +344,14 @@ export const landlordRelations = relations(landlord, ({ one, many }) => ({
   electricityBills: many(electricityBill),
   paymentReceipts: many(paymentReceipt),
   notificationReads: many(notificationRead),
+  billingEvents: many(saasBillingEvent),
+}));
+
+export const saasBillingEventRelations = relations(saasBillingEvent, ({ one }) => ({
+  landlord: one(landlord, {
+    fields: [saasBillingEvent.landlordId],
+    references: [landlord.id],
+  }),
 }));
 
 export const notificationReadRelations = relations(notificationRead, ({ one }) => ({
@@ -391,6 +420,7 @@ export const schema = {
   session,
   account,
   verification,
+  saasBillingEvent,
   property,
   unit,
   tenant,
@@ -402,6 +432,7 @@ export const schema = {
   paymentAllocation,
   userRelations,
   landlordRelations,
+  saasBillingEventRelations,
   notificationReadRelations,
   propertyRelations,
   unitRelations,

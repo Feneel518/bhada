@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   Building2,
   CalendarDays,
+  ChartNoAxesCombined,
   Check,
   ChevronDown,
   ChevronUp,
@@ -512,6 +513,14 @@ export function Dashboard({
 
         <nav className="mt-7 space-y-1 border-t border-[#eff0f4] pt-6">
           <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a1a6b3]">Manage</p>
+          {user.email.trim().toLowerCase() === "feneelp@gmail.com" && (
+            <Link
+              href="/owner"
+              className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-white/50 transition-colors hover:bg-white/[0.04] hover:text-white"
+            >
+              <ChartNoAxesCombined className="size-[18px]" /> Owner analytics
+            </Link>
+          )}
           <Link
             href="/dashboard?section=Profile"
             onClick={(event) => openSectionLink(event, "Profile")}
