@@ -350,7 +350,7 @@ export default async function Home() {
               The details, without the fine print.
             </h2>
             <p className="mt-5 max-w-sm text-sm leading-6 text-white/50 sm:text-[15px] sm:leading-7">
-              Straight answers about billing, payments, documents, and privacy before you add your first property.
+              Straight answers about billing, payments, electricity, and privacy before you add your first property.
             </p>
           </div>
 
