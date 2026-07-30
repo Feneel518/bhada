@@ -60,6 +60,107 @@ button {
   color: #33338b;
 }
 
+/* Sonner notifications, tuned to feel like the rest of the Bhada workspace. */
+[data-sonner-toaster].bhada-toaster {
+  --width: 372px;
+  font-family: var(--font-body), sans-serif;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-styled="true"] {
+  gap: 12px;
+  min-height: 64px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.97);
+  color: var(--foreground);
+  box-shadow: 0 16px 45px rgba(32, 38, 55, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-title] {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-description] {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-icon] {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 10px;
+  background: #efeffd;
+  color: var(--brand);
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="success"] {
+  border-left-color: #16a39a;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="success"] [data-icon] {
+  background: #e8f7f4;
+  color: #13877f;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="error"] {
+  border-left-color: #d86b78;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="error"] [data-icon] {
+  background: #fceef0;
+  color: #c55361;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="warning"] {
+  border-left-color: #e8994f;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="warning"] [data-icon] {
+  background: #fff3e7;
+  color: #c87931;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-button] {
+  height: 30px;
+  border-radius: 9px;
+  background: var(--brand);
+  color: white;
+  font-weight: 700;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-cancel] {
+  background: #f0f1f6;
+  color: #4d5464;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-close-button] {
+  top: -6px;
+  left: -6px;
+  width: 22px;
+  height: 22px;
+  border-color: var(--line);
+  background: white;
+  color: var(--muted);
+  box-shadow: 0 4px 12px rgba(32, 38, 55, 0.12);
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-close-button]:hover {
+  border-color: #d6d8e2;
+  background: #f7f8fc;
+  color: var(--foreground);
+}
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;

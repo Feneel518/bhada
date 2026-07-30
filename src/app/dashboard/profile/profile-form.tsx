@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, LoaderCircle, Save, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, CreditCard, LoaderCircle, Save, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-controls";
 
@@ -32,14 +33,25 @@ const inputClass =
 export function ProfileForm({
   email,
   initialValues,
+  subscription,
 }: {
   email: string;
   initialValues: ProfileValues;
+  subscription: {
+    active: boolean;
+    status: string;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+  };
 }) {
+  const router = useRouter();
   const [result, setResult] = useState<SaveResult>({ status: "idle", message: "" });
   const [pending, setPending] = useState(false);
   const [gstin, setGstin] = useState(initialValues.gstin);
   const [pan, setPan] = useState(initialValues.pan);
+  const [cancelPending, setCancelPending] = useState(false);
+  const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(subscription.cancelAtPeriodEnd);
+  const [cancellationMessage, setCancellationMessage] = useState("");
 
   const gstinError =
     gstin.length > 0 && !GSTIN_REGEX.test(gstin)
@@ -69,6 +81,41 @@ export function ProfileForm({
     }
   }
 
+  async function scheduleDowngrade() {
+    const confirmed = window.confirm(
+      "Downgrade to One Door at the end of this billing cycle? Future renewals will stop, and your existing data will be kept.",
+    );
+    if (!confirmed) return;
+
+    setCancelPending(true);
+    setCancellationMessage("");
+    try {
+      const response = await fetch("/api/billing/razorpay/cancel", { method: "POST" });
+      const payload = await response.json() as { message?: string };
+      if (!response.ok) {
+        throw new Error(payload.message || "Unable to schedule the downgrade.");
+      }
+      setCancelAtPeriodEnd(true);
+      setCancellationMessage(payload.message || "Your downgrade is scheduled.");
+      router.refresh();
+    } catch (error) {
+      setCancellationMessage(
+        error instanceof Error ? error.message : "Unable to schedule the downgrade.",
+      );
+    } finally {
+      setCancelPending(false);
+    }
+  }
+
+  const paidThrough = subscription.currentPeriodEnd
+    ? new Intl.DateTimeFormat("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Kolkata",
+      }).format(new Date(subscription.currentPeriodEnd))
+    : null;
+
   return (
     <div className="animate-rise">
       <header>
@@ -80,6 +127,55 @@ export function ProfileForm({
           These details identify your rental business and will be available for invoices.
         </p>
       </header>
+
+      <section className="mt-5 w-full overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)]">
+        <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#efeffd] text-[#5656c9]">
+              <CreditCard className="size-5" />
+            </span>
+            <div>
+              <h2 className="font-display text-lg font-bold tracking-[-0.025em] text-[#292f3d]">
+                {subscription.active ? "Portfolio plan" : "One Door plan"}
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-[#8b91a0]">
+                {cancelAtPeriodEnd
+                  ? `Your subscription will not renew${paidThrough ? ` after ${paidThrough}` : ""}. Portfolio access stays available until then.`
+                  : subscription.active
+                    ? `₹49 per month${paidThrough ? ` · current period ends ${paidThrough}` : ""}.`
+                    : "Free plan · 1 property and 3 units."}
+              </p>
+            </div>
+          </div>
+          {subscription.active && !cancelAtPeriodEnd && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={scheduleDowngrade}
+              disabled={cancelPending}
+              className="shrink-0"
+            >
+              {cancelPending && <LoaderCircle className="size-4 animate-spin" />}
+              {cancelPending ? "Scheduling..." : "Downgrade to One Door"}
+            </Button>
+          )}
+          {cancelAtPeriodEnd && (
+            <span className="shrink-0 rounded-full bg-[#fff4dc] px-3 py-1.5 text-xs font-bold text-[#9a6926]">
+              Cancellation scheduled
+            </span>
+          )}
+        </div>
+        {cancellationMessage && (
+          <p
+            aria-live="polite"
+            className={`border-t border-[#eceef3] px-5 py-3 text-sm sm:px-6 ${
+              cancelAtPeriodEnd ? "font-semibold text-[#27816b]" : "font-medium text-[#c65c4d]"
+            }`}
+          >
+            {cancellationMessage}
+          </p>
+        )}
+      </section>
 
       <form onSubmit={submit} className="mt-5 w-full overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)]">
           <section className="border-b border-[#eceef3] px-5 py-4 sm:px-6">

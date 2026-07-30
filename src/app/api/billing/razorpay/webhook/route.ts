@@ -80,6 +80,10 @@ export async function POST(request: Request) {
           plan: subscriptionPlan(subscription.status),
           subscriptionStatus: subscription.status,
           subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription),
+          subscriptionCancelAtPeriodEnd:
+            subscription.status === "cancelled"
+              ? false
+              : Boolean(subscription.has_scheduled_changes),
           updatedAt: new Date(),
         })
         .where(eq(landlord.razorpaySubscriptionId, subscription.id));

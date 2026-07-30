@@ -15,10 +15,14 @@ export type PlanAccount = {
   plan?: string | null;
   subscriptionStatus?: string | null;
   subscriptionCurrentPeriodEnd?: Date | null;
+  subscriptionCancelAtPeriodEnd?: boolean | null;
 };
 
 export function hasPortfolioAccess(account: PlanAccount, now = new Date()) {
   if (account.plan !== "portfolio") return false;
+  if (account.subscriptionCancelAtPeriodEnd && account.subscriptionCurrentPeriodEnd) {
+    return account.subscriptionCurrentPeriodEnd.getTime() > now.getTime();
+  }
   if (["authenticated", "active"].includes(account.subscriptionStatus ?? "")) return true;
 
   return account.subscriptionStatus === "pending"

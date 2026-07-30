@@ -63,6 +63,7 @@ export async function getOwnerAnalytics(now = new Date()) {
         plan: landlord.plan,
         subscriptionStatus: landlord.subscriptionStatus,
         subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+        subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
         subscriptionUpdatedAt: landlord.updatedAt,
       })
       .from(user)

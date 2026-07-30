@@ -12,7 +12,6 @@ import {
   DoorOpen,
   IndianRupee,
   LayoutDashboard,
-  RefreshCw,
   ShieldCheck,
   TrendingUp,
   UserMinus,
@@ -20,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { BhadaLogo } from "@/components/brand-logo";
+import { RefreshAnalyticsButton } from "@/app/owner/refresh-analytics-button";
 import { getOwnerAnalytics } from "@/lib/owner-analytics";
 import { requireOwner } from "@/lib/owner";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,8 @@ export const metadata: Metadata = {
   title: "Owner analytics",
   description: "Private business analytics for Bhada.",
 };
+
+export const dynamic = "force-dynamic";
 
 const money = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -196,14 +198,7 @@ export default async function OwnerPage() {
             <span className="hidden items-center gap-1.5 rounded-full border border-[#dfe1e8] bg-white px-3 py-1.5 text-[11px] font-medium text-[#737987] md:flex">
               <ShieldCheck className="size-3.5 text-[#168b72]" /> {owner.email}
             </span>
-            <Link
-              href="/owner"
-              className="grid size-9 place-items-center rounded-lg border border-[#dfe1e8] bg-white text-[#6f7482] transition hover:border-[#c9c8eb] hover:text-[#5b56c7]"
-              aria-label="Refresh analytics"
-              title="Refresh analytics"
-            >
-              <RefreshCw className="size-4" />
-            </Link>
+            <RefreshAnalyticsButton />
             <Link
               href="/dashboard"
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#252938] px-3 text-xs font-semibold text-white transition hover:bg-[#34394b]"

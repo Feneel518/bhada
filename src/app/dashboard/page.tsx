@@ -83,6 +83,7 @@ export default async function DashboardPage({
         active: Boolean(profile && hasPortfolioAccess(profile)),
         status: profile?.subscriptionStatus ?? "none",
         currentPeriodEnd: profile?.subscriptionCurrentPeriodEnd?.toISOString() ?? null,
+        cancelAtPeriodEnd: profile?.subscriptionCancelAtPeriodEnd ?? false,
       }}
       profile={{
         businessName: profile?.businessName ?? session.user.name,

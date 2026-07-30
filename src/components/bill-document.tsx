@@ -205,6 +205,17 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   return pdf.output("blob");
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = window.document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  window.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
+
 export function BillDocumentDialog({
   document,
   issuer,
@@ -225,12 +236,7 @@ export function BillDocumentDialog({
     setWorking("download");
     try {
       const blob = await createPdf(document, issuer);
-      const url = URL.createObjectURL(blob);
-      const anchor = window.document.createElement("a");
-      anchor.href = url;
-      anchor.download = filenameFor(document);
-      anchor.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, filenameFor(document));
       toast.success("PDF downloaded");
     } catch {
       toast.error("Couldn’t create the PDF. Please try again.");
@@ -252,12 +258,7 @@ export function BillDocumentDialog({
           files: [file],
         });
       } else {
-        const url = URL.createObjectURL(blob);
-        const anchor = window.document.createElement("a");
-        anchor.href = url;
-        anchor.download = filenameFor(document);
-        anchor.click();
-        URL.revokeObjectURL(url);
+        downloadBlob(blob, filenameFor(document));
         toast.info("Sharing isn’t supported here, so the PDF was downloaded.");
       }
     } catch (error) {

@@ -246,31 +246,6 @@ const statusStyles: Record<string, string> = {
   Upcoming: "border border-white/15 bg-white/5 text-white/60",
 };
 
-type CsvValue = string | number | boolean | null | undefined;
-
-function csvCell(value: CsvValue) {
-  let text = value === null || value === undefined ? "" : String(value);
-  if (/^[=+\-@]/.test(text.trimStart())) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
-
-function downloadCsv(filename: string, headers: string[], rows: CsvValue[][]) {
-  const csv = [
-    headers.map(csvCell).join(","),
-    ...rows.map((row) => row.map(csvCell).join(",")),
-  ].join("\r\n");
-  const url = URL.createObjectURL(
-    new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }),
-  );
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 type DashboardUser = {
   id: string;
   name: string;
@@ -313,6 +288,7 @@ export function Dashboard({
     active: boolean;
     status: string;
     currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
   };
 }) {
   const [active, setActive] = useState<DashboardSection>(initialSection);
@@ -330,6 +306,7 @@ export function Dashboard({
   const [profileTenant, setProfileTenant] = useState<TenantRecord | null>(null);
   const [billDocument, setBillDocument] = useState<BillDocument | null>(null);
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [period, setPeriod] = useState("This year");
   const deferredSearch = useDeferredValue(search);
   const totalUnitCount = properties.reduce(
@@ -342,14 +319,18 @@ export function Dashboard({
     const query = deferredSearch.trim().toLowerCase();
     if (!query) return payments;
     return payments.filter((payment) =>
-      `${payment.tenant} ${payment.property} ${payment.status}`.toLowerCase().includes(query),
+      `${payment.tenant} ${payment.property} ${payment.status} ${payment.receiptNumber} ${payment.method} ${payment.summary} ${payment.date}`
+        .toLowerCase()
+        .includes(query),
     );
   }, [deferredSearch, payments]);
   const visibleProperties = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
     if (!query) return properties;
     return properties.filter((item) =>
-      `${item.name} ${item.address} ${item.city} ${item.state} ${item.postalCode}`
+      `${item.name} ${item.address} ${item.city} ${item.state} ${item.postalCode} ${item.units
+        .map((unit) => `${unit.unitNumber} ${unit.tenant?.name ?? ""}`)
+        .join(" ")}`
         .toLowerCase()
         .includes(query),
     );
@@ -363,6 +344,19 @@ export function Dashboard({
         .includes(query),
     );
   }, [deferredSearch, tenants]);
+  const searchResults = useMemo(
+    () => ({
+      properties: visibleProperties.slice(0, 4),
+      tenants: visibleTenants.slice(0, 4),
+      payments: visiblePayments.slice(0, 4),
+    }),
+    [visiblePayments, visibleProperties, visibleTenants],
+  );
+  const searchQuery = search.trim();
+  const searchResultCount =
+    searchResults.properties.length +
+    searchResults.tenants.length +
+    searchResults.payments.length;
 
   useEffect(() => {
     function syncSectionFromHistory() {
@@ -569,7 +563,7 @@ export function Dashboard({
           </p>
           {subscription.active ? (
             <p className="mt-3 text-[11px] font-semibold text-[#e4c77a]">
-              Portfolio billing is active
+              {subscription.cancelAtPeriodEnd ? "Downgrade scheduled" : "Portfolio billing is active"}
             </p>
           ) : (
             <PortfolioCheckoutButton
@@ -608,36 +602,113 @@ export function Dashboard({
       </aside>
 
       <main className="min-w-0">
-        <header className={cn("sticky top-0 z-30 flex h-[72px] items-center gap-3 border-b px-4 sm:px-7 lg:px-9", styles.topbar)}>
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+        <header className={cn("sticky top-0 z-30 flex h-16 items-center gap-2 border-b px-3 sm:h-[72px] sm:gap-3 sm:px-7 lg:px-9", styles.topbar)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 lg:hidden"
+            aria-label="Open navigation"
+            onClick={() => setSidebarOpen(true)}
+          >
             <Menu className="size-5" />
           </Button>
-          <div className="relative hidden max-w-[360px] flex-1 sm:block">
+          <div className="min-w-0 lg:hidden">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">Bhada</p>
+            <p className="truncate text-sm font-semibold text-[#edede8]">{active}</p>
+          </div>
+          <div
+            className="relative hidden max-w-[360px] flex-1 sm:block"
+            onFocus={() => setSearchOpen(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setSearchOpen(false);
+            }}
+          >
             <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#9aa0af]" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  setSearchOpen(false);
+                  event.currentTarget.blur();
+                }
+              }}
               placeholder="Search tenants, properties..."
+              role="combobox"
+              aria-label="Search tenants, properties, and payments"
+              aria-expanded={searchOpen && Boolean(searchQuery)}
+              aria-controls="dashboard-search-results"
               className="h-10 w-full border border-white/15 bg-white/[0.025] pl-10 pr-4 text-sm text-[#edede8] outline-none transition placeholder:text-white/30 focus:border-[#e4c77a]/60 focus:bg-white/[0.04]"
             />
+            {searchOpen && searchQuery && (
+              <DashboardSearchResults
+                id="dashboard-search-results"
+                className="absolute left-0 right-0 top-[calc(100%+10px)]"
+                count={searchResultCount}
+                results={searchResults}
+                onNavigate={(section) => {
+                  navigateToSection(section);
+                  setSearchOpen(false);
+                }}
+              />
+            )}
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sm:hidden"
+              aria-label={searchOpen ? "Close search" : "Search dashboard"}
+              aria-expanded={searchOpen}
+              onClick={() => setSearchOpen((open) => !open)}
+            >
+              {searchOpen ? <X className="size-5" /> : <Search className="size-5" />}
+            </Button>
             <NotificationCenter
               initialNotifications={notifications}
               onNavigate={navigateToSection}
             />
-            <Button onClick={() => setPaymentOpen(true)}>
+            <Button
+              onClick={() => setPaymentOpen(true)}
+              className="size-10 px-0 sm:h-10 sm:w-auto sm:px-4"
+              aria-label="Record payment"
+            >
               <Plus className="size-4" strokeWidth={2.5} />
               <span className="hidden sm:inline">Record payment</span>
-              <span className="sm:hidden">Payment</span>
             </Button>
           </div>
+          {searchOpen && (
+            <div className={cn("absolute inset-x-0 top-full border-b border-white/10 p-3 sm:hidden", styles.mobileSearch)}>
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-white/35" />
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search tenants, properties..."
+                  aria-label="Search tenants, properties, and payments"
+                  className="h-11 w-full border border-white/15 bg-white/[0.025] pl-10 pr-4 text-sm text-[#edede8] outline-none placeholder:text-white/30 focus:border-[#e4c77a]/60"
+                />
+              </div>
+              {searchQuery && (
+                <DashboardSearchResults
+                  count={searchResultCount}
+                  results={searchResults}
+                  onNavigate={(section) => {
+                    navigateToSection(section);
+                    setSearchOpen(false);
+                  }}
+                  className="mt-2 max-h-[min(58vh,440px)]"
+                />
+              )}
+            </div>
+          )}
         </header>
 
         <div
           key={active}
           className={cn(
-            "mx-auto max-w-[1440px] px-4 py-7 sm:px-7 lg:px-9 lg:py-9",
+            "mx-auto max-w-[1440px] px-3 py-5 pb-28 min-[380px]:px-4 sm:px-7 sm:py-7 sm:pb-8 lg:px-9 lg:py-9",
             styles.content,
             styles.sectionTransition,
           )}
@@ -657,7 +728,11 @@ export function Dashboard({
               firstName={firstName}
             />
           ) : active === "Profile" && profile ? (
-            <ProfileForm email={user.email} initialValues={profile} />
+            <ProfileForm
+              email={user.email}
+              initialValues={profile}
+              subscription={subscription}
+            />
           ) : active === "Help center" ? (
             <HelpCenter />
           ) : (
@@ -670,6 +745,7 @@ export function Dashboard({
               financialYearOptions={financialYearOptions}
               properties={visibleProperties}
               tenants={visibleTenants}
+              portfolioActive={subscription.active}
               onAddProperty={() => openProperty()}
               onEditProperty={openProperty}
               onAddUnit={(property) => openUnit(property)}
@@ -695,6 +771,21 @@ export function Dashboard({
           )}
         </div>
       </main>
+
+      <nav className={cn("lg:hidden", styles.mobileNav)} aria-label="Primary navigation">
+        {nav.slice(0, 4).map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            onClick={(event) => openSectionLink(event, item.label)}
+            aria-current={active === item.label ? "page" : undefined}
+            className={cn(styles.mobileNavItem, active === item.label && styles.mobileNavItemActive)}
+          >
+            <item.icon className="size-[19px]" strokeWidth={active === item.label ? 2.4 : 1.8} />
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
 
       {paymentOpen && (
         <RecordPaymentDialog
@@ -760,6 +851,128 @@ export function Dashboard({
   );
 }
 
+function DashboardSearchResults({
+  id,
+  className,
+  count,
+  results,
+  onNavigate,
+}: {
+  id?: string;
+  className?: string;
+  count: number;
+  results: {
+    properties: PropertyRecord[];
+    tenants: TenantRecord[];
+    payments: PaymentRecord[];
+  };
+  onNavigate: (section: "Properties" | "Tenants" | "Payments") => void;
+}) {
+  return (
+    <div
+      id={id}
+      className={cn(
+        "z-50 overflow-y-auto border border-white/10 bg-[#181816] p-2 shadow-[0_18px_55px_rgba(0,0,0,.42)]",
+        className,
+      )}
+    >
+      {count ? (
+        <>
+          {results.properties.length > 0 && (
+            <SearchResultGroup label="Properties">
+              {results.properties.map((property) => (
+                <SearchResultButton
+                  key={property.id}
+                  icon={Building2}
+                  title={property.name}
+                  description={[property.address, property.city].filter(Boolean).join(", ") || "Property"}
+                  onClick={() => onNavigate("Properties")}
+                />
+              ))}
+            </SearchResultGroup>
+          )}
+          {results.tenants.length > 0 && (
+            <SearchResultGroup label="Tenants">
+              {results.tenants.map((tenant) => (
+                <SearchResultButton
+                  key={tenant.id}
+                  icon={Users}
+                  title={tenant.name}
+                  description={`${tenant.propertyName} · Unit ${tenant.unitNumber}`}
+                  onClick={() => onNavigate("Tenants")}
+                />
+              ))}
+            </SearchResultGroup>
+          )}
+          {results.payments.length > 0 && (
+            <SearchResultGroup label="Payments">
+              {results.payments.map((payment) => (
+                <SearchResultButton
+                  key={payment.id}
+                  icon={CreditCard}
+                  title={payment.tenant}
+                  description={`${payment.receiptNumber} · ${formatCurrency(payment.amount)} · ${payment.status}`}
+                  onClick={() => onNavigate("Payments")}
+                />
+              ))}
+            </SearchResultGroup>
+          )}
+        </>
+      ) : (
+        <div className="px-3 py-7 text-center">
+          <p className="text-sm font-semibold text-[#edede8]">No results found</p>
+          <p className="mt-1 text-xs text-white/40">Try a name, property, unit, or receipt number.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SearchResultGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="py-1">
+      <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30">
+        {label}
+      </p>
+      {children}
+    </section>
+  );
+}
+
+function SearchResultButton({
+  icon: Icon,
+  title,
+  description,
+  onClick,
+}: {
+  icon: typeof Building2;
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-white/[0.06] focus:bg-white/[0.06] focus:outline-none"
+    >
+      <span className="grid size-8 shrink-0 place-items-center border border-[#e4c77a]/20 bg-[#e4c77a]/[0.07] text-[#e4c77a]">
+        <Icon className="size-3.5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-[#edede8]">{title}</span>
+        <span className="mt-0.5 block truncate text-[11px] text-white/40">{description}</span>
+      </span>
+    </button>
+  );
+}
+
 function Overview({
   period,
   setPeriod,
@@ -804,20 +1017,20 @@ function Overview({
 
   return (
     <>
-      <div className="animate-rise flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+      <div className="animate-rise flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-5">
         <div>
-          <p className="mb-1 text-sm font-medium text-[#888e9d]">{todayLabel}</p>
-          <h1 className="font-display text-[29px] leading-tight tracking-[-0.045em] text-[#222836] sm:text-[34px]">
+          <p className="mb-1 text-xs font-medium text-[#888e9d] sm:text-sm">{todayLabel}</p>
+          <h1 className="font-display text-[27px] leading-tight tracking-[-0.045em] text-[#222836] sm:text-[34px]">
             {greeting}, {firstName}
           </h1>
-          <p className="mt-1.5 text-sm text-[#747b8b]">Here&apos;s how your portfolio is doing this month.</p>
+          <p className="mt-1.5 text-[13px] text-[#747b8b] sm:text-sm">Here&apos;s how your portfolio is doing this month.</p>
         </div>
-        <Button variant="outline" onClick={onAddProperty}>
+        <Button variant="outline" onClick={onAddProperty} className="w-full sm:w-auto">
           <Plus className="size-4" /> Add property
         </Button>
       </div>
 
-      <div className="animate-rise-delay mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="animate-rise-delay mt-5 grid grid-cols-2 gap-2 sm:mt-7 sm:gap-4 xl:grid-cols-4">
         <MetricCard icon={WalletCards} label="Billed this month" value={formatCurrency(rentBilling.billedThisMonth)} note={`${rentBilling.periodLabel} rent bills`} trend="up" tone="indigo" />
         <MetricCard icon={CircleDollarSign} label="Collected" value={formatCurrency(rentBilling.paidThisMonth)} note={`${rentBilling.collectionRate}% collection rate`} trend="up" tone="green" />
         <MetricCard icon={CalendarDays} label="Pending rent" value={formatCurrency(rentBilling.pendingTotal)} note={`${rentBilling.overdueCount} overdue bill${rentBilling.overdueCount === 1 ? "" : "s"}`} trend="down" tone="orange" />
@@ -826,7 +1039,7 @@ function Overview({
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
         <section className="rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)] sm:p-6">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-start min-[380px]:justify-between min-[380px]:gap-4">
             <div>
               <h2 className="font-display text-base font-bold tracking-[-0.025em]">Income overview</h2>
               <p className="mt-1 text-xs text-[#8b91a0]">Rent collected across all properties</p>
@@ -834,7 +1047,7 @@ function Overview({
             <FormSelect
               value={period}
               onValueChange={setPeriod}
-              className="h-9 w-[132px] rounded-lg border-[#e3e5ec] bg-white px-3 text-xs font-semibold text-[#5f6676]"
+              className="h-9 w-full rounded-lg border-[#e3e5ec] bg-white px-3 text-xs font-semibold text-[#5f6676] min-[380px]:w-[132px]"
               options={[
                 { value: "This year", label: "This year" },
                 { value: "Last 6 months", label: "Last 6 months" },
@@ -855,12 +1068,12 @@ function Overview({
               <Ellipsis className="size-5" />
             </button>
           </div>
-          <div className="mt-7 flex items-center gap-6">
+          <div className="mt-6 flex items-center gap-3 sm:mt-7 sm:gap-6">
             <div
-              className="relative grid size-[118px] shrink-0 place-items-center rounded-full"
+              className="relative grid size-[96px] shrink-0 place-items-center rounded-full sm:size-[118px]"
               style={{ background: `conic-gradient(#e4c77a 0 ${rentBilling.collectionRate}%, #2a2a28 ${rentBilling.collectionRate}% 100%)` }}
             >
-              <div className="grid size-[88px] place-items-center rounded-full bg-white text-center">
+              <div className="grid size-[72px] place-items-center rounded-full bg-white text-center sm:size-[88px]">
                 <div>
                   <p className="font-display text-xl font-extrabold tracking-[-0.04em]">{rentBilling.collectionRate}%</p>
                   <p className="text-[10px] text-[#9298a7]">collected</p>
@@ -909,18 +1122,18 @@ function MetricCard({
     pink: "border border-[#b77f96]/30 bg-[#b77f96]/10 text-[#d29bb2]",
   };
   return (
-    <article className="group rounded-[22px] border border-white/80 bg-white p-5 shadow-[0_8px_30px_rgba(32,38,55,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_45px_rgba(32,38,55,.075)]">
+    <article className="group min-w-0 rounded-[22px] border border-white/80 bg-white p-3.5 shadow-[0_8px_30px_rgba(32,38,55,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_45px_rgba(32,38,55,.075)] sm:p-5">
       <div className="flex items-center justify-between">
-        <span className={cn("grid size-10 place-items-center rounded-xl", tones[tone])}>
-          <Icon className="size-[19px]" strokeWidth={2.1} />
+        <span className={cn("grid size-9 place-items-center rounded-xl sm:size-10", tones[tone])}>
+          <Icon className="size-[17px] sm:size-[19px]" strokeWidth={2.1} />
         </span>
-        <button className="text-[#a0a5b2] hover:text-[#666d7d]">
+        <button className="hidden text-[#a0a5b2] hover:text-[#666d7d] sm:block">
           <Ellipsis className="size-5" />
         </button>
       </div>
-      <p className="mt-5 text-xs font-medium text-[#858b9a]">{label}</p>
-      <p className="mt-1 font-display text-[23px] tracking-[-0.045em] text-[#242a38]">{value}</p>
-      <p className={cn("mt-3 flex items-center gap-1 text-[11px] font-semibold", trend === "up" ? "text-[#479078]" : "text-[#c06b58]")}>
+      <p className="mt-4 truncate text-[11px] font-medium text-[#858b9a] sm:mt-5 sm:text-xs">{label}</p>
+      <p className="mt-1 truncate font-display text-lg tracking-[-0.045em] text-[#242a38] sm:text-[23px]">{value}</p>
+      <p className={cn("mt-2 flex items-start gap-1 text-[10px] font-semibold leading-4 sm:mt-3 sm:text-[11px]", trend === "up" ? "text-[#479078]" : "text-[#c06b58]")}>
         {trend === "up" ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
         {note}
       </p>
@@ -970,7 +1183,42 @@ function PaymentTable({
           </button>
         )}
       </div>
-      <div className="overflow-x-auto">
+      <div className="divide-y divide-white/[0.075] border-t border-white/10 sm:hidden">
+        {rows.length ? (
+          rows.slice(0, 8).map((payment) => (
+            <div key={payment.id} className="p-4">
+              <div className="flex items-start gap-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-full border border-[#e4c77a]/25 bg-[#e4c77a]/[0.08] text-[10px] font-extrabold text-[#e4c77a]">
+                  {payment.initials}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-[#343a48]">{payment.tenant}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-[#989eac]">{payment.property} · {payment.summary}</p>
+                    </div>
+                    <p className="shrink-0 text-sm font-bold text-[#343a48]">{formatCurrency(payment.amount)}</p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-[#7e8595]">{payment.date}</p>
+                    <span className={cn("inline-flex px-2.5 py-1 text-[10px] font-bold", statusStyles[payment.status])}>
+                      {payment.status}
+                    </span>
+                  </div>
+                  {payment.status !== "Paid" && (
+                    <p className="mt-2 text-right text-[10px] font-semibold text-[#b66a45]">
+                      Balance {formatCurrency(payment.balance)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="px-5 py-10 text-center text-sm text-[#8b91a0]">No payments match your search.</p>
+        )}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[600px] text-left">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
@@ -1085,6 +1333,7 @@ function SectionView({
   financialYearOptions,
   properties,
   tenants,
+  portfolioActive,
   onAddProperty,
   onEditProperty,
   onAddUnit,
@@ -1105,6 +1354,7 @@ function SectionView({
   financialYearOptions: FinancialYearOption[];
   properties: PropertyRecord[];
   tenants: TenantRecord[];
+  portfolioActive: boolean;
   onAddProperty: () => void;
   onEditProperty: (property: PropertyRecord) => void;
   onAddUnit: (property: PropertyRecord) => void;
@@ -1122,158 +1372,40 @@ function SectionView({
     Tenants: "Keep every tenant and lease in one place.",
     Payments: "Track paid, pending, and overdue rent.",
   };
-  const today = new Date().toISOString().slice(0, 10);
-
   function exportSection() {
-    if (section === "Properties") {
-      const exportRows = properties.flatMap((property) => {
-        const propertyValues: CsvValue[] = [
-          property.name,
-          property.address,
-          property.city,
-          property.state,
-          property.postalCode,
-        ];
-        if (!property.units.length) return [[...propertyValues, "", "", "", "", "", "", ""]];
-        return property.units.map((unit) => [
-          ...propertyValues,
-          unit.unitNumber,
-          unit.floor,
-          unit.areaSqft,
-          unit.status,
-          unit.tenant?.name ?? "",
-          unit.tenant?.email ?? "",
-          unit.tenant?.phone ?? "",
-        ]);
-      });
-      downloadCsv(
-        `bhada-properties-${today}.csv`,
-        ["Property", "Address", "City", "State", "Postal code", "Unit", "Floor", "Area (sq ft)", "Status", "Tenant", "Tenant email", "Tenant phone"],
-        exportRows,
-      );
-      return;
-    }
-
-    if (section === "Tenants") {
-      downloadCsv(
-        `bhada-tenants-${today}.csv`,
-        ["Tenant", "Property", "Unit", "Status", "Email", "Phone", "Lease start", "Lease end", "Monthly rent", "Billing day", "Due day", "GST enabled", "GST rate", "TDS enabled", "TDS rate", "Security deposit", "Opening balance", "Credit balance", "Next escalation"],
-        tenants.map((tenant) => [
-          tenant.name,
-          tenant.propertyName,
-          tenant.unitNumber,
-          tenant.isActive ? "Active" : "Inactive",
-          tenant.email,
-          tenant.phone,
-          tenant.leaseStart,
-          tenant.leaseEnd,
-          tenant.monthlyRent,
-          tenant.rentBillingDay,
-          tenant.rentDueDay,
-          tenant.gstEnabled ? "Yes" : "No",
-          tenant.gstRate,
-          tenant.tdsEnabled ? "Yes" : "No",
-          tenant.tdsRate,
-          tenant.securityDeposit,
-          tenant.openingBalance,
-          tenant.creditBalance,
-          tenant.nextEscalationDate,
-        ]),
-      );
-      return;
-    }
-
-    const tenantById = new Map(tenants.map((tenant) => [tenant.id, tenant]));
-    const financialYearEnd = financialYearStart + 1;
-    const paymentRows = rows
-      .filter((payment) => {
-        const date = payment.paidAt || payment.date;
-        return date >= `${financialYearStart}-04-01` && date < `${financialYearEnd}-04-01`;
-      })
-      .map<CsvValue[]>((payment) => [
-        "Payment",
-        payment.receiptNumber,
-        payment.tenant,
-        payment.property,
-        "",
-        "",
-        payment.paidAt || payment.date,
-        "",
-        "",
-        "",
-        "",
-        payment.amount,
-        payment.amount,
-        payment.balance,
-        payment.status,
-        payment.method,
-        payment.summary,
-      ]);
-    const rentRows = rentBilling.bills.map<CsvValue[]>((bill) => {
-      const tenant = tenantById.get(bill.tenantId);
-      return [
-        "Rent bill",
-        bill.billNumber,
-        bill.tenantName,
-        tenant?.propertyName ?? "",
-        tenant?.unitNumber ?? "",
-        bill.billingPeriod,
-        "",
-        bill.dueDate,
-        bill.baseAmount,
-        bill.gstAmount,
-        bill.tdsAmount,
-        bill.amount,
-        bill.paid,
-        bill.pending,
-        bill.status,
-        "",
-        "",
-      ];
-    });
-    const electricityRows = electricityBills.map<CsvValue[]>((bill) => [
-      "Electricity bill",
-      bill.billNumber,
-      bill.tenantName,
-      bill.propertyName,
-      bill.unitNumber,
-      bill.billingPeriod,
-      "",
-      bill.dueDate,
-      "",
-      "",
-      "",
-      bill.amount,
-      bill.paid,
-      bill.pending,
-      bill.status,
-      "",
-      bill.note,
-    ]);
-    downloadCsv(
-      `bhada-payments-FY${financialYearStart}-${String(financialYearEnd).slice(-2)}.csv`,
-      ["Record type", "Reference", "Tenant", "Property", "Unit", "Billing period", "Payment date", "Due date", "Base amount", "GST amount", "TDS amount", "Total amount", "Paid", "Pending / balance", "Status", "Payment method", "Notes"],
-      [...rentRows, ...electricityRows, ...paymentRows],
-    );
+    const params = new URLSearchParams({ section });
+    if (section === "Payments") params.set("fy", String(financialYearStart));
+    const anchor = document.createElement("a");
+    anchor.href = `/api/export?${params.toString()}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
   }
 
-  const canExport =
+  const hasExportData =
     section === "Properties"
       ? properties.length > 0
       : section === "Tenants"
         ? tenants.length > 0
         : rentBilling.bills.length > 0 || electricityBills.length > 0 || rows.length > 0;
+  const canExport = portfolioActive && hasExportData;
 
   return (
     <div className="animate-rise">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm text-[#8a909f]">Portfolio</p>
-          <h1 className="mt-1 font-display text-[34px] font-extrabold tracking-[-0.045em]">{section}</h1>
-          <p className="mt-1 text-sm text-[#747b8b]">{descriptions[section]}</p>
+          <p className="text-xs text-[#8a909f] sm:text-sm">Portfolio</p>
+          <h1 className="mt-1 font-display text-[29px] font-extrabold tracking-[-0.045em] sm:text-[34px]">{section}</h1>
+          <p className="mt-1 text-[13px] text-[#747b8b] sm:text-sm">{descriptions[section]}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={exportSection} disabled={!canExport}>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={exportSection}
+            disabled={!canExport}
+            title={!portfolioActive ? "CSV export is included with Portfolio." : undefined}
+          >
             <Download className="size-4" /> Export CSV
           </Button>
           {section === "Payments" && (
@@ -1281,7 +1413,10 @@ function SectionView({
               <Plus className="size-4" /> Add electricity bill
             </Button>
           )}
-          <Button onClick={section === "Properties" ? onAddProperty : section === "Tenants" ? onAddTenant : onRecordPayment}>
+          <Button
+            onClick={section === "Properties" ? onAddProperty : section === "Tenants" ? onAddTenant : onRecordPayment}
+            className="col-span-2 sm:col-auto"
+          >
             <Plus className="size-4" /> {section === "Properties" ? "Add property" : section === "Payments" ? "Record payment" : `Add ${section.slice(0, -1).toLowerCase()}`}
           </Button>
         </div>
@@ -1385,7 +1520,54 @@ function RentBillTable({
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="divide-y divide-white/[0.075] border-t border-white/10 sm:hidden">
+        {visibleBills.length ? visibleBills.map((bill) => (
+          <article key={bill.id} className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-[#343a48]">{bill.billNumber}</p>
+                <p className="mt-1 truncate text-[11px] text-[#7e8595]">
+                  {bill.tenantName} · {formatBillingMonth(bill.billingPeriod)}
+                </p>
+              </div>
+              <span className={cn(
+                "inline-flex shrink-0 px-2.5 py-1 text-[10px] font-bold",
+                bill.status === "Paid"
+                  ? statusStyles.Paid
+                  : bill.status === "Overdue"
+                    ? statusStyles.Overdue
+                    : statusStyles.Upcoming,
+              )}>
+                {bill.status}
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 border-y border-white/[0.075] py-3">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">Payable</p>
+                <p className="mt-1 text-sm font-bold text-[#343a48]">{formatCurrency(bill.amount)}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">Pending</p>
+                <p className="mt-1 text-sm font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-[#7e8595]">Due {bill.dueDate}</p>
+              <button
+                onClick={() => onViewBill(bill)}
+                className="inline-flex h-9 items-center gap-1.5 border border-[#dfe2e9] px-3 text-[11px] font-bold text-[#5555c7]"
+              >
+                <Eye className="size-3.5" /> View bill
+              </button>
+            </div>
+          </article>
+        )) : (
+          <p className="px-5 py-10 text-center text-sm text-[#8b91a0]">
+            {billSearch ? "No rent bill matches that bill number." : `No rent bills in ${financialYearLabel}.`}
+          </p>
+        )}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[460px] text-left md:min-w-[720px]">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
@@ -1485,7 +1667,60 @@ function ElectricityBillTable({
           />
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="divide-y divide-white/[0.075] border-t border-white/10 sm:hidden">
+        {visibleBills.length ? visibleBills.map((bill) => (
+          <article key={bill.id} className="p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-[#343a48]">{bill.billNumber}</p>
+                <p className="mt-1 truncate text-[11px] text-[#7e8595]">
+                  {bill.propertyName} · Unit {bill.unitNumber}
+                </p>
+              </div>
+              <span className={cn(
+                "inline-flex shrink-0 px-2.5 py-1 text-[10px] font-bold",
+                bill.status === "Paid"
+                  ? statusStyles.Paid
+                  : bill.status === "Overdue"
+                    ? statusStyles.Overdue
+                    : statusStyles.Upcoming,
+              )}>
+                {bill.status}
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 border-y border-white/[0.075] py-3">
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">Amount</p>
+                <p className="mt-1 text-sm font-bold text-[#343a48]">{formatCurrency(bill.amount)}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">Pending</p>
+                <p className="mt-1 text-sm font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">Meter reading</p>
+                <p className="mt-1 text-[11px] text-[#7e8595]">
+                  {bill.previousReading} → {bill.currentReading} · {bill.unitsConsumed} units
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] text-[#7e8595]">Due {bill.dueDate}</p>
+              <button
+                onClick={() => onViewBill(bill)}
+                className="inline-flex h-9 items-center gap-1.5 border border-[#dfe2e9] px-3 text-[11px] font-bold text-[#5555c7]"
+              >
+                <Eye className="size-3.5" /> View bill
+              </button>
+            </div>
+          </article>
+        )) : (
+          <p className="px-5 py-10 text-center text-sm text-[#8b91a0]">
+            {billSearch ? "No electricity bill matches that bill number." : `No electricity bills in ${financialYearLabel}.`}
+          </p>
+        )}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[520px] text-left md:min-w-[760px] lg:min-w-[1000px]">
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">

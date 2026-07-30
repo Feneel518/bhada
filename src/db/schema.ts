@@ -30,6 +30,7 @@ export const landlord = pgTable("landlord", {
   subscriptionStatus: text("subscription_status").default("none").notNull(),
   razorpaySubscriptionId: text("razorpay_subscription_id").unique(),
   subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
+  subscriptionCancelAtPeriodEnd: boolean("subscription_cancel_at_period_end").default(false).notNull(),
   rentBillingPeriod: text("rent_billing_period").default("previous").notNull(),
   phone: text("phone"),
   gstin: text("gstin"),

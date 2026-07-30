@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarClock,
   Check,
+  CircleCheck,
   CircleAlert,
   IndianRupee,
   TrendingUp,
@@ -16,6 +17,7 @@ import type { NotificationItem, NotificationKind } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 
 const kindStyles: Record<NotificationKind, { icon: typeof Bell; className: string }> = {
+  payment: { icon: CircleCheck, className: "bg-[#e8f5ef] text-[#328161]" },
   overdue: { icon: CircleAlert, className: "bg-[#fff0ed] text-[#c65c4d]" },
   due_soon: { icon: IndianRupee, className: "bg-[#fff4e8] text-[#b66a45]" },
   lease: { icon: CalendarClock, className: "bg-[#eef0ff] text-[#5555c7]" },
@@ -33,7 +35,7 @@ export function NotificationCenter({
   onNavigate,
 }: {
   initialNotifications: NotificationItem[];
-  onNavigate: (section: "Payments" | "Tenants") => void;
+  onNavigate: (section: "Payments" | "Tenants" | "Profile") => void;
 }) {
   const [open, setOpen] = useState(false);
   const [optimisticReadIds, setOptimisticReadIds] = useState<string[]>([]);
@@ -172,7 +174,7 @@ export function NotificationCenter({
               </span>
               <p className="mt-3 text-sm font-bold text-[#404655]">No notifications</p>
               <p className="mt-1 text-xs leading-5 text-[#8c92a2]">
-                Upcoming dues, lease dates, and rent increases will appear here.
+                Payments, upcoming dues, lease dates, and rent increases will appear here.
               </p>
             </div>
           )}
