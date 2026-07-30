@@ -437,7 +437,8 @@ export function Dashboard({
         setFocusedPaymentId(notification.target.paymentId);
         break;
       case "rent_bill": {
-        const bill = rentBilling.bills.find((item) => item.id === notification.target.billId);
+        const { billId } = notification.target;
+        const bill = rentBilling.bills.find((item) => item.id === billId);
         if (bill) {
           setBillDocument({
             kind: "rent",
@@ -448,7 +449,8 @@ export function Dashboard({
         break;
       }
       case "electricity_bill": {
-        const bill = electricityBills.find((item) => item.id === notification.target.billId);
+        const { billId } = notification.target;
+        const bill = electricityBills.find((item) => item.id === billId);
         if (bill) {
           setBillDocument({
             kind: "electricity",
@@ -459,7 +461,8 @@ export function Dashboard({
         break;
       }
       case "tenant": {
-        const renter = tenants.find((item) => item.id === notification.target.tenantId);
+        const { tenantId } = notification.target;
+        const renter = tenants.find((item) => item.id === tenantId);
         if (renter) setProfileTenant(renter);
         break;
       }
