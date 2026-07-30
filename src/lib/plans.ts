@@ -8,17 +8,21 @@ export const PORTFOLIO_PLAN = {
   name: "Portfolio",
   monthlyPrice: 49,
   propertyLimit: 5,
-  unitLimit: 15,
+  unitLimit: 25,
 } as const;
 
 export type PlanAccount = {
   plan?: string | null;
   subscriptionStatus?: string | null;
   subscriptionCurrentPeriodEnd?: Date | null;
+  subscriptionCancelAtPeriodEnd?: boolean | null;
 };
 
 export function hasPortfolioAccess(account: PlanAccount, now = new Date()) {
   if (account.plan !== "portfolio") return false;
+  if (account.subscriptionCancelAtPeriodEnd && account.subscriptionCurrentPeriodEnd) {
+    return account.subscriptionCurrentPeriodEnd.getTime() > now.getTime();
+  }
   if (["authenticated", "active"].includes(account.subscriptionStatus ?? "")) return true;
 
   return account.subscriptionStatus === "pending"

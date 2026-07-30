@@ -1,14 +1,27 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { landlord, notificationRead } from "@/db/schema";
+import {
+  landlord,
+  notificationRead,
+  paymentReceipt,
+  saasBillingEvent,
+  tenant,
+} from "@/db/schema";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { TenantRecord } from "@/lib/tenants";
 import { formatCurrency } from "@/lib/utils";
 
-export type NotificationKind = "overdue" | "due_soon" | "lease" | "rent_increase";
+export type NotificationKind = "payment" | "overdue" | "due_soon" | "lease" | "rent_increase";
+
+export type NotificationTarget =
+  | { type: "payment"; paymentId: string }
+  | { type: "rent_bill"; billId: string }
+  | { type: "electricity_bill"; billId: string }
+  | { type: "tenant"; tenantId: string }
+  | { type: "subscription_receipt"; paymentId: string };
 
 export type NotificationItem = {
   id: string;
@@ -16,7 +29,8 @@ export type NotificationItem = {
   title: string;
   description: string;
   date: string;
-  section: "Payments" | "Tenants";
+  section: "Payments" | "Tenants" | "Profile";
+  target: NotificationTarget;
   read: boolean;
 };
 
@@ -48,6 +62,15 @@ function dateLabel(date: string) {
   }).format(new Date(`${date}T12:00:00+05:30`));
 }
 
+function dateKey(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Kolkata",
+  }).format(date);
+}
+
 export async function getNotifications(
   userId: string,
   { rentBilling, electricityBills, tenants }: NotificationInputs,
@@ -55,6 +78,69 @@ export async function getNotifications(
 ): Promise<NotificationItem[]> {
   const today = startOfDay(now);
   const items: Omit<NotificationItem, "read">[] = [];
+  const recentPaymentCutoff = new Date(now.getTime() - 30 * DAY);
+  const [recentReceipts, recentSubscriptionPayments] = await Promise.all([
+    db
+      .select({
+        id: paymentReceipt.id,
+        receiptNumber: paymentReceipt.receiptNumber,
+        amount: paymentReceipt.amount,
+        tenantName: tenant.name,
+        createdAt: paymentReceipt.createdAt,
+      })
+      .from(paymentReceipt)
+      .innerJoin(landlord, eq(paymentReceipt.landlordId, landlord.id))
+      .innerJoin(tenant, eq(paymentReceipt.tenantId, tenant.id))
+      .where(
+        and(
+          eq(landlord.userId, userId),
+          gte(paymentReceipt.createdAt, recentPaymentCutoff),
+        ),
+      )
+      .orderBy(desc(paymentReceipt.createdAt))
+      .limit(30),
+    db
+      .select({
+        id: saasBillingEvent.id,
+        amountPaise: saasBillingEvent.amountPaise,
+        occurredAt: saasBillingEvent.occurredAt,
+      })
+      .from(saasBillingEvent)
+      .innerJoin(landlord, eq(saasBillingEvent.landlordId, landlord.id))
+      .where(
+        and(
+          eq(landlord.userId, userId),
+          eq(saasBillingEvent.eventType, "payment.captured"),
+          gte(saasBillingEvent.occurredAt, recentPaymentCutoff),
+        ),
+      )
+      .orderBy(desc(saasBillingEvent.occurredAt))
+      .limit(30),
+  ]);
+
+  for (const receipt of recentReceipts) {
+    items.push({
+      id: `payment:${receipt.id}:received`,
+      kind: "payment",
+      title: "Payment received",
+      description: `${formatCurrency(Number(receipt.amount))} received from ${receipt.tenantName} · ${receipt.receiptNumber}.`,
+      date: dateKey(receipt.createdAt),
+      section: "Payments",
+      target: { type: "payment", paymentId: receipt.id },
+    });
+  }
+
+  for (const payment of recentSubscriptionPayments) {
+    items.push({
+      id: `subscription-payment:${payment.id}:captured`,
+      kind: "payment",
+      title: "Subscription payment successful",
+      description: `${formatCurrency(payment.amountPaise / 100)} Razorpay payment captured for your Portfolio plan.`,
+      date: dateKey(payment.occurredAt),
+      section: "Profile",
+      target: { type: "subscription_receipt", paymentId: payment.id },
+    });
+  }
 
   for (const bill of rentBilling.bills) {
     if (bill.status === "Paid") continue;
@@ -68,6 +154,7 @@ export async function getNotifications(
       description: `${bill.tenantName} has ${formatCurrency(bill.pending)} ${overdue ? "overdue" : "due"} on ${dateLabel(bill.dueDate)}.`,
       date: bill.dueDate,
       section: "Payments",
+      target: { type: "rent_bill", billId: bill.id },
     });
   }
 
@@ -83,6 +170,7 @@ export async function getNotifications(
       description: `${bill.tenantName} · ${bill.propertyName} ${bill.unitNumber}: ${formatCurrency(bill.pending)} ${overdue ? "was due" : "is due"} on ${dateLabel(bill.dueDate)}.`,
       date: bill.dueDate,
       section: "Payments",
+      target: { type: "electricity_bill", billId: bill.id },
     });
   }
 
@@ -99,6 +187,7 @@ export async function getNotifications(
           description: `${renter.name}'s lease for ${renter.propertyName} ${renter.unitNumber} ends on ${dateLabel(renter.leaseEnd)}.`,
           date: renter.leaseEnd,
           section: "Tenants",
+          target: { type: "tenant", tenantId: renter.id },
         });
       }
     }
@@ -113,19 +202,27 @@ export async function getNotifications(
           description: `${renter.name}'s rent increases by ${renter.rentEscalationPct}% on ${dateLabel(renter.nextEscalationDate)}.`,
           date: renter.nextEscalationDate,
           section: "Tenants",
+          target: { type: "tenant", tenantId: renter.id },
         });
       }
     }
   }
 
   const priority: Record<NotificationKind, number> = {
-    overdue: 0,
-    due_soon: 1,
-    lease: 2,
-    rent_increase: 3,
+    payment: 0,
+    overdue: 1,
+    due_soon: 2,
+    lease: 3,
+    rent_increase: 4,
   };
   const visible = items
-    .sort((a, b) => priority[a.kind] - priority[b.kind] || a.date.localeCompare(b.date))
+    .sort((a, b) => {
+      const kindDifference = priority[a.kind] - priority[b.kind];
+      if (kindDifference) return kindDifference;
+      return a.kind === "payment"
+        ? b.date.localeCompare(a.date)
+        : a.date.localeCompare(b.date);
+    })
     .slice(0, 30);
 
   if (!visible.length) return [];

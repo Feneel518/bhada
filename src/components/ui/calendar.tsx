@@ -19,7 +19,7 @@ export function Calendar({
         months: "relative flex flex-col gap-4 sm:flex-row",
         month: "space-y-4",
         month_caption: "relative flex h-9 items-center justify-center",
-        caption_label: "text-sm font-bold text-[#353b4a]",
+        caption_label: "text-sm font-bold text-[#edede8]",
         dropdowns: "flex items-center justify-center gap-1",
         dropdown:
           "absolute inset-0 cursor-pointer opacity-0",
@@ -41,9 +41,9 @@ export function Calendar({
         selected:
           "[&>button]:bg-[#e4c77a] [&>button]:font-semibold [&>button]:text-[#111111] [&>button:hover]:bg-[#f0da9d] [&>button:hover]:text-[#111111]",
         today:
-          "[&>button]:border [&>button]:border-[#b9b9ef] [&>button]:font-semibold [&>button]:text-[#4f4fc3]",
-        outside: "text-[#c2c6d0] opacity-50",
-        disabled: "text-[#c2c6d0] opacity-40",
+          "[&>button]:border [&>button]:border-[#e4c77a]/45 [&>button]:font-semibold [&>button]:text-[#e4c77a]",
+        outside: "text-white/25",
+        disabled: "text-white/20 opacity-40",
         hidden: "invisible",
         ...classNames,
       }}

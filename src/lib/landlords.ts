@@ -11,6 +11,7 @@ export async function ensureLandlord(user: { id: string; name: string }) {
       plan: landlord.plan,
       subscriptionStatus: landlord.subscriptionStatus,
       subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+      subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
     })
     .from(landlord)
     .where(eq(landlord.userId, user.id))
@@ -31,6 +32,7 @@ export async function ensureLandlord(user: { id: string; name: string }) {
       plan: landlord.plan,
       subscriptionStatus: landlord.subscriptionStatus,
       subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+      subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
     });
 
   if (created) return created;
@@ -41,6 +43,7 @@ export async function ensureLandlord(user: { id: string; name: string }) {
       plan: landlord.plan,
       subscriptionStatus: landlord.subscriptionStatus,
       subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+      subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
     })
     .from(landlord)
     .where(eq(landlord.userId, user.id))

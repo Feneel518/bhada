@@ -7,7 +7,18 @@ export type RazorpaySubscription = {
   plan_id: string;
   status: string;
   current_end: number | null;
+  has_scheduled_changes?: boolean;
+  change_scheduled_at?: number | null;
   notes?: Record<string, string> | [];
+};
+
+export type RazorpayPayment = {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  captured: boolean;
+  created_at: number;
 };
 
 export function razorpayConfig() {

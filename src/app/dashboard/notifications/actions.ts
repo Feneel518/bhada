@@ -13,7 +13,7 @@ function validKeys(value: unknown) {
       (item): item is string =>
         typeof item === "string" &&
         item.length <= 180 &&
-        /^(rent|electricity|tenant):[a-zA-Z0-9-]+:(overdue|due|lease|increase)(?::\d{4}-\d{2}-\d{2})?$/.test(item),
+        /^(?:(?:rent|electricity|tenant):[a-zA-Z0-9-]+:(?:overdue|due|lease|increase)(?::\d{4}-\d{2}-\d{2})?|payment:[a-zA-Z0-9-]+:received|subscription-payment:[a-zA-Z0-9_-]+:captured)$/.test(item),
     )
     .slice(0, 50);
 }

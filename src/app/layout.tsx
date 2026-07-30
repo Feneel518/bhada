@@ -27,7 +27,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" data-scroll-behavior="smooth">
       <body className={`${bodyFont.variable} ${displayFont.variable}`}>
         {children}
-        <Toaster richColors position="top-right" />
+        <Toaster
+          className="bhada-toaster"
+          position="top-right"
+          closeButton
+          gap={10}
+          offset={{ top: 20, right: 20 }}
+          mobileOffset={16}
+          toastOptions={{ duration: 4500 }}
+        />
       </body>
     </html>
   );

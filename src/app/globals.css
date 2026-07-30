@@ -60,6 +60,107 @@ button {
   color: #33338b;
 }
 
+/* Sonner notifications, tuned to feel like the rest of the Bhada workspace. */
+[data-sonner-toaster].bhada-toaster {
+  --width: 372px;
+  font-family: var(--font-body), sans-serif;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-styled="true"] {
+  gap: 12px;
+  min-height: 64px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--brand);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.97);
+  color: var(--foreground);
+  box-shadow: 0 16px 45px rgba(32, 38, 55, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-title] {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-description] {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-icon] {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 10px;
+  background: #efeffd;
+  color: var(--brand);
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="success"] {
+  border-left-color: #16a39a;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="success"] [data-icon] {
+  background: #e8f7f4;
+  color: #13877f;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="error"] {
+  border-left-color: #d86b78;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="error"] [data-icon] {
+  background: #fceef0;
+  color: #c55361;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="warning"] {
+  border-left-color: #e8994f;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="warning"] [data-icon] {
+  background: #fff3e7;
+  color: #c87931;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-button] {
+  height: 30px;
+  border-radius: 9px;
+  background: var(--brand);
+  color: white;
+  font-weight: 700;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-cancel] {
+  background: #f0f1f6;
+  color: #4d5464;
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-close-button] {
+  top: -6px;
+  left: -6px;
+  width: 22px;
+  height: 22px;
+  border-color: var(--line);
+  background: white;
+  color: var(--muted);
+  box-shadow: 0 4px 12px rgba(32, 38, 55, 0.12);
+}
+
+[data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-close-button]:hover {
+  border-color: #d6d8e2;
+  background: #f7f8fc;
+  color: var(--foreground);
+}
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -67,6 +168,109 @@ button {
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/*
+ * Dialog motion stays on opacity and transforms so opening a modal does not
+ * repaint and blur the full dashboard underneath it.
+ */
+.bhada-dialog-overlay {
+  animation: bhada-dialog-overlay-in 100ms linear both;
+}
+
+.bhada-dialog-overlay[data-state="closed"] {
+  animation: bhada-dialog-overlay-out 80ms linear both;
+}
+
+.bhada-dialog-content {
+  animation: bhada-dialog-content-in 120ms cubic-bezier(.2, .8, .2, 1) both;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.bhada-dialog-content[data-state="closed"] {
+  animation: bhada-dialog-content-out 80ms ease-in both;
+}
+
+.bhada-popover-surface {
+  animation: bhada-popover-in 100ms cubic-bezier(.2, .8, .2, 1) both;
+  transform-origin: top right;
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="default"] {
+  border-color: #e4c77a;
+  background: #e4c77a;
+  color: #111111;
+  box-shadow: 0 8px 24px rgba(228, 199, 122, 0.09);
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="default"]:hover {
+  border-color: #f0da9d;
+  background: #f0da9d;
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="outline"] {
+  border-color: rgba(228, 199, 122, 0.42);
+  background: rgba(228, 199, 122, 0.045);
+  color: #e4c77a;
+  box-shadow: none;
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="outline"]:hover {
+  border-color: #e4c77a;
+  background: rgba(228, 199, 122, 0.1);
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="ghost"] {
+  color: rgba(237, 237, 232, 0.55);
+}
+
+[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="ghost"]:hover {
+  background: rgba(255, 255, 255, 0.055);
+  color: #e4c77a;
+}
+
+@keyframes bhada-dialog-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bhada-dialog-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes bhada-dialog-content-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -49%) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes bhada-dialog-content-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -49.5%) scale(.99);
+  }
+}
+
+@keyframes bhada-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px) scale(.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 @keyframes rise {

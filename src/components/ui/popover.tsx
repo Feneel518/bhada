@@ -20,7 +20,7 @@ export function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-[100] w-auto rounded-none border border-white/15 bg-[#1a1a19] p-0 text-[#edede8] shadow-[0_24px_70px_rgba(0,0,0,.45)] outline-none",
+          "bhada-popover-surface z-[100] w-auto rounded-none border border-white/15 bg-[#1a1a19] p-0 text-[#edede8] shadow-[0_20px_56px_rgba(0,0,0,.42)] outline-none",
           className,
         )}
         {...props}

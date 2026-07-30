@@ -71,6 +71,7 @@ export async function POST() {
         .set({
           razorpaySubscriptionId: subscription.id,
           subscriptionStatus: subscription.status,
+          subscriptionCancelAtPeriodEnd: false,
           plan: "one_door",
           updatedAt: new Date(),
         })

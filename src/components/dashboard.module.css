@@ -50,6 +50,65 @@
   min-height: calc(100vh - 72px);
 }
 
+.mobileSearch {
+  background: rgba(17, 17, 17, 0.98);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(20px);
+}
+
+.mobileNav {
+  position: fixed;
+  z-index: 38;
+  right: 0.75rem;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  left: 0.75rem;
+  display: none;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: 4.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(22, 22, 21, 0.96);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(22px);
+}
+
+.mobileNavItem {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 4.25rem;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: rgba(237, 237, 232, 0.38);
+  font-size: 0.61rem;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+
+.mobileNavItem::before {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  width: 1.75rem;
+  height: 2px;
+  background: transparent;
+  content: "";
+  transform: translateX(-50%);
+}
+
+.mobileNavItemActive {
+  background: rgba(228, 199, 122, 0.055);
+  color: #e4c77a;
+}
+
+.mobileNavItemActive::before {
+  background: #e4c77a;
+}
+
 .sectionTransition {
   animation: section-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -180,6 +239,10 @@
   border-radius: 0 !important;
   background-color: #171717 !important;
   box-shadow: none !important;
+}
+
+.shell :global(form[data-profile-settings]) {
+  background-color: transparent !important;
 }
 
 .shell :global(table) {
@@ -341,6 +404,26 @@
 @media (max-width: 1023px) {
   .sidebar {
     box-shadow: 24px 0 80px rgba(0, 0, 0, 0.45);
+  }
+
+  .mobileNav {
+    display: grid;
+  }
+}
+
+@media (max-width: 639px) {
+  .content {
+    min-height: calc(100dvh - 4rem);
+  }
+
+  .shell :global(section),
+  .shell :global(article) {
+    scroll-margin-top: 5rem;
+  }
+
+  .shell :global(button),
+  .shell :global(a) {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 

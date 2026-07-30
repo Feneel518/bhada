@@ -129,6 +129,7 @@ export default async function Home() {
           plan: landlord.plan,
           subscriptionStatus: landlord.subscriptionStatus,
           subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+          subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
         })
         .from(landlord)
         .where(eq(landlord.userId, session.user.id))
