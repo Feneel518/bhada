@@ -1,0 +1,1 @@
+ALTER TABLE "tenant" ADD COLUMN "gst_taxable_percent" real DEFAULT 100 NOT NULL;

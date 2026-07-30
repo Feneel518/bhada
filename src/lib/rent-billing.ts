@@ -122,6 +122,7 @@ export async function generateMonthlyRentBills(now = new Date(), userId?: string
       rentDueDay: tenant.rentDueDay,
       gstEnabled: tenant.gstEnabled,
       gstRate: tenant.gstRate,
+      gstTaxablePercent: tenant.gstTaxablePercent,
       tdsEnabled: tenant.tdsEnabled,
       tdsRate: tenant.tdsRate,
       createdAt: tenant.createdAt,
@@ -165,8 +166,10 @@ export async function generateMonthlyRentBills(now = new Date(), userId?: string
     );
     const basePaise = Math.round(renter.monthlyRent * 100);
     const gstRate = renter.gstEnabled ? renter.gstRate : 0;
+    const gstTaxablePercent = renter.gstEnabled ? renter.gstTaxablePercent : 0;
     const tdsRate = renter.tdsEnabled ? renter.tdsRate : 0;
-    const gstPaise = Math.round((basePaise * gstRate) / 100);
+    const taxableRentPaise = Math.round((basePaise * gstTaxablePercent) / 100);
+    const gstPaise = Math.round((taxableRentPaise * gstRate) / 100);
     const tdsPaise = Math.round(((basePaise + gstPaise) * tdsRate) / 100);
     rows.push({
       id: crypto.randomUUID(),

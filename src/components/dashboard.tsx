@@ -6,7 +6,6 @@ import { useActionState, useDeferredValue, useEffect, useMemo, useState, useTran
 import {
   ArrowDownRight,
   ArrowUpRight,
-  Bell,
   Building2,
   CalendarDays,
   Check,
@@ -71,6 +70,8 @@ import { formatBillingMonth, type FinancialYearOption } from "@/lib/financial-ye
 import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import type { TenantAnalytics } from "@/lib/tenant-analytics";
+import type { NotificationItem } from "@/lib/notifications";
+import { NotificationCenter } from "@/components/notification-center";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const LineChart = dynamic(() => import("@/components/ui/line-chart").then((module) => module.LineChart));
@@ -121,6 +122,7 @@ export function Dashboard({
   issuer,
   tenantAnalytics,
   incomeOverview,
+  notifications,
 }: {
   user: DashboardUser;
   initialSection?: "Overview" | "Profile" | "Payments";
@@ -135,6 +137,7 @@ export function Dashboard({
   issuer: BillIssuer;
   tenantAnalytics: TenantAnalytics[];
   incomeOverview: IncomeOverviewPoint[];
+  notifications: NotificationItem[];
 }) {
   const [active, setActive] = useState<string>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -323,15 +326,10 @@ export function Dashboard({
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="relative"
-              onClick={() => toast("You’re all caught up", { description: "No new notifications." })}
-            >
-              <Bell className="size-[18px]" />
-              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#ed7864] ring-2 ring-white" />
-            </Button>
+            <NotificationCenter
+              initialNotifications={notifications}
+              onNavigate={selectSection}
+            />
             <Button onClick={() => setPaymentOpen(true)}>
               <Plus className="size-4" strokeWidth={2.5} />
               <span className="hidden sm:inline">Record payment</span>
@@ -1201,7 +1199,9 @@ function TenantCard({
         <p><span className="font-bold text-[#4d5362]">Billing:</span> Day {item.rentBillingDay} · due day {item.rentDueDay}</p>
         <p>
           <span className="font-bold text-[#4d5362]">Tax on rent:</span>{" "}
-          {item.gstEnabled ? `${item.gstRate}% GST` : "No GST"}
+          {item.gstEnabled
+            ? `${item.gstRate}% GST on ${item.gstTaxablePercent}% of rent`
+            : "No GST"}
           {" · "}
           {item.tdsEnabled ? `${item.tdsRate}% TDS` : "No TDS"}
         </p>
@@ -2144,11 +2144,15 @@ function TenantDialog({
   const editing = Boolean(tenant);
   const [gstEnabled, setGstEnabled] = useState(tenant?.gstEnabled ?? false);
   const [gstRate, setGstRate] = useState(String(tenant?.gstRate || 18));
+  const [gstTaxablePercent, setGstTaxablePercent] = useState(String(tenant?.gstTaxablePercent ?? 100));
   const [tdsEnabled, setTdsEnabled] = useState(tenant?.tdsEnabled ?? false);
   const [tdsRate, setTdsRate] = useState(String(tenant?.tdsRate || 10));
   const [monthlyRent, setMonthlyRent] = useState(String(tenant?.monthlyRent ?? ""));
   const baseRent = Math.max(0, Number(monthlyRent) || 0);
-  const previewGst = gstEnabled ? (baseRent * (Number(gstRate) || 0)) / 100 : 0;
+  const taxableRent = gstEnabled
+    ? (baseRent * (Number(gstTaxablePercent) || 0)) / 100
+    : 0;
+  const previewGst = gstEnabled ? (taxableRent * (Number(gstRate) || 0)) / 100 : 0;
   const previewTds = tdsEnabled
     ? ((baseRent + previewGst) * (Number(tdsRate) || 0)) / 100
     : 0;
@@ -2281,7 +2285,7 @@ function TenantDialog({
                   Add GST to rent bills
                 </label>
                 {gstEnabled && (
-                  <div className="mt-3">
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     <Field label="GST rate (%)">
                       <input
                         className={inputClass}
@@ -2296,6 +2300,23 @@ function TenantDialog({
                       />
                       {state.errors?.gstRate && <FieldError message={state.errors.gstRate} />}
                     </Field>
+                    <Field label="Rent subject to GST (%)">
+                      <input
+                        className={inputClass}
+                        name="gstTaxablePercent"
+                        type="number"
+                        min={0.01}
+                        max={100}
+                        step="any"
+                        value={gstTaxablePercent}
+                        onChange={(event) => setGstTaxablePercent(event.target.value)}
+                        aria-invalid={Boolean(state.errors?.gstTaxablePercent)}
+                      />
+                      {state.errors?.gstTaxablePercent && <FieldError message={state.errors.gstTaxablePercent} />}
+                    </Field>
+                    <p className="text-[10px] leading-4 text-[#8b91a0] sm:col-span-2">
+                      Use 50% when half the rent is billed with GST and half without GST.
+                    </p>
                   </div>
                 )}
               </div>
@@ -2335,7 +2356,11 @@ function TenantDialog({
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#777e91]">Monthly bill preview</p>
                 <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#606779]">
                   <span>Rent {formatCurrency(baseRent)}</span>
-                  {gstEnabled && <span>+ GST {formatCurrency(previewGst)}</span>}
+                  {gstEnabled && (
+                    <span>
+                      + GST on {gstTaxablePercent || 0}% ({formatCurrency(taxableRent)}): {formatCurrency(previewGst)}
+                    </span>
+                  )}
                   {tdsEnabled && <span>− TDS {formatCurrency(previewTds)}</span>}
                   <span className="font-extrabold text-[#3f4660]">= {formatCurrency(previewPayable)} payable</span>
                 </div>

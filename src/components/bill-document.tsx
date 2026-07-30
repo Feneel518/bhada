@@ -45,6 +45,10 @@ const money = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value)}`;
 
+function gstTaxableAmount(bill: RentBill) {
+  return bill.gstRate > 0 ? (bill.gstAmount * 100) / bill.gstRate : 0;
+}
+
 function filenameFor(document: BillDocument) {
   return `${document.kind === "rent" ? "Rent" : "Electricity"}-Bill-${document.bill.billNumber.replace(/[^a-z0-9-]/gi, "-")}.pdf`;
 }
@@ -126,7 +130,12 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   const rows: Array<[string, string, boolean?]> = document.kind === "rent"
     ? [
         [`Monthly rent — ${formatBillingMonth(document.bill.billingPeriod)}`, money(document.bill.baseAmount)],
-        ...(document.bill.gstAmount > 0 ? [[`GST @ ${document.bill.gstRate}%`, money(document.bill.gstAmount)] as [string, string]] : []),
+        ...(document.bill.gstAmount > 0
+          ? [[
+              `GST @ ${document.bill.gstRate}% on taxable rent ${money(gstTaxableAmount(document.bill))}`,
+              money(document.bill.gstAmount),
+            ] as [string, string]]
+          : []),
         ...(document.bill.tdsAmount > 0 ? [[`TDS deduction @ ${document.bill.tdsRate}%`, `- ${money(document.bill.tdsAmount)}`] as [string, string]] : []),
       ]
     : [
@@ -322,7 +331,12 @@ export function BillDocumentDialog({
                 {document.kind === "rent" ? (
                   <div className="divide-y divide-[#eff0f4] text-xs">
                     <BillLine label={`Monthly rent · ${formatBillingMonth(document.bill.billingPeriod)}`} value={formatCurrency(document.bill.baseAmount)} />
-                    {document.bill.gstAmount > 0 && <BillLine label={`GST @ ${document.bill.gstRate}%`} value={formatCurrency(document.bill.gstAmount)} />}
+                    {document.bill.gstAmount > 0 && (
+                      <BillLine
+                        label={`GST @ ${document.bill.gstRate}% on taxable rent ${formatCurrency(gstTaxableAmount(document.bill))}`}
+                        value={formatCurrency(document.bill.gstAmount)}
+                      />
+                    )}
                     {document.bill.tdsAmount > 0 && <BillLine label={`TDS deduction @ ${document.bill.tdsRate}%`} value={`− ${formatCurrency(document.bill.tdsAmount)}`} />}
                   </div>
                 ) : (

@@ -14,6 +14,7 @@ import { resolveFinancialYearStart } from "@/lib/financial-year";
 import { getAvailableFinancialYears } from "@/lib/financial-year-server";
 import { getTenantAnalytics } from "@/lib/tenant-analytics";
 import { getIncomeOverview } from "@/lib/dashboard-analytics";
+import { getNotifications } from "@/lib/notifications";
 
 export default async function DashboardPage({
   searchParams,
@@ -44,6 +45,11 @@ export default async function DashboardPage({
     getTenantAnalytics(session.user.id),
     getIncomeOverview(session.user.id, now),
   ]);
+  const notifications = await getNotifications(
+    session.user.id,
+    { rentBilling, electricityBills, tenants },
+    now,
+  );
 
   return (
     <Dashboard
@@ -57,6 +63,7 @@ export default async function DashboardPage({
       financialYearOptions={financialYearOptions}
       tenantAnalytics={tenantAnalytics}
       incomeOverview={incomeOverview}
+      notifications={notifications}
       issuer={{
         businessName: profile?.businessName ?? session.user.name,
         email: session.user.email,

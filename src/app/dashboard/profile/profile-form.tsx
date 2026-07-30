@@ -69,7 +69,7 @@ export function ProfileForm({
   }
 
   return (
-    <div className="animate-rise lg:flex lg:h-[calc(100vh-144px)] lg:flex-col">
+    <div className="animate-rise">
       <header>
         <p className="text-sm font-semibold text-[#5b5bd6]">Account settings</p>
         <h1 className="mt-2 font-display text-[29px] tracking-[-0.045em] text-[#222836] sm:text-[34px]">
@@ -80,7 +80,7 @@ export function ProfileForm({
         </p>
       </header>
 
-      <form onSubmit={submit} className="mt-5 w-full overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)] lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+      <form onSubmit={submit} className="mt-5 w-full overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white shadow-[0_1px_2px_rgba(25,29,41,.02)]">
           <section className="border-b border-[#eceef3] px-5 py-4 sm:px-6">
             <div className="flex items-start gap-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#efeffd] text-[#5656c9]">
@@ -93,7 +93,7 @@ export function ProfileForm({
             </div>
           </section>
 
-          <div className="grid gap-x-4 gap-y-3.5 p-5 sm:grid-cols-2 sm:p-6 lg:min-h-0 lg:flex-1 lg:grid-cols-3 lg:overflow-y-auto">
+          <div className="grid gap-x-4 gap-y-3.5 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-3">
             <Field label="Business name" required className="sm:col-span-2">
               <input
                 className={inputClass}

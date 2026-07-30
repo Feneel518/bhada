@@ -38,6 +38,23 @@ export const landlord = pgTable("landlord", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const notificationRead = pgTable(
+  "notification_read",
+  {
+    id: text("id").primaryKey(),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id, { onDelete: "cascade" }),
+    notificationKey: text("notification_key").notNull(),
+    readAt: timestamp("read_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("notification_read_landlord_key_unique").on(
+      table.landlordId,
+      table.notificationKey,
+    ),
+    index("notification_read_landlord_id_idx").on(table.landlordId),
+  ],
+);
+
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
@@ -143,6 +160,7 @@ export const tenant = pgTable(
     rentDueDay: integer("rent_due_day").default(1).notNull(),
     gstEnabled: boolean("gst_enabled").default(false).notNull(),
     gstRate: real("gst_rate").default(0).notNull(),
+    gstTaxablePercent: real("gst_taxable_percent").default(100).notNull(),
     tdsEnabled: boolean("tds_enabled").default(false).notNull(),
     tdsRate: real("tds_rate").default(0).notNull(),
     securityDeposit: real("security_deposit"),
@@ -300,6 +318,14 @@ export const landlordRelations = relations(landlord, ({ one, many }) => ({
   rentBills: many(rentBill),
   electricityBills: many(electricityBill),
   paymentReceipts: many(paymentReceipt),
+  notificationReads: many(notificationRead),
+}));
+
+export const notificationReadRelations = relations(notificationRead, ({ one }) => ({
+  landlord: one(landlord, {
+    fields: [notificationRead.landlordId],
+    references: [landlord.id],
+  }),
 }));
 
 export const propertyRelations = relations(property, ({ one, many }) => ({
@@ -357,6 +383,7 @@ export const paymentAllocationRelations = relations(paymentAllocation, ({ one })
 export const schema = {
   user,
   landlord,
+  notificationRead,
   session,
   account,
   verification,
@@ -371,6 +398,7 @@ export const schema = {
   paymentAllocation,
   userRelations,
   landlordRelations,
+  notificationReadRelations,
   propertyRelations,
   unitRelations,
   tenantRelations,

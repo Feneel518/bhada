@@ -21,6 +21,7 @@ type TenantField =
   | "rentBillingDay"
   | "rentDueDay"
   | "gstRate"
+  | "gstTaxablePercent"
   | "tdsRate"
   | "securityDeposit"
   | "lockInMonths"
@@ -93,6 +94,7 @@ export async function saveTenant(
   const rentBillingDay = optionalNumber(value("rentBillingDay"), "Rent billing day", true);
   const rentDueDay = optionalNumber(value("rentDueDay"), "Rent due day", true);
   const gstRate = optionalNumber(value("gstRate"), "GST rate");
+  const gstTaxablePercent = optionalNumber(value("gstTaxablePercent"), "GST taxable rent");
   const tdsRate = optionalNumber(value("tdsRate"), "TDS rate");
   const securityDeposit = optionalNumber(value("securityDeposit"), "Security deposit");
   const lockInMonths = optionalNumber(value("lockInMonths"), "Lock-in period", true);
@@ -132,6 +134,12 @@ export async function saveTenant(
   }
   if (gstRate.error || (gstEnabled && (!gstRate.value || gstRate.value > 100))) {
     errors.gstRate = "GST rate must be greater than 0 and at most 100.";
+  }
+  if (
+    gstTaxablePercent.error ||
+    (gstEnabled && (!gstTaxablePercent.value || gstTaxablePercent.value > 100))
+  ) {
+    errors.gstTaxablePercent = "GST taxable rent must be greater than 0% and at most 100%.";
   }
   if (tdsRate.error || (tdsEnabled && (!tdsRate.value || tdsRate.value > 100))) {
     errors.tdsRate = "TDS rate must be greater than 0 and at most 100.";
@@ -205,6 +213,7 @@ export async function saveTenant(
     rentDueDay: rentDueDay.value ?? rentBillingDay.value ?? 1,
     gstEnabled,
     gstRate: gstEnabled ? (gstRate.value ?? 0) : 0,
+    gstTaxablePercent: gstEnabled ? (gstTaxablePercent.value ?? 100) : 100,
     tdsEnabled,
     tdsRate: tdsEnabled ? (tdsRate.value ?? 0) : 0,
     securityDeposit: securityDeposit.value,
