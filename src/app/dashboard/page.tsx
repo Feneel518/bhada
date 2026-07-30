@@ -15,6 +15,16 @@ import { getAvailableFinancialYears } from "@/lib/financial-year-server";
 import { getTenantAnalytics } from "@/lib/tenant-analytics";
 import { getIncomeOverview } from "@/lib/dashboard-analytics";
 import { getNotifications } from "@/lib/notifications";
+import { hasPortfolioAccess } from "@/lib/plans";
+
+const dashboardSections = new Set([
+  "Overview",
+  "Properties",
+  "Tenants",
+  "Payments",
+  "Profile",
+  "Help center",
+] as const);
 
 export default async function DashboardPage({
   searchParams,
@@ -28,6 +38,11 @@ export default async function DashboardPage({
   }
 
   const params = await searchParams;
+  const initialSection = dashboardSections.has(
+    params.section as "Overview" | "Properties" | "Tenants" | "Payments" | "Profile" | "Help center",
+  )
+    ? (params.section as "Overview" | "Properties" | "Tenants" | "Payments" | "Profile" | "Help center")
+    : "Overview";
   const now = new Date();
   const financialYearStart = resolveFinancialYearStart(params.fy, now);
   const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, incomeOverview] = await Promise.all([
@@ -53,7 +68,7 @@ export default async function DashboardPage({
 
   return (
     <Dashboard
-      initialSection={params.section === "Payments" ? "Payments" : "Overview"}
+      initialSection={initialSection}
       properties={properties}
       tenants={tenants}
       payments={payments}
@@ -64,6 +79,22 @@ export default async function DashboardPage({
       tenantAnalytics={tenantAnalytics}
       incomeOverview={incomeOverview}
       notifications={notifications}
+      subscription={{
+        active: Boolean(profile && hasPortfolioAccess(profile)),
+        status: profile?.subscriptionStatus ?? "none",
+        currentPeriodEnd: profile?.subscriptionCurrentPeriodEnd?.toISOString() ?? null,
+      }}
+      profile={{
+        businessName: profile?.businessName ?? session.user.name,
+        rentBillingPeriod: profile?.rentBillingPeriod === "current" ? "current" : "previous",
+        phone: profile?.phone ?? "",
+        gstin: profile?.gstin ?? "",
+        pan: profile?.pan ?? "",
+        address: profile?.address ?? "",
+        city: profile?.city ?? "",
+        state: profile?.state ?? "",
+        pincode: profile?.pincode ?? "",
+      }}
       issuer={{
         businessName: profile?.businessName ?? session.user.name,
         email: session.user.email,

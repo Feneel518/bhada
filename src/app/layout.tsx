@@ -10,7 +10,7 @@ const bodyFont = DM_Sans({
 
 const displayFont = Gotu({
   variable: "--font-display",
-  subsets: ["latin"],
+  subsets: ["devanagari", "latin"],
   weight: "400",
 });
 
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className={`${bodyFont.variable} ${displayFont.variable}`}>
         {children}
         <Toaster richColors position="top-right" />

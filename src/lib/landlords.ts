@@ -6,7 +6,12 @@ import { landlord } from "@/db/schema";
 
 export async function ensureLandlord(user: { id: string; name: string }) {
   const [existing] = await db
-    .select({ id: landlord.id })
+    .select({
+      id: landlord.id,
+      plan: landlord.plan,
+      subscriptionStatus: landlord.subscriptionStatus,
+      subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+    })
     .from(landlord)
     .where(eq(landlord.userId, user.id))
     .limit(1);
@@ -21,12 +26,22 @@ export async function ensureLandlord(user: { id: string; name: string }) {
       businessName: user.name,
     })
     .onConflictDoNothing({ target: landlord.userId })
-    .returning({ id: landlord.id });
+    .returning({
+      id: landlord.id,
+      plan: landlord.plan,
+      subscriptionStatus: landlord.subscriptionStatus,
+      subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+    });
 
   if (created) return created;
 
   const [concurrent] = await db
-    .select({ id: landlord.id })
+    .select({
+      id: landlord.id,
+      plan: landlord.plan,
+      subscriptionStatus: landlord.subscriptionStatus,
+      subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+    })
     .from(landlord)
     .where(eq(landlord.userId, user.id))
     .limit(1);

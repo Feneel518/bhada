@@ -56,6 +56,35 @@ EMAIL_FROM="Bhada <hello@example.com>"
 Use `SMTP_SECURE=true` for implicit TLS (commonly port 465). Password reset
 tokens expire after Better Auth's default one-hour window.
 
+## Razorpay Portfolio billing
+
+Create a Razorpay Subscription Plan for ₹49 INR with a monthly billing period,
+then configure:
+
+```env
+RAZORPAY_KEY_ID="rzp_test_..."
+RAZORPAY_KEY_SECRET="..."
+RAZORPAY_PORTFOLIO_PLAN_ID="plan_..."
+RAZORPAY_WEBHOOK_SECRET="..."
+```
+
+Start with Test Mode keys. In Razorpay Dashboard, add this webhook URL:
+
+```text
+https://YOUR_DOMAIN/api/billing/razorpay/webhook
+```
+
+Subscribe it to all `subscription.*` events, using the same webhook secret set
+above. Before enabling live billing, replace the Test Mode key and plan with
+their Live Mode equivalents and run the database migration:
+
+```bash
+npx drizzle-kit migrate
+```
+
+The checkout callback is verified server-side, and renewals, failed charges,
+pauses, and cancellations are synchronized through signed webhooks.
+
 ## Security model
 
 - `/` is the public marketing page.

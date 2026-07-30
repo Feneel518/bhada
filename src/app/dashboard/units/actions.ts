@@ -1,12 +1,13 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, count, eq, ne } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { property, unit } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
+import { planLimits } from "@/lib/plans";
 import type { UnitStatus } from "@/lib/properties";
 
 type UnitField =
@@ -82,6 +83,7 @@ export async function saveUnit(
   }
 
   const owner = await ensureLandlord(session.user);
+  const limits = planLimits(owner);
   const [ownedProperty] = await db
     .select({ id: property.id })
     .from(property)
@@ -89,6 +91,19 @@ export async function saveUnit(
     .limit(1);
 
   if (!ownedProperty) return error("Property not found or you no longer have access to it.");
+
+  if (!id) {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(unit)
+      .where(eq(unit.landlordId, owner.id));
+
+    if (total >= limits.unitLimit) {
+      return error(
+        `${limits.name} includes up to ${limits.unitLimit} units.`,
+      );
+    }
+  }
 
   const duplicateConditions = [
     eq(unit.propertyId, propertyId),
