@@ -13,6 +13,7 @@ import {
   ChevronUp,
   CircleDollarSign,
   CreditCard,
+  Download,
   Ellipsis,
   Eye,
   Gauge,
@@ -34,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { BhadaLogo } from "@/components/brand-logo";
 import { DatePickerInput, FormSelect } from "@/components/ui/form-controls";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { BillDocument, BillIssuer } from "@/components/bill-document";
@@ -71,7 +73,9 @@ import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import type { TenantAnalytics } from "@/lib/tenant-analytics";
 import type { NotificationItem } from "@/lib/notifications";
+import { FREE_PLAN, PORTFOLIO_PLAN } from "@/lib/plans";
 import { NotificationCenter } from "@/components/notification-center";
+import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button";
 import { cn, formatCurrency } from "@/lib/utils";
 import styles from "./dashboard.module.css";
 
@@ -86,12 +90,32 @@ const ProfileForm = dynamic(
   () => import("@/app/dashboard/profile/profile-form").then((module) => module.ProfileForm),
 );
 
-const nav = [
-  { label: "Overview", icon: Home },
-  { label: "Properties", icon: Building2 },
-  { label: "Tenants", icon: Users },
-  { label: "Payments", icon: CreditCard },
+type DashboardSection = "Overview" | "Properties" | "Tenants" | "Payments" | "Profile" | "Help center";
+
+const nav: { label: Exclude<DashboardSection, "Profile" | "Help center">; href: string; icon: typeof Home }[] = [
+  { label: "Overview", href: "/dashboard", icon: Home },
+  { label: "Properties", href: "/dashboard?section=Properties", icon: Building2 },
+  { label: "Tenants", href: "/dashboard?section=Tenants", icon: Users },
+  { label: "Payments", href: "/dashboard?section=Payments", icon: CreditCard },
 ];
+
+const sectionHrefs: Record<DashboardSection, string> = {
+  Overview: "/dashboard",
+  Properties: "/dashboard?section=Properties",
+  Tenants: "/dashboard?section=Tenants",
+  Payments: "/dashboard?section=Payments",
+  Profile: "/dashboard?section=Profile",
+  "Help center": "/dashboard?section=Help%20center",
+};
+
+const dashboardSections = new Set<DashboardSection>([
+  "Overview",
+  "Properties",
+  "Tenants",
+  "Payments",
+  "Profile",
+  "Help center",
+]);
 
 const helpCenterSections = [
   {
@@ -221,6 +245,31 @@ const statusStyles: Record<string, string> = {
   Upcoming: "border border-white/15 bg-white/5 text-white/60",
 };
 
+type CsvValue = string | number | boolean | null | undefined;
+
+function csvCell(value: CsvValue) {
+  let text = value === null || value === undefined ? "" : String(value);
+  if (/^[=+\-@]/.test(text.trimStart())) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(filename: string, headers: string[], rows: CsvValue[][]) {
+  const csv = [
+    headers.map(csvCell).join(","),
+    ...rows.map((row) => row.map(csvCell).join(",")),
+  ].join("\r\n");
+  const url = URL.createObjectURL(
+    new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }),
+  );
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 type DashboardUser = {
   id: string;
   name: string;
@@ -243,9 +292,10 @@ export function Dashboard({
   tenantAnalytics,
   incomeOverview,
   notifications,
+  subscription,
 }: {
   user: DashboardUser;
-  initialSection?: "Overview" | "Profile" | "Payments";
+  initialSection?: DashboardSection;
   profile?: ProfileValues;
   properties: PropertyRecord[];
   tenants: TenantRecord[];
@@ -258,8 +308,13 @@ export function Dashboard({
   tenantAnalytics: TenantAnalytics[];
   incomeOverview: IncomeOverviewPoint[];
   notifications: NotificationItem[];
+  subscription: {
+    active: boolean;
+    status: string;
+    currentPeriodEnd: string | null;
+  };
 }) {
-  const [active, setActive] = useState<string>(initialSection);
+  const [active, setActive] = useState<DashboardSection>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [electricityBillOpen, setElectricityBillOpen] = useState(false);
@@ -276,6 +331,11 @@ export function Dashboard({
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState("This year");
   const deferredSearch = useDeferredValue(search);
+  const totalUnitCount = properties.reduce(
+    (total, property) => total + property.units.length,
+    0,
+  );
+  const limits = subscription.active ? PORTFOLIO_PLAN : FREE_PLAN;
 
   const visiblePayments = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
@@ -303,14 +363,75 @@ export function Dashboard({
     );
   }, [deferredSearch, tenants]);
 
-  function selectSection(section: string) {
+  useEffect(() => {
+    function syncSectionFromHistory() {
+      const section = new URLSearchParams(window.location.search).get("section");
+      setActive(
+        section && dashboardSections.has(section as DashboardSection)
+          ? (section as DashboardSection)
+          : "Overview",
+      );
+      setSidebarOpen(false);
+    }
+
+    window.addEventListener("popstate", syncSectionFromHistory);
+    return () => window.removeEventListener("popstate", syncSectionFromHistory);
+  }, []);
+
+  function navigateToSection(section: DashboardSection) {
     setActive(section);
     setSidebarOpen(false);
+    const href = sectionHrefs[section];
+    if (`${window.location.pathname}${window.location.search}` !== href) {
+      window.history.pushState(null, "", href);
+    }
+  }
+
+  function openSectionLink(event: React.MouseEvent<HTMLAnchorElement>, section: DashboardSection) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    navigateToSection(section);
   }
 
   function openProperty(propertyToEdit: PropertyRecord | null = null) {
+    if (!propertyToEdit && properties.length >= limits.propertyLimit) {
+      showPlanLimit(
+        `Your ${limits.name} plan includes ${limits.propertyLimit} ${limits.propertyLimit === 1 ? "property" : "properties"}.`,
+      );
+      return;
+    }
     setEditingProperty(propertyToEdit);
     setPropertyOpen(true);
+  }
+
+  function openUnit(property: PropertyRecord, unit: UnitRecord | null = null) {
+    if (!unit && totalUnitCount >= limits.unitLimit) {
+      showPlanLimit(
+        `Your ${limits.name} plan includes ${limits.unitLimit} units.`,
+      );
+      return;
+    }
+    setUnitEditor({ property, unit });
+  }
+
+  function showPlanLimit(message: string) {
+    toast(message, {
+      description: `Portfolio supports up to ${PORTFOLIO_PLAN.propertyLimit} properties and ${PORTFOLIO_PLAN.unitLimit} units for ₹${PORTFOLIO_PLAN.monthlyPrice}/month.`,
+      action: {
+        label: "View plans",
+        onClick: () => window.location.assign("/#pricing"),
+      },
+    });
   }
 
   function openTenant(tenantToEdit: TenantRecord | null = null) {
@@ -348,12 +469,16 @@ export function Dashboard({
         )}
       >
         <div className="flex h-11 items-center justify-between px-2">
-          <button onClick={() => selectSection("Overview")} className="flex items-center gap-2.5">
-            <span className="relative grid size-9 place-items-center overflow-hidden border border-white/20 text-[#e4c77a]">
-              <Building2 className="size-[18px]" strokeWidth={2} />
-            </span>
-            <span className="font-display text-[18px] tracking-[0.02em] text-[#edede8]">bhada</span>
-          </button>
+          <Link
+            href="/dashboard"
+            onClick={(event) => openSectionLink(event, "Overview")}
+            className="flex items-center"
+          >
+            <BhadaLogo
+              markClassName="size-9 text-[#edede8]"
+              wordmarkClassName="text-[18px] text-[#edede8]"
+            />
+          </Link>
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="size-5" />
           </Button>
@@ -362,9 +487,11 @@ export function Dashboard({
         <nav className="mt-8 space-y-1">
           <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a1a6b3]">Workspace</p>
           {nav.map((item) => (
-            <button
+            <Link
               key={item.label}
-              onClick={() => selectSection(item.label)}
+              href={item.href}
+              onClick={(event) => openSectionLink(event, item.label)}
+              aria-current={active === item.label ? "page" : undefined}
               className={cn(
                 "flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
                 active === item.label
@@ -379,14 +506,16 @@ export function Dashboard({
                   {item.label === "Properties" ? properties.length : tenants.length}
                 </span>
               )}
-            </button>
+            </Link>
           ))}
         </nav>
 
         <nav className="mt-7 space-y-1 border-t border-[#eff0f4] pt-6">
           <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#a1a6b3]">Manage</p>
           <Link
-            href="/dashboard/profile"
+            href="/dashboard?section=Profile"
+            onClick={(event) => openSectionLink(event, "Profile")}
+            aria-current={active === "Profile" ? "page" : undefined}
             className={cn(
               "flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
               active === "Profile"
@@ -396,8 +525,10 @@ export function Dashboard({
           >
             <Settings className="size-[18px]" /> Settings
           </Link>
-          <button
-            onClick={() => selectSection("Help center")}
+          <Link
+            href="/dashboard?section=Help%20center"
+            onClick={(event) => openSectionLink(event, "Help center")}
+            aria-current={active === "Help center" ? "page" : undefined}
             className={cn(
               "flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors",
               active === "Help center"
@@ -406,38 +537,61 @@ export function Dashboard({
             )}
           >
             <HelpCircle className="size-[18px]" /> Help center
-          </button>
+          </Link>
         </nav>
 
         <div className="mt-auto border border-[#e4c77a]/25 bg-[#e4c77a]/[0.05] p-3.5">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.08em] text-[#e4c77a] uppercase">
-            <Sparkles className="size-4" /> Bhada Pro
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.08em] text-[#e4c77a] uppercase">
+              <Sparkles className="size-4" /> {limits.name}
+            </div>
+            <span className="border border-white/10 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.08em] text-white/40 uppercase">
+              {subscription.active ? "Active" : "Free"}
+            </span>
           </div>
-          <p className="mt-2 text-[11px] leading-4 text-white/40">Automate reminders and payment receipts.</p>
-          <button
-            onClick={() => toast("You’re on the demo plan", { description: "Billing is ready to connect when you are." })}
-            className="mt-3 text-[11px] font-semibold text-[#e4c77a] hover:text-[#f0da9d]"
-          >
-            Explore features →
-          </button>
+          <div className="mt-3 h-1 overflow-hidden bg-white/10">
+            <div
+              className="h-full bg-[#e4c77a] transition-[width]"
+              style={{ width: `${Math.min(100, (totalUnitCount / limits.unitLimit) * 100)}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] leading-4 text-white/40">
+            {totalUnitCount} of {limits.unitLimit} units used · {properties.length} of {limits.propertyLimit} {limits.propertyLimit === 1 ? "property" : "properties"}
+          </p>
+          {subscription.active ? (
+            <p className="mt-3 text-[11px] font-semibold text-[#e4c77a]">
+              Portfolio billing is active
+            </p>
+          ) : (
+            <PortfolioCheckoutButton
+              className="mt-3 inline-flex items-center gap-1.5 text-left text-[11px] font-semibold text-[#e4c77a] hover:text-[#f0da9d]"
+            />
+          )}
         </div>
 
-        <div className="mt-4 flex items-center gap-3 rounded-xl px-2 py-2">
-          <div
-            className={cn(
-              "grid size-9 place-items-center overflow-hidden rounded-full bg-cover bg-center text-xs font-bold",
-              user.image
-                ? "bg-[#272b3a] text-white"
-                : "border border-[#e4c77a]/25 bg-[#e4c77a]/[0.08] text-[#e4c77a]",
-            )}
-            style={user.image ? { backgroundImage: `url("${user.image.replace(/"/g, "%22")}")` } : undefined}
+        <div className="mt-4 flex items-center rounded-xl px-2 py-2">
+          <Link
+            href="/dashboard?section=Profile"
+            onClick={(event) => openSectionLink(event, "Profile")}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e4c77a]/70"
+            aria-label="Open profile settings"
           >
-            {!user.image && initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-[#edede8]">{user.name}</p>
-            <p className="truncate text-[11px] text-white/35">{user.email}</p>
-          </div>
+            <span
+              className={cn(
+                "grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-cover bg-center text-xs font-bold",
+                user.image
+                  ? "bg-[#272b3a] text-white"
+                  : "border border-[#e4c77a]/25 bg-[#e4c77a]/[0.08] text-[#e4c77a]",
+              )}
+              style={user.image ? { backgroundImage: `url("${user.image.replace(/"/g, "%22")}")` } : undefined}
+            >
+              {!user.image && initials}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-[#edede8]">{user.name}</span>
+              <span className="block truncate text-[11px] text-white/35">{user.email}</span>
+            </span>
+          </Link>
           <button onClick={signOut} aria-label="Sign out" title="Sign out" className="grid size-8 place-items-center text-white/35 hover:bg-white/5 hover:text-[#e4c77a]">
             <LogOut className="size-4" />
           </button>
@@ -461,7 +615,7 @@ export function Dashboard({
           <div className="ml-auto flex items-center gap-2">
             <NotificationCenter
               initialNotifications={notifications}
-              onNavigate={selectSection}
+              onNavigate={navigateToSection}
             />
             <Button onClick={() => setPaymentOpen(true)}>
               <Plus className="size-4" strokeWidth={2.5} />
@@ -471,7 +625,14 @@ export function Dashboard({
           </div>
         </header>
 
-        <div className={cn("mx-auto max-w-[1440px] px-4 py-7 sm:px-7 lg:px-9 lg:py-9", styles.content)}>
+        <div
+          key={active}
+          className={cn(
+            "mx-auto max-w-[1440px] px-4 py-7 sm:px-7 lg:px-9 lg:py-9",
+            styles.content,
+            styles.sectionTransition,
+          )}
+        >
           {active === "Overview" ? (
             <Overview
               period={period}
@@ -482,8 +643,8 @@ export function Dashboard({
               totalProperties={properties.length}
               incomeOverview={incomeOverview}
               onAddProperty={() => openProperty()}
-              onViewPayments={() => selectSection("Payments")}
-              onViewProperties={() => selectSection("Properties")}
+              onViewPayments={() => navigateToSection("Payments")}
+              onViewProperties={() => navigateToSection("Properties")}
               firstName={firstName}
             />
           ) : active === "Profile" && profile ? (
@@ -502,8 +663,8 @@ export function Dashboard({
               tenants={visibleTenants}
               onAddProperty={() => openProperty()}
               onEditProperty={openProperty}
-              onAddUnit={(property) => setUnitEditor({ property, unit: null })}
-              onEditUnit={(property, unit) => setUnitEditor({ property, unit })}
+              onAddUnit={(property) => openUnit(property)}
+              onEditUnit={(property, unit) => openUnit(property, unit)}
               onRecordPayment={() => setPaymentOpen(true)}
               onAddElectricityBill={() => setElectricityBillOpen(true)}
               onAddTenant={() => openTenant()}
@@ -952,6 +1113,148 @@ function SectionView({
     Tenants: "Keep every tenant and lease in one place.",
     Payments: "Track paid, pending, and overdue rent.",
   };
+  const today = new Date().toISOString().slice(0, 10);
+
+  function exportSection() {
+    if (section === "Properties") {
+      const exportRows = properties.flatMap((property) => {
+        const propertyValues: CsvValue[] = [
+          property.name,
+          property.address,
+          property.city,
+          property.state,
+          property.postalCode,
+        ];
+        if (!property.units.length) return [[...propertyValues, "", "", "", "", "", "", ""]];
+        return property.units.map((unit) => [
+          ...propertyValues,
+          unit.unitNumber,
+          unit.floor,
+          unit.areaSqft,
+          unit.status,
+          unit.tenant?.name ?? "",
+          unit.tenant?.email ?? "",
+          unit.tenant?.phone ?? "",
+        ]);
+      });
+      downloadCsv(
+        `bhada-properties-${today}.csv`,
+        ["Property", "Address", "City", "State", "Postal code", "Unit", "Floor", "Area (sq ft)", "Status", "Tenant", "Tenant email", "Tenant phone"],
+        exportRows,
+      );
+      return;
+    }
+
+    if (section === "Tenants") {
+      downloadCsv(
+        `bhada-tenants-${today}.csv`,
+        ["Tenant", "Property", "Unit", "Status", "Email", "Phone", "Lease start", "Lease end", "Monthly rent", "Billing day", "Due day", "GST enabled", "GST rate", "TDS enabled", "TDS rate", "Security deposit", "Opening balance", "Credit balance", "Next escalation"],
+        tenants.map((tenant) => [
+          tenant.name,
+          tenant.propertyName,
+          tenant.unitNumber,
+          tenant.isActive ? "Active" : "Inactive",
+          tenant.email,
+          tenant.phone,
+          tenant.leaseStart,
+          tenant.leaseEnd,
+          tenant.monthlyRent,
+          tenant.rentBillingDay,
+          tenant.rentDueDay,
+          tenant.gstEnabled ? "Yes" : "No",
+          tenant.gstRate,
+          tenant.tdsEnabled ? "Yes" : "No",
+          tenant.tdsRate,
+          tenant.securityDeposit,
+          tenant.openingBalance,
+          tenant.creditBalance,
+          tenant.nextEscalationDate,
+        ]),
+      );
+      return;
+    }
+
+    const tenantById = new Map(tenants.map((tenant) => [tenant.id, tenant]));
+    const financialYearEnd = financialYearStart + 1;
+    const paymentRows = rows
+      .filter((payment) => {
+        const date = payment.paidAt || payment.date;
+        return date >= `${financialYearStart}-04-01` && date < `${financialYearEnd}-04-01`;
+      })
+      .map<CsvValue[]>((payment) => [
+        "Payment",
+        payment.receiptNumber,
+        payment.tenant,
+        payment.property,
+        "",
+        "",
+        payment.paidAt || payment.date,
+        "",
+        "",
+        "",
+        "",
+        payment.amount,
+        payment.amount,
+        payment.balance,
+        payment.status,
+        payment.method,
+        payment.summary,
+      ]);
+    const rentRows = rentBilling.bills.map<CsvValue[]>((bill) => {
+      const tenant = tenantById.get(bill.tenantId);
+      return [
+        "Rent bill",
+        bill.billNumber,
+        bill.tenantName,
+        tenant?.propertyName ?? "",
+        tenant?.unitNumber ?? "",
+        bill.billingPeriod,
+        "",
+        bill.dueDate,
+        bill.baseAmount,
+        bill.gstAmount,
+        bill.tdsAmount,
+        bill.amount,
+        bill.paid,
+        bill.pending,
+        bill.status,
+        "",
+        "",
+      ];
+    });
+    const electricityRows = electricityBills.map<CsvValue[]>((bill) => [
+      "Electricity bill",
+      bill.billNumber,
+      bill.tenantName,
+      bill.propertyName,
+      bill.unitNumber,
+      bill.billingPeriod,
+      "",
+      bill.dueDate,
+      "",
+      "",
+      "",
+      bill.amount,
+      bill.paid,
+      bill.pending,
+      bill.status,
+      "",
+      bill.note,
+    ]);
+    downloadCsv(
+      `bhada-payments-FY${financialYearStart}-${String(financialYearEnd).slice(-2)}.csv`,
+      ["Record type", "Reference", "Tenant", "Property", "Unit", "Billing period", "Payment date", "Due date", "Base amount", "GST amount", "TDS amount", "Total amount", "Paid", "Pending / balance", "Status", "Payment method", "Notes"],
+      [...rentRows, ...electricityRows, ...paymentRows],
+    );
+  }
+
+  const canExport =
+    section === "Properties"
+      ? properties.length > 0
+      : section === "Tenants"
+        ? tenants.length > 0
+        : rentBilling.bills.length > 0 || electricityBills.length > 0 || rows.length > 0;
+
   return (
     <div className="animate-rise">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -961,6 +1264,9 @@ function SectionView({
           <p className="mt-1 text-sm text-[#747b8b]">{descriptions[section]}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={exportSection} disabled={!canExport}>
+            <Download className="size-4" /> Export CSV
+          </Button>
           {section === "Payments" && (
             <Button variant="outline" onClick={onAddElectricityBill}>
               <Plus className="size-4" /> Add electricity bill

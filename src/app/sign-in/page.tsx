@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, Building2, Check, Eye, EyeOff, LoaderCircle, MailCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, LoaderCircle, MailCheck } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { BhadaLogo } from "@/components/brand-logo";
 
 export default function SignInPage() {
   return (
@@ -93,8 +94,10 @@ function SignInContent() {
       <section className="relative hidden overflow-hidden bg-[#242452] p-12 text-white lg:flex lg:flex-col">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(124,124,230,.45),transparent_33%),radial-gradient(circle_at_85%_75%,rgba(70,181,160,.24),transparent_30%)]" />
         <Link href="/" className="relative flex items-center gap-3">
-          <span className="grid size-10 place-items-center rounded-xl bg-white text-[#5555c7]"><Building2 className="size-5" /></span>
-          <span className="font-display text-2xl tracking-[-0.04em]">bhada</span>
+          <BhadaLogo
+            markClassName="size-10 text-white"
+            wordmarkClassName="text-2xl text-white"
+          />
         </Link>
         <div className="relative my-auto max-w-lg">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#aaaaf0]">Rent, without the runaround</p>

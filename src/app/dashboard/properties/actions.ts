@@ -1,12 +1,13 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { db } from "@/db";
 import { property } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
+import { planLimits } from "@/lib/plans";
 
 export type PropertyActionState = {
   status: "idle" | "success" | "error";
@@ -61,6 +62,7 @@ export async function saveProperty(
     updatedAt: new Date(),
   };
   const owner = await ensureLandlord(session.user);
+  const limits = planLimits(owner);
 
   if (id) {
     const [updated] = await db
@@ -73,6 +75,17 @@ export async function saveProperty(
       return initialError("Property not found or you no longer have access to it.");
     }
   } else {
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(property)
+      .where(eq(property.landlordId, owner.id));
+
+    if (total >= limits.propertyLimit) {
+      return initialError(
+        `${limits.name} includes ${limits.propertyLimit} ${limits.propertyLimit === 1 ? "property" : "properties"}.`,
+      );
+    }
+
     await db.insert(property).values({
       id: crypto.randomUUID(),
       landlordId: owner.id,

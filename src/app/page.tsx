@@ -1,10 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
 import {
   ArrowRight,
   BellRing,
-  Building2,
   Check,
   FileText,
   Gauge,
@@ -19,6 +19,11 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { LandingFaq } from "@/components/landing-faq";
+import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button";
+import { BhadaLogo } from "@/components/brand-logo";
+import { db } from "@/db";
+import { landlord } from "@/db/schema";
+import { FREE_PLAN, hasPortfolioAccess, PORTFOLIO_PLAN } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Rent management for independent landlords",
@@ -118,6 +123,18 @@ const reasons = [
 
 export default async function Home() {
   const session = await auth.api.getSession({ headers: await headers() });
+  const [billingAccount] = session
+    ? await db
+        .select({
+          plan: landlord.plan,
+          subscriptionStatus: landlord.subscriptionStatus,
+          subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
+        })
+        .from(landlord)
+        .where(eq(landlord.userId, session.user.id))
+        .limit(1)
+    : [];
+  const portfolioActive = Boolean(billingAccount && hasPortfolioAccess(billingAccount));
   const primaryHref = session ? "/dashboard" : "/sign-in";
   const primaryLabel = session ? "Open dashboard" : "Start for free";
 
@@ -133,11 +150,16 @@ export default async function Home() {
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-5 sm:px-10 sm:py-6 lg:px-[72px]">
           <Link href="/" className="flex items-center gap-2.5" aria-label="Bhada home">
-            <Logo />
+            <BhadaLogo
+              className="gap-3"
+              markClassName="size-8 text-[#EDEDE8]"
+              wordmarkClassName="text-lg text-[#EDEDE8]"
+            />
           </Link>
           <nav aria-label="Primary navigation" className="hidden items-center gap-10 text-xs tracking-[0.5px] text-white/55 uppercase md:flex">
             <a href="#features" className="transition hover:text-white">Features</a>
             <a href="#how-it-works" className="transition hover:text-white">How it works</a>
+            <a href="#pricing" className="transition hover:text-white">Pricing</a>
             <a href="#faq" className="transition hover:text-white">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
@@ -336,6 +358,106 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* PRICING */}
+      <section id="pricing" className="scroll-mt-8 border-b border-white/10 px-5 py-20 sm:px-10 sm:py-24 lg:px-[72px] lg:py-[112px]">
+        <div className="mx-auto max-w-[1120px]">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-[11px] font-semibold tracking-[1.8px] text-[#E4C77A] uppercase">
+              Simple pricing
+            </p>
+            <h2 className="mt-5 font-display text-3xl leading-tight tracking-[-0.5px] sm:text-4xl lg:text-[44px]">
+              Start with one door. Grow when you need to.
+            </h2>
+            <p className="mt-5 text-sm leading-6 text-white/50 sm:text-[15px] sm:leading-7">
+              No setup fees, contracts, or feature maze. Your existing records stay available if you change plans.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-px bg-white/10 md:grid-cols-2">
+            <article className="flex flex-col bg-[#111111] p-7 sm:p-9">
+              <div>
+                <p className="text-xs font-semibold tracking-[1px] text-white/45 uppercase">For your first rental</p>
+                <h3 className="mt-4 font-display text-3xl">{FREE_PLAN.name}</h3>
+                <div className="mt-6 flex items-end gap-2">
+                  <span className="font-display text-5xl">₹0</span>
+                  <span className="pb-1.5 text-sm text-white/40">forever</span>
+                </div>
+                <p className="mt-5 min-h-12 text-sm leading-6 text-white/50">
+                  A complete rent workspace for a landlord managing one small property.
+                </p>
+              </div>
+              <ul className="mt-8 space-y-3.5 text-sm text-white/65">
+                {[
+                  `${FREE_PLAN.propertyLimit} property`,
+                  `Up to ${FREE_PLAN.unitLimit} units`,
+                  "Tenant, rent, and payment tracking",
+                  "GST, TDS, and electricity billing",
+                  "PDF bills and in-app reminders",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <Check className="mt-0.5 size-4 shrink-0 text-[#E4C77A]" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={primaryHref}
+                className="mt-10 inline-flex min-h-12 items-center justify-center border border-white/25 px-6 text-sm font-semibold transition hover:border-white/50 hover:bg-white/[0.04]"
+              >
+                {session ? "Continue with One Door" : "Start for free"}
+              </Link>
+            </article>
+
+            <article className="relative flex flex-col bg-[#171717] p-7 sm:p-9">
+              <div className="absolute right-0 top-0 bg-[#E4C77A] px-3 py-1.5 text-[10px] font-bold tracking-[1px] text-[#111111] uppercase">
+                Most popular
+              </div>
+              <div>
+                <p className="text-xs font-semibold tracking-[1px] text-[#E4C77A] uppercase">For growing landlords</p>
+                <h3 className="mt-4 font-display text-3xl">{PORTFOLIO_PLAN.name}</h3>
+                <div className="mt-6 flex items-end gap-2">
+                  <span className="font-display text-5xl">₹{PORTFOLIO_PLAN.monthlyPrice}</span>
+                  <span className="pb-1.5 text-sm text-white/40">/ month</span>
+                </div>
+                <p className="mt-5 min-h-12 text-sm leading-6 text-white/50">
+                  More room for every property, unit, tenant, bill, and payment.
+                </p>
+              </div>
+              <ul className="mt-8 space-y-3.5 text-sm text-white/65">
+                {[
+                  `Up to ${PORTFOLIO_PLAN.propertyLimit} properties`,
+                  `Up to ${PORTFOLIO_PLAN.unitLimit} units`,
+                  `Everything in ${FREE_PLAN.name}`,
+                  "More room for tenants and billing history",
+                  "Collection analytics and data exports",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-start gap-3">
+                    <Check className="mt-0.5 size-4 shrink-0 text-[#E4C77A]" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              {session ? (
+                <PortfolioCheckoutButton
+                  active={portfolioActive}
+                  className="mt-10 inline-flex min-h-12 items-center justify-center gap-2 bg-[#EDEDE8] px-6 text-sm font-semibold text-[#111111] transition hover:bg-white"
+                />
+              ) : (
+                <Link
+                  href="/sign-in"
+                  className="mt-10 inline-flex min-h-12 items-center justify-center bg-[#EDEDE8] px-6 text-sm font-semibold text-[#111111] transition hover:bg-white"
+                >
+                  Sign in to upgrade
+                </Link>
+              )}
+              <p className="mt-3 text-center text-xs text-white/35">
+                Secure recurring billing powered by Razorpay.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ */}
       <section id="faq" className="scroll-mt-8 border-b border-white/10 px-5 py-20 sm:px-10 sm:py-24 lg:px-[72px] lg:py-[112px]">
         <div className="mx-auto grid max-w-[1296px] gap-12 lg:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.28fr)] lg:gap-24">
@@ -401,9 +523,10 @@ export default async function Home() {
         <div className="mx-auto max-w-[1296px]">
         <div className="grid gap-12 sm:grid-cols-[1.3fr_1fr_1fr]">
           <div>
-            <div className="flex items-center gap-2 font-display text-lg text-[#EDEDE8]">
-              <Building2 className="size-4" /> bhada
-            </div>
+            <BhadaLogo
+              markClassName="size-6 text-[#EDEDE8]"
+              wordmarkClassName="text-lg text-[#EDEDE8]"
+            />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/45">
               Rent, GST &amp; TDS billing, submeter electricity, and payments — one calm dashboard for independent landlords.
             </p>
@@ -433,16 +556,5 @@ export default async function Home() {
         </div>
       </footer>
     </main>
-  );
-}
-
-function Logo() {
-  return (
-    <>
-      <span className="grid size-8 place-items-center border border-white/20">
-        <Building2 className="size-4" />
-      </span>
-      <span className="font-display text-lg tracking-[0.5px] text-[#EDEDE8]">bhada</span>
-    </>
   );
 }

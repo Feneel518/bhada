@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#111111"/>
+  <rect x="1.5" y="1.5" width="29" height="29" fill="none" stroke="#EDEDE8"/>
+  <text x="16" y="22" fill="#E4C77A" font-family="Gotu, Noto Sans Devanagari, sans-serif" font-size="17.5" text-anchor="middle">भ</text>
+</svg>
