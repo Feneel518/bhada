@@ -128,13 +128,13 @@ button {
   gap: 12px;
   min-height: 64px;
   padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--brand);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.97);
-  color: var(--foreground);
-  box-shadow: 0 16px 45px rgba(32, 38, 55, 0.12);
-  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 2px solid #e4c77a;
+  border-radius: 0;
+  background: rgba(23, 23, 23, 0.97);
+  color: #edede8;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(20px);
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-title] {
@@ -146,7 +146,7 @@ button {
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-description] {
   margin-top: 3px;
-  color: var(--muted);
+  color: rgba(237, 237, 232, 0.48);
   font-size: 0.8125rem;
   line-height: 1.45;
 }
@@ -157,49 +157,53 @@ button {
   height: 30px;
   flex: 0 0 30px;
   place-items: center;
-  border-radius: 10px;
-  background: #efeffd;
-  color: var(--brand);
+  border: 1px solid rgba(228, 199, 122, 0.28);
+  border-radius: 0;
+  background: rgba(228, 199, 122, 0.08);
+  color: #e4c77a;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="success"] {
-  border-left-color: #16a39a;
+  border-left-color: #9bc4ab;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="success"] [data-icon] {
-  background: #e8f7f4;
-  color: #13877f;
+  border-color: rgba(122, 161, 139, 0.28);
+  background: rgba(122, 161, 139, 0.1);
+  color: #9bc4ab;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="error"] {
-  border-left-color: #d86b78;
+  border-left-color: #df8a70;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="error"] [data-icon] {
-  background: #fceef0;
-  color: #c55361;
+  border-color: rgba(201, 106, 78, 0.28);
+  background: rgba(201, 106, 78, 0.1);
+  color: #df8a70;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="warning"] {
-  border-left-color: #e8994f;
+  border-left-color: #dda676;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast][data-type="warning"] [data-icon] {
-  background: #fff3e7;
-  color: #c87931;
+  border-color: rgba(221, 166, 118, 0.28);
+  background: rgba(221, 166, 118, 0.1);
+  color: #dda676;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-button] {
   height: 30px;
-  border-radius: 9px;
-  background: var(--brand);
-  color: white;
+  border-radius: 0;
+  background: #e4c77a;
+  color: #111111;
   font-weight: 700;
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-cancel] {
-  background: #f0f1f6;
-  color: #4d5464;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(237, 237, 232, 0.72);
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-close-button] {
@@ -207,16 +211,16 @@ button {
   left: -6px;
   width: 22px;
   height: 22px;
-  border-color: var(--line);
-  background: white;
-  color: var(--muted);
-  box-shadow: 0 4px 12px rgba(32, 38, 55, 0.12);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #171717;
+  color: rgba(237, 237, 232, 0.55);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.32);
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast] [data-close-button]:hover {
-  border-color: #d6d8e2;
-  background: #f7f8fc;
-  color: var(--foreground);
+  border-color: rgba(228, 199, 122, 0.5);
+  background: #20201f;
+  color: #e4c77a;
 }
 
 .scrollbar-none {

@@ -195,15 +195,24 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
     ...(bill.paid > 0 ? [["Amount received", `− ${money(bill.paid)}`] as [string, string]] : []),
     ["Total Due", money(bill.pending), true],
   ];
+  const summaryLeft = 100;
+  const summaryLabelX = 104;
+  const summaryValueX = 185;
+  const summaryValueWidth = 40;
   summaryRows.forEach(([label, value, total], index) => {
     const y = summaryTop + index * 12;
-    if (total) pdf.line(138, y - 7, 185, y - 7);
+    if (total) pdf.line(summaryLeft, y - 7, summaryValueX, y - 7);
     pdf.setFont(pdfFont, "bold");
     pdf.setFontSize(total ? 13 : 8.5);
-    pdf.text(label, 142, y);
+    pdf.text(label, summaryLabelX, y);
     pdf.setFont(pdfFont, "normal");
-    pdf.setFontSize(total ? 14 : 8.5);
-    pdf.text(value, 185, y, { align: "right" });
+    const preferredValueSize = total ? 14 : 8.5;
+    pdf.setFontSize(preferredValueSize);
+    const valueWidth = pdf.getTextWidth(value);
+    if (valueWidth > summaryValueWidth) {
+      pdf.setFontSize(preferredValueSize * (summaryValueWidth / valueWidth));
+    }
+    pdf.text(value, summaryValueX, y, { align: "right" });
   });
 
   if (document.kind === "electricity" && document.bill.note) {
