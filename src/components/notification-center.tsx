@@ -115,7 +115,7 @@ export function NotificationCenter({
         <section
           role="dialog"
           aria-label="Notifications"
-          className="bhada-popover-surface absolute right-0 top-12 z-50 w-[min(390px,calc(100vw-2rem))] overflow-hidden border border-white/10 bg-[#171717] shadow-[0_22px_60px_rgba(0,0,0,.42)]"
+          className="bhada-notification-panel bhada-popover-surface absolute right-0 top-12 z-50 flex w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden border border-white/10 bg-[#171717] shadow-[0_22px_60px_rgba(0,0,0,.42)]"
         >
           <div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-3.5">
             <div>
@@ -138,7 +138,7 @@ export function NotificationCenter({
           </div>
 
           {notifications.length ? (
-            <div className="max-h-[min(520px,70vh)] overflow-y-auto">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:max-h-[min(520px,70vh)]">
               {notifications.map((item) => {
                 const style = kindStyles[item.kind];
                 const Icon = style.icon;

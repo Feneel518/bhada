@@ -25,6 +25,9 @@
 }
 
 html {
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   scroll-behavior: smooth;
 }
 
@@ -40,7 +43,11 @@ html {
 }
 
 body {
+  min-height: 100dvh;
+  max-width: 100%;
   margin: 0;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
@@ -73,8 +80,36 @@ button {
 
 /* Sonner notifications, tuned to feel like the rest of the Bhada workspace. */
 [data-sonner-toaster].bhada-toaster {
-  --width: 372px;
+  --width: min(372px, calc(100vw - 2rem));
   font-family: var(--font-body), sans-serif;
+}
+
+@media (max-width: 600px) {
+  [data-sonner-toaster].bhada-toaster[data-x-position="right"] {
+    right: max(1rem, env(safe-area-inset-right));
+    left: max(1rem, env(safe-area-inset-left));
+    width: auto;
+  }
+
+  [data-sonner-toaster].bhada-toaster [data-sonner-toast] {
+    width: 100%;
+  }
+}
+
+/* The dashboard notification tray is viewport-aligned on phones. */
+.bhada-notification-panel {
+  max-height: min(590px, calc(100dvh - 5.5rem));
+}
+
+@media (max-width: 639px) {
+  .bhada-notification-panel {
+    position: fixed;
+    top: calc(4rem + 0.5rem);
+    right: max(0.75rem, env(safe-area-inset-right));
+    left: max(0.75rem, env(safe-area-inset-left));
+    width: auto;
+    max-height: calc(100dvh - 5.25rem - env(safe-area-inset-bottom));
+  }
 }
 
 [data-sonner-toaster].bhada-toaster [data-sonner-toast][data-styled="true"] {

@@ -727,7 +727,7 @@ export function Dashboard({
               />
             )}
           </div>
-          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 sm:gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -748,7 +748,7 @@ export function Dashboard({
               title={`${rentBilling.periodLabel}: ${formatCurrency(rentBilling.paidThisMonth)} collected · ${formatCurrency(rentBilling.pendingTotal)} pending`}
             >
               <CircleDollarSign className="size-4 shrink-0 text-[#e4c77a]" />
-              <span className="leading-none">
+              <span className="hidden leading-none min-[380px]:block">
                 <span className="hidden text-[9px] font-semibold uppercase tracking-[0.12em] text-white/35 sm:block">
                   This month
                 </span>
@@ -3045,6 +3045,7 @@ function UnitDialog({
                 className={inputClass}
                 invalid={Boolean(state.errors?.openingMeterReadingDate)}
                 monthOnly
+                monthYearNavigation
                 placeholder="Pick an opening month"
               />
               {state.errors?.openingMeterReadingDate && <FieldError message={state.errors.openingMeterReadingDate} />}
