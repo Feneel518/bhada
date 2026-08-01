@@ -1,7 +1,5 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
 import {
   ArrowRight,
   BellRing,
@@ -17,31 +15,96 @@ import {
   WalletCards,
   Zap,
 } from "lucide-react";
-import { auth } from "@/lib/auth";
 import { LandingFaq } from "@/components/landing-faq";
-import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button";
+import { JsonLd } from "@/components/json-ld";
 import { BhadaLogo } from "@/components/brand-logo";
-import { db } from "@/db";
-import { landlord } from "@/db/schema";
-import { FREE_PLAN, hasPortfolioAccess, PORTFOLIO_PLAN } from "@/lib/plans";
+import { FREE_PLAN, PORTFOLIO_PLAN } from "@/lib/plans";
+import { landingFaqs } from "@/lib/landing-content";
+import { SITE_DESCRIPTION, SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Rent management for independent landlords",
-  description:
-    "Manage rent, GST and TDS invoices, submeter electricity, payments, reminders, and PDF bills from one calm landlord dashboard.",
+  title: "Rent Management Software for Landlords in India",
+  description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Bhada — Rent management, without the runaround",
-    description:
-      "Rent billing, submeter electricity, payments, and reminders in one dashboard for independent landlords.",
+    title: "Bhada — Rent Management Software for Landlords in India",
+    description: SITE_DESCRIPTION,
+    url: "/",
     type: "website",
   },
   twitter: {
-    card: "summary",
-    title: "Bhada — Rent management, without the runaround",
-    description:
-      "Rent billing, submeter electricity, payments, and reminders in one calm dashboard.",
+    card: "summary_large_image",
+    title: "Bhada — Rent Management Software for Landlords in India",
+    description: SITE_DESCRIPTION,
   },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "Bhada",
+      url: SITE_URL,
+      logo: `${SITE_URL}/icon.svg`,
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: "Bhada",
+      description: SITE_DESCRIPTION,
+      publisher: { "@id": `${SITE_URL}/#organization` },
+      inLanguage: "en-IN",
+    },
+    {
+      "@type": "WebApplication",
+      "@id": `${SITE_URL}/#app`,
+      name: "Bhada",
+      url: SITE_URL,
+      description: SITE_DESCRIPTION,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any device with a modern web browser",
+      browserRequirements: "Requires JavaScript and a modern web browser",
+      featureList: [
+        "Rent collection tracking",
+        "GST and TDS-ready rent billing",
+        "Submeter electricity billing",
+        "Tenant payment and balance tracking",
+        "PDF rent bills",
+        "Landlord reminders and analytics",
+      ],
+      offers: [
+        {
+          "@type": "Offer",
+          name: FREE_PLAN.name,
+          price: "0",
+          priceCurrency: "INR",
+          url: `${SITE_URL}/#pricing`,
+        },
+        {
+          "@type": "Offer",
+          name: PORTFOLIO_PLAN.name,
+          price: String(PORTFOLIO_PLAN.monthlyPrice),
+          priceCurrency: "INR",
+          url: `${SITE_URL}/#pricing`,
+        },
+      ],
+      provider: { "@id": `${SITE_URL}/#organization` },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: landingFaqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
+    },
+  ],
 };
 
 const capabilities = [
@@ -121,26 +184,13 @@ const reasons = [
   },
 ];
 
-export default async function Home() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const [billingAccount] = session
-    ? await db
-        .select({
-          plan: landlord.plan,
-          subscriptionStatus: landlord.subscriptionStatus,
-          subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
-          subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
-        })
-        .from(landlord)
-        .where(eq(landlord.userId, session.user.id))
-        .limit(1)
-    : [];
-  const portfolioActive = Boolean(billingAccount && hasPortfolioAccess(billingAccount));
-  const primaryHref = session ? "/dashboard" : "/sign-in";
-  const primaryLabel = session ? "Open dashboard" : "Start for free";
+export default function Home() {
+  const primaryHref = "/sign-in";
+  const primaryLabel = "Start for free";
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[#111111] font-sans text-[#EDEDE8] selection:bg-[#E4C77A] selection:text-[#111111]">
+      <JsonLd data={structuredData} />
       <a
         href="#main-content"
         className="fixed top-3 left-3 z-[100] -translate-y-20 bg-[#EDEDE8] px-4 py-2 text-sm font-semibold text-[#111111] transition focus:translate-y-0"
@@ -164,17 +214,15 @@ export default async function Home() {
             <a href="#faq" className="transition hover:text-white">FAQ</a>
           </nav>
           <div className="flex items-center gap-3">
-            {!session && (
-              <Link href="/sign-in" className="hidden text-xs tracking-[0.5px] text-white/55 uppercase transition hover:text-white sm:block">
-                Sign in
-              </Link>
-            )}
+            <Link href="/sign-in" className="hidden text-xs tracking-[0.5px] text-white/55 uppercase transition hover:text-white sm:block">
+              Sign in
+            </Link>
             <Link
               href={primaryHref}
               className="border border-white/30 px-4 py-2.5 text-[11px] font-semibold tracking-[0.5px] uppercase transition hover:border-white/60 hover:bg-white/[0.04] sm:px-5 sm:text-xs"
             >
-              <span className="sm:hidden">{session ? "Dashboard" : "Start free"}</span>
-              <span className="hidden sm:inline">{session ? "Dashboard" : "Start free"}</span>
+              <span className="sm:hidden">Start free</span>
+              <span className="hidden sm:inline">Start free</span>
             </Link>
           </div>
         </div>
@@ -405,7 +453,7 @@ export default async function Home() {
                 href={primaryHref}
                 className="mt-10 inline-flex min-h-12 items-center justify-center border border-white/25 px-6 text-sm font-semibold transition hover:border-white/50 hover:bg-white/[0.04]"
               >
-                {session ? "Continue with One Door" : "Start for free"}
+                Start for free
               </Link>
             </article>
 
@@ -438,19 +486,12 @@ export default async function Home() {
                   </li>
                 ))}
               </ul>
-              {session ? (
-                <PortfolioCheckoutButton
-                  active={portfolioActive}
-                  className="mt-10 inline-flex min-h-12 items-center justify-center gap-2 bg-[#EDEDE8] px-6 text-sm font-semibold text-[#111111] transition hover:bg-white"
-                />
-              ) : (
-                <Link
-                  href="/sign-in"
-                  className="mt-10 inline-flex min-h-12 items-center justify-center bg-[#EDEDE8] px-6 text-sm font-semibold text-[#111111] transition hover:bg-white"
-                >
-                  Sign in to upgrade
-                </Link>
-              )}
+              <Link
+                href="/sign-in"
+                className="mt-10 inline-flex min-h-12 items-center justify-center bg-[#EDEDE8] px-6 text-sm font-semibold text-[#111111] transition hover:bg-white"
+              >
+                Sign in to upgrade
+              </Link>
               <p className="mt-3 text-center text-xs text-white/35">
                 Secure recurring billing powered by Razorpay.
               </p>
@@ -537,15 +578,14 @@ export default async function Home() {
             <div className="flex flex-col gap-3.5 text-sm text-white/60">
               <a href="#features" className="transition hover:text-white">Features</a>
               <a href="#how-it-works" className="transition hover:text-white">How it works</a>
+              <Link href="/rent-management-software" className="transition hover:text-white">Rent management software</Link>
               <a href="#faq" className="transition hover:text-white">FAQ</a>
             </div>
           </div>
           <div>
             <div className="mb-5 text-xs tracking-[1px] text-white/40 uppercase">Account</div>
             <div className="flex flex-col gap-3.5 text-sm text-white/60">
-              {!session && (
-                <Link href="/sign-in" className="transition hover:text-white">Sign in</Link>
-              )}
+              <Link href="/sign-in" className="transition hover:text-white">Sign in</Link>
               <Link href={primaryHref} className="transition hover:text-white">{primaryLabel}</Link>
             </div>
           </div>

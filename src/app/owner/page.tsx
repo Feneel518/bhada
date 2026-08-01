@@ -23,10 +23,12 @@ import { RefreshAnalyticsButton } from "@/app/owner/refresh-analytics-button";
 import { getOwnerAnalytics } from "@/lib/owner-analytics";
 import { requireOwner } from "@/lib/owner";
 import { cn } from "@/lib/utils";
+import { PRIVATE_PAGE_METADATA } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Owner analytics",
   description: "Private business analytics for Bhada.",
+  ...PRIVATE_PAGE_METADATA,
 };
 
 export const dynamic = "force-dynamic";

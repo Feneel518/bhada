@@ -28,6 +28,17 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Keep fixed controls stationary while Radix temporarily removes the page scrollbar. */
+.bhada-language-switcher {
+  right: calc(1rem + var(--removed-body-scroll-bar-size, 0px));
+}
+
+@media (min-width: 640px) {
+  .bhada-language-switcher {
+    right: calc(1.25rem + var(--removed-body-scroll-bar-size, 0px));
+  }
+}
+
 body {
   margin: 0;
   background: var(--background);
