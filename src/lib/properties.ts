@@ -92,7 +92,7 @@ export async function getProperties(userId: string): Promise<PropertyRecord[]> {
         status: item.status,
         openingMeterReading: item.openingMeterReading ?? item.lastMeterReading,
         openingMeterReadingDate:
-          (item.openingMeterReadingDate ?? item.lastMeterReadingDate)?.toISOString().slice(0, 7) ?? "",
+          (item.openingMeterReadingDate ?? item.lastMeterReadingDate)?.toISOString().slice(0, 10) ?? "",
         lastMeterReading: item.lastMeterReading,
         lastMeterReadingDate: item.lastMeterReadingDate?.toISOString().slice(0, 10) ?? "",
         tenant: item.tenantId

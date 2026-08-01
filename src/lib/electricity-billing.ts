@@ -85,7 +85,7 @@ export async function getElectricityBills(
         and(
           eq(landlord.userId, userId),
           gte(electricityBill.billingPeriod, financialYear.startPeriod),
-          lte(electricityBill.billingPeriod, financialYear.endPeriod),
+          lte(electricityBill.billingPeriod, `${financialYear.endPeriod}-31`),
         ),
       )
       .orderBy(asc(electricityBill.dueDate), asc(electricityBill.createdAt)),

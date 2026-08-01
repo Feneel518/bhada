@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BhadaMark } from "@/components/brand-logo";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
-import { formatBillingMonth } from "@/lib/financial-year";
+import { formatBillingMonth, formatElectricityReadingDate } from "@/lib/financial-year";
 import { drawBhadaPdfLogo, loadGotuPdfFont } from "@/lib/bhada-pdf-logo";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { TenantRecord } from "@/lib/tenants";
@@ -66,7 +66,7 @@ function gstTaxableAmount(bill: RentBill) {
 function invoiceRows(document: BillDocument): InvoiceRow[] {
   if (document.kind === "electricity") {
     return [{
-      item: `Electricity usage — ${formatBillingMonth(document.bill.billingPeriod)}`,
+      item: `Electricity usage — reading dated ${formatElectricityReadingDate(document.bill.billingPeriod)}`,
       quantity: String(document.bill.unitsConsumed),
       unitPrice: money(document.bill.unitRate),
       total: money(document.bill.amount),
@@ -302,7 +302,7 @@ export function BillDocumentDialog({
       if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
         await navigator.share({
           title: `Invoice ${bill.billNumber}`,
-          text: `${bill.tenantName} — ${formatBillingMonth(bill.billingPeriod)}`,
+          text: `${bill.tenantName} — ${document.kind === "electricity" ? formatElectricityReadingDate(bill.billingPeriod) : formatBillingMonth(bill.billingPeriod)}`,
           files: [file],
         });
       } else {

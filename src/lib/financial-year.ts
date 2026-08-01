@@ -52,3 +52,16 @@ export function formatBillingMonth(billingPeriod: string) {
     year: "numeric",
   }).format(new Date(Date.UTC(year, month - 1, 15)));
 }
+
+export function formatElectricityReadingDate(billingPeriod: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(billingPeriod);
+  if (!match) return formatBillingMonth(billingPeriod);
+
+  const [, year, month, day] = match;
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  }).format(new Date(`${year}-${month}-${day}T12:00:00+05:30`));
+}

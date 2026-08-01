@@ -50,6 +50,8 @@
 }
 
 .content {
+  width: 100%;
+  min-width: 0;
   min-height: calc(100vh - 72px);
 }
 
@@ -416,7 +418,7 @@
 
 @media (max-width: 639px) {
   .content {
-    min-height: calc(100dvh - 4rem);
+    min-height: 0;
   }
 
   .shell :global(section),

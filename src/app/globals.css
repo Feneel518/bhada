@@ -42,6 +42,13 @@ html {
   }
 }
 
+/* Keep the language control clear of the dashboard's floating navigation island. */
+@media (max-width: 1023px) {
+  body:has(.dashboard-shell) .bhada-language-switcher {
+    bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 5rem));
+  }
+}
+
 body {
   min-height: 100dvh;
   max-width: 100%;
@@ -54,6 +61,11 @@ body {
   background-image:
     radial-gradient(circle at 82% 0%, rgba(91, 91, 214, 0.055), transparent 27rem),
     radial-gradient(circle at 18% 100%, rgba(22, 163, 154, 0.04), transparent 30rem);
+}
+
+body:has(.dashboard-shell) {
+  background: #111111;
+  overscroll-behavior-y: none;
 }
 
 a:focus-visible,

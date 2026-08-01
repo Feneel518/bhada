@@ -69,7 +69,11 @@ import type { IncomeOverviewPoint } from "@/lib/dashboard-analytics";
 import type { PaymentRecord } from "@/lib/payments";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
-import { formatBillingMonth, type FinancialYearOption } from "@/lib/financial-year";
+import {
+  formatBillingMonth,
+  formatElectricityReadingDate,
+  type FinancialYearOption,
+} from "@/lib/financial-year";
 import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import type { TenantAnalytics } from "@/lib/tenant-analytics";
@@ -206,12 +210,12 @@ const helpCenterSections = [
       {
         question: "How do I create an electricity bill?",
         answer:
-          "Open Payments and select Add electricity bill. Choose the property and unit, billing month, current meter reading, rate per unit, and due date. Bhada uses the previous reading to calculate consumption and the bill amount.",
+          "Open Payments and select Add electricity bill. Choose the property and unit, the exact meter reading date, current reading, rate per unit, and due date. Bhada uses the previous dated reading to calculate consumption and the bill amount.",
       },
       {
-        question: "Why can’t I add another bill for the same month?",
+        question: "Why can’t I add another bill for the same date?",
         answer:
-          "Each unit can have only one electricity bill per billing month. Check the existing electricity bills in Payments before trying again, and confirm that the selected month and unit are correct.",
+          "Each unit can have only one electricity bill per meter reading date. Check the existing electricity bills in Payments before trying again, and confirm that the selected date and unit are correct.",
       },
     ],
   },
@@ -797,7 +801,7 @@ export function Dashboard({
         <div
           key={active}
           className={cn(
-            "mx-auto max-w-[1440px] px-3 py-5 pb-28 min-[380px]:px-4 sm:px-7 sm:py-7 sm:pb-8 lg:px-9 lg:py-9",
+            "mx-auto w-full min-w-0 max-w-[1440px] px-3 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] min-[380px]:px-4 sm:px-7 sm:py-7 sm:pb-8 lg:px-9 lg:py-9",
             styles.content,
             styles.sectionTransition,
           )}
@@ -1131,8 +1135,8 @@ function Overview({
         <MetricCard icon={Building2} label="Active properties" value={String(totalProperties)} note="Across your portfolio" trend="up" tone="pink" />
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <section className="rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)] sm:p-6">
+      <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <section className="min-w-0 overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)] sm:p-6">
           <div className="flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-start min-[380px]:justify-between min-[380px]:gap-4">
             <div>
               <h2 className="font-display text-base font-bold tracking-[-0.025em]">Income overview</h2>
@@ -1803,7 +1807,7 @@ function ElectricityBillTable({
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-[#343a48]">{bill.billNumber}</p>
                 <p className="mt-1 truncate text-[11px] text-[#7e8595]">
-                  {bill.propertyName} · Unit {bill.unitNumber}
+                  {bill.propertyName} · Unit {bill.unitNumber} · {formatElectricityReadingDate(bill.billingPeriod)}
                 </p>
               </div>
               <span className={cn(
@@ -1829,7 +1833,7 @@ function ElectricityBillTable({
               <div className="col-span-2">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-white/30">Meter reading</p>
                 <p className="mt-1 text-[11px] text-[#7e8595]">
-                  {bill.previousReading} → {bill.currentReading} · {bill.unitsConsumed} units
+                  {formatMeterReading(bill.previousReading)} → {formatMeterReading(bill.currentReading)} · {formatMeterReading(bill.unitsConsumed)} units
                 </p>
               </div>
             </div>
@@ -1854,7 +1858,7 @@ function ElectricityBillTable({
           <thead>
             <tr className="border-y border-[#eef0f4] bg-[#fafafd] text-[10px] uppercase tracking-[0.08em] text-[#989eac]">
               <th className="px-6 py-3 font-bold">Bill</th>
-              <th className="px-4 py-3 font-bold">Bill month</th>
+              <th className="px-4 py-3 font-bold">Reading date</th>
               <th className="px-4 py-3 font-bold">Unit</th>
               <th className="hidden px-4 py-3 font-bold xl:table-cell">Tenant</th>
               <th className="hidden px-4 py-3 font-bold lg:table-cell">Meter calculation</th>
@@ -1871,15 +1875,15 @@ function ElectricityBillTable({
                 <td className="px-6 py-3.5">
                   <p className="text-xs font-bold text-[#343a48]">{bill.billNumber}</p>
                 </td>
-                <td className="px-4 py-3.5 text-xs text-[#5f6676]">{formatBillingMonth(bill.billingPeriod)}</td>
+                <td className="px-4 py-3.5 text-xs text-[#5f6676]">{formatElectricityReadingDate(bill.billingPeriod)}</td>
                 <td className="px-4 py-3.5">
                   <p className="text-xs font-bold text-[#4d5362]">{bill.propertyName}</p>
                   <p className="mt-0.5 text-[10px] text-[#989eac]">Unit {bill.unitNumber}</p>
                 </td>
                 <td className="hidden px-4 py-3.5 text-xs text-[#5f6676] xl:table-cell">{bill.tenantName}</td>
                 <td className="hidden px-4 py-3.5 lg:table-cell">
-                  <p className="text-xs font-bold text-[#4d5362]">{bill.previousReading} → {bill.currentReading}</p>
-                  <p className="mt-0.5 text-[10px] text-[#989eac]">{bill.unitsConsumed} units × {formatCurrency(bill.unitRate)}</p>
+                  <p className="text-xs font-bold tabular-nums text-[#4d5362]">{formatMeterReading(bill.previousReading)} → {formatMeterReading(bill.currentReading)}</p>
+                  <p className="mt-0.5 text-[10px] tabular-nums text-[#989eac]">{formatMeterReading(bill.unitsConsumed)} units × {formatCurrency(bill.unitRate)}</p>
                 </td>
                 <td className="hidden px-4 py-3.5 text-xs font-bold text-[#343a48] md:table-cell">{formatCurrency(bill.amount)}</td>
                 <td className="px-4 py-3.5 text-xs font-bold text-[#b66a45]">{formatCurrency(bill.pending)}</td>
@@ -2186,9 +2190,9 @@ function UnitRow({ unit, onEdit }: { unit: UnitRecord; onEdit: () => void }) {
           </p>
           {unit.openingMeterReading !== null && (
             <p className="mt-1 flex items-center gap-1 text-[10px] text-[#8c92a1]">
-              <Gauge className="size-3" /> Opening {unit.openingMeterReading}
+              <Gauge className="size-3" /> Opening {formatMeterReading(unit.openingMeterReading)} units
               {unit.openingMeterReadingDate ? ` (${unit.openingMeterReadingDate})` : ""}
-              {unit.lastMeterReading !== null ? ` · Latest ${unit.lastMeterReading}` : ""}
+              {unit.lastMeterReading !== null ? ` · Latest ${formatMeterReading(unit.lastMeterReading)} units` : ""}
             </p>
           )}
         </div>
@@ -2352,6 +2356,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const inputClass = "h-11 w-full rounded-none border border-white/[0.09] bg-white/[0.018] px-3.5 text-sm text-[#edede8]/85 outline-none transition-[border-color,background-color,color] placeholder:text-white/25 focus:border-white/20 focus:bg-white/[0.028] focus:ring-0 aria-invalid:border-[#c96a4e]/55";
 
+const meterReadingFormatter = new Intl.NumberFormat("en-IN", {
+  maximumFractionDigits: 3,
+});
+
+function formatMeterReading(value: number | string) {
+  const reading = Number(value);
+  return Number.isFinite(reading) ? meterReadingFormatter.format(reading) : "—";
+}
+
 const initialElectricityBillState: ElectricityBillActionState = {
   status: "idle",
   message: "",
@@ -2384,6 +2397,7 @@ function ElectricityBillDialog({
       ? 0
       : Math.max(0, Number(currentReading) - previousReading);
   const calculatedAmount = unitsConsumed * (Number(unitRate) || 0);
+  const hasCurrentReading = currentReading !== "" && Number.isFinite(Number(currentReading));
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -2396,7 +2410,7 @@ function ElectricityBillDialog({
       <DialogContent className="max-w-[560px]">
         <DialogTitle>Add electricity bill</DialogTitle>
         <DialogDescription>
-          Enter this month&apos;s meter reading and rate. Consumption and amount are calculated from the previous reading.
+          Enter the meter reading for a specific day. Consumption and amount are calculated from the previous reading.
         </DialogDescription>
         <form action={formAction} className="mt-6 space-y-4">
           <Field label="Property and unit">
@@ -2423,31 +2437,35 @@ function ElectricityBillDialog({
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Billing month">
+            <Field label="Meter reading date">
               <DatePickerInput
                 name="billingPeriod"
-                defaultValue={today.slice(0, 7)}
+                defaultValue={today}
                 className={inputClass}
                 invalid={Boolean(state.errors?.billingPeriod)}
                 required
-                monthOnly
-                placeholder="Pick a billing month"
+                placeholder="Pick the reading date"
               />
               {state.errors?.billingPeriod && <FieldError message={state.errors.billingPeriod} />}
             </Field>
             <Field label="Current meter reading">
-              <input
-                required
-                className={inputClass}
-                name="currentReading"
-                type="number"
-                min={previousReading ?? 0}
-                step="0.001"
-                value={currentReading}
-                onChange={(event) => setCurrentReading(event.target.value)}
-                placeholder={previousReading === null ? "Set opening reading first" : `Previous: ${previousReading}`}
-                aria-invalid={Boolean(state.errors?.currentReading)}
-              />
+              <div className="relative">
+                <input
+                  required
+                  className={cn(inputClass, "pr-16 tabular-nums")}
+                  name="currentReading"
+                  type="number"
+                  min={previousReading ?? 0}
+                  step="0.001"
+                  value={currentReading}
+                  onChange={(event) => setCurrentReading(event.target.value)}
+                  placeholder={previousReading === null ? "Set opening reading first" : `Previous: ${formatMeterReading(previousReading)}`}
+                  aria-invalid={Boolean(state.errors?.currentReading)}
+                />
+                <span className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-[10px] font-bold uppercase tracking-[0.08em] text-white/30">
+                  units
+                </span>
+              </div>
               {state.errors?.currentReading && <FieldError message={state.errors.currentReading} />}
             </Field>
             <Field label="Rate per unit (₹)">
@@ -2480,18 +2498,47 @@ function ElectricityBillDialog({
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 border border-white/[0.08] bg-white/[0.025] px-4 py-3.5 text-center">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">Previous</p>
-              <p className="mt-1 text-sm font-extrabold text-[#e4c77a]">{previousReading ?? "—"}</p>
+          <div className="border border-white/[0.09] bg-white/[0.025]">
+            <div className="flex items-center gap-2 border-b border-white/[0.08] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">
+              <Gauge className="size-3.5 text-[#e4c77a]" /> Meter calculation
             </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">Units used</p>
-              <p className="mt-1 text-sm font-extrabold text-[#e4c77a]">{unitsConsumed.toFixed(3)}</p>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-4 sm:px-5">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Previous reading</p>
+                <p className="mt-1.5 font-display text-xl font-bold tabular-nums text-white/75">
+                  {previousReading === null ? "—" : formatMeterReading(previousReading)}
+                  {previousReading !== null && <span className="ml-1 text-[10px] font-semibold uppercase tracking-normal text-white/30">units</span>}
+                </p>
+                {selectedUnit?.lastMeterReadingDate && (
+                  <p className="mt-1 text-[9px] text-white/35">
+                    {formatElectricityReadingDate(selectedUnit.lastMeterReadingDate)}
+                  </p>
+                )}
+              </div>
+              <div aria-hidden="true" className="flex items-center gap-1 text-white/20">
+                <span className="h-px w-3 bg-white/15 sm:w-5" />
+                <span className="text-sm">→</span>
+                <span className="h-px w-3 bg-white/15 sm:w-5" />
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Current reading</p>
+                <p className="mt-1.5 font-display text-xl font-bold tabular-nums text-[#e4c77a]">
+                  {hasCurrentReading ? formatMeterReading(currentReading) : "—"}
+                  {hasCurrentReading && <span className="ml-1 text-[10px] font-semibold uppercase tracking-normal text-[#e4c77a]/55">units</span>}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">Bill amount</p>
-              <p className="mt-1 text-sm font-extrabold text-[#e4c77a]">{formatCurrency(calculatedAmount)}</p>
+            <div className="grid grid-cols-2 border-t border-white/[0.08] bg-black/10">
+              <div className="border-r border-white/[0.08] px-4 py-3.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Consumption</p>
+                <p className="mt-1 text-base font-extrabold tabular-nums text-[#e4c77a]">
+                  {formatMeterReading(unitsConsumed)} <span className="text-[10px] font-semibold uppercase text-[#e4c77a]/55">units</span>
+                </p>
+              </div>
+              <div className="px-4 py-3.5 text-right">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-white/35">Bill amount</p>
+                <p className="mt-1 text-base font-extrabold tabular-nums text-[#e4c77a]">{formatCurrency(calculatedAmount)}</p>
+              </div>
             </div>
           </div>
 
@@ -3037,24 +3084,23 @@ function UnitDialog({
               />
               {state.errors?.openingMeterReading && <FieldError message={state.errors.openingMeterReading} />}
             </Field>
-            <Field label="Opening reading month">
+            <Field label="Opening reading date">
               <DatePickerInput
-                key={`opening-month-${unit?.id ?? "new"}`}
+                key={`opening-date-${unit?.id ?? "new"}`}
                 name="openingMeterReadingDate"
                 defaultValue={unit?.openingMeterReadingDate}
                 className={inputClass}
                 invalid={Boolean(state.errors?.openingMeterReadingDate)}
-                monthOnly
                 monthYearNavigation
-                placeholder="Pick an opening month"
+                placeholder="Pick an opening date"
               />
               {state.errors?.openingMeterReadingDate && <FieldError message={state.errors.openingMeterReadingDate} />}
             </Field>
           </div>
           {unit && unit.lastMeterReading !== null && (
             <p className="border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-xs text-white/45">
-              Latest billed reading: <span className="font-bold text-white/70">{unit.lastMeterReading}</span>
-              {unit.lastMeterReadingDate ? ` (${unit.lastMeterReadingDate.slice(0, 7)})` : ""}
+              Latest billed reading: <span className="font-bold text-white/70">{formatMeterReading(unit.lastMeterReading)} units</span>
+              {unit.lastMeterReadingDate ? ` (${unit.lastMeterReadingDate})` : ""}
             </p>
           )}
           {unit?.tenant && (
