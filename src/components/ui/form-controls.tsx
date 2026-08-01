@@ -84,6 +84,7 @@ export function DatePickerInput({
   invalid,
   required,
   monthOnly = false,
+  monthYearNavigation = false,
 }: {
   name: string;
   defaultValue?: string | null;
@@ -92,6 +93,7 @@ export function DatePickerInput({
   invalid?: boolean;
   required?: boolean;
   monthOnly?: boolean;
+  monthYearNavigation?: boolean;
 }) {
   const [date, setDate] = useState<Date | undefined>(() => parseDate(defaultValue));
   const serialized = date ? format(date, monthOnly ? "yyyy-MM" : "yyyy-MM-dd") : "";
@@ -122,6 +124,7 @@ export function DatePickerInput({
             mode="single"
             selected={date}
             defaultMonth={date}
+            captionLayout={monthYearNavigation ? "dropdown" : "label"}
             onSelect={(nextDate) => {
               if (!nextDate) {
                 if (!required) setDate(undefined);
