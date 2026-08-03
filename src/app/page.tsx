@@ -20,11 +20,12 @@ import { JsonLd } from "@/components/json-ld";
 import { BhadaLogo } from "@/components/brand-logo";
 import { FREE_PLAN, PORTFOLIO_PLAN } from "@/lib/plans";
 import { landingFaqs } from "@/lib/landing-content";
-import { SITE_DESCRIPTION, SITE_URL } from "@/lib/seo";
+import { SEO_KEYWORDS, SITE_ALTERNATE_NAME, SITE_DESCRIPTION, SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Rent Management Software for Landlords in India",
   description: SITE_DESCRIPTION,
+  keywords: SEO_KEYWORDS,
   alternates: { canonical: "/" },
   openGraph: {
     title: "Bhada — Rent Management Software for Landlords in India",
@@ -46,6 +47,7 @@ const structuredData = {
       "@type": "Organization",
       "@id": `${SITE_URL}/#organization`,
       name: "Bhada",
+      alternateName: SITE_ALTERNATE_NAME,
       url: SITE_URL,
       logo: `${SITE_URL}/icon.svg`,
     },
@@ -54,6 +56,7 @@ const structuredData = {
       "@id": `${SITE_URL}/#website`,
       url: SITE_URL,
       name: "Bhada",
+      alternateName: SITE_ALTERNATE_NAME,
       description: SITE_DESCRIPTION,
       publisher: { "@id": `${SITE_URL}/#organization` },
       inLanguage: "en-IN",
@@ -62,6 +65,7 @@ const structuredData = {
       "@type": "WebApplication",
       "@id": `${SITE_URL}/#app`,
       name: "Bhada",
+      alternateName: [SITE_ALTERNATE_NAME, "Bhadaa Rent Tracker"],
       url: SITE_URL,
       description: SITE_DESCRIPTION,
       applicationCategory: "BusinessApplication",
@@ -243,7 +247,7 @@ export default function Home() {
           </div>
           <div className="max-w-md pb-1 lg:pb-2">
             <p className="mb-8 text-[15px] leading-7 text-white/60 sm:text-[17px]">
-              GST &amp; TDS-ready invoicing, submeter electricity billing, in-app reminders, and one-tap PDF bills — one dashboard, every property.
+              Track rent payments and overdue balances, create GST &amp; TDS-ready bills, add submeter electricity, and share PDFs — one dashboard, every property.
             </p>
             <div className="flex flex-wrap gap-3.5">
               <Link href={primaryHref} className="group inline-flex min-h-12 items-center gap-2 bg-[#EDEDE8] px-7 py-3.5 text-sm font-semibold text-[#111111] transition hover:bg-white">
@@ -579,6 +583,7 @@ export default function Home() {
               <a href="#features" className="transition hover:text-white">Features</a>
               <a href="#how-it-works" className="transition hover:text-white">How it works</a>
               <Link href="/rent-management-software" className="transition hover:text-white">Rent management software</Link>
+              <Link href="/rent-tracking" className="transition hover:text-white">Rent tracking software</Link>
               <a href="#faq" className="transition hover:text-white">FAQ</a>
             </div>
           </div>

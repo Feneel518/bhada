@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, Gotu } from "next/font/google";
 import { Toaster } from "sonner";
 import { LanguageProvider } from "@/components/language-provider";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { SEO_KEYWORDS, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 import "./globals.css";
 
 const bodyFont = DM_Sans({
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     template: "%s | Bhada",
   },
   description: SITE_DESCRIPTION,
+  keywords: SEO_KEYWORDS,
   applicationName: SITE_NAME,
   authors: [{ name: SITE_NAME, url: SITE_URL }],
   creator: SITE_NAME,
