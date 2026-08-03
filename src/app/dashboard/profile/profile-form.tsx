@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-controls";
 import { SubscriptionBillingHistory } from "@/components/subscription-receipt-card";
+import { LanguageSwitcher } from "@/components/language-provider";
 import type { SubscriptionReceipt } from "@/lib/subscription-receipts";
 
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
@@ -211,6 +212,18 @@ export function ProfileForm({
             <p className="mt-1.5 truncate text-xs text-white/50" title={email}>
               {email}
             </p>
+          </div>
+
+          <div className="mt-3 border border-white/10 bg-[#151515] p-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/30">
+              Language
+            </p>
+            <p className="mt-1 text-[11px] leading-4 text-white/35">
+              Choose your display language.
+            </p>
+            <div className="mt-3">
+              <LanguageSwitcher />
+            </div>
           </div>
         </aside>
 

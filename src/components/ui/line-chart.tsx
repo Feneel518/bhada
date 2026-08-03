@@ -57,13 +57,13 @@ export function LineChart({ data, className, markerIndex }: LineChartProps) {
   return (
     <div
       ref={frameRef}
-      className={cn("relative mt-5 aspect-[3/1] min-h-[210px] w-full select-none", className)}
+      className={cn("relative mt-5 aspect-[3/1] min-h-[210px] w-full min-w-0 overflow-hidden select-none", className)}
       onPointerMove={handlePointer}
       onPointerLeave={() => setActiveIndex(null)}
       role="img"
       aria-label="Monthly rent income line chart"
     >
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="absolute inset-0 size-full overflow-hidden">
         <defs>
           <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--chart-line-primary)" stopOpacity=".24" />
@@ -120,7 +120,14 @@ export function LineChart({ data, className, markerIndex }: LineChartProps) {
 
       {activePoint && (
         <div
-          className="pointer-events-none absolute z-10 min-w-[128px] -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-xl border border-white/10 bg-[#292d3b]/95 px-3 py-2.5 text-white shadow-xl backdrop-blur-md"
+          className={cn(
+            "pointer-events-none absolute z-10 min-w-[128px] -translate-y-[calc(100%+14px)] rounded-xl border border-white/10 bg-[#292d3b]/95 px-3 py-2.5 text-white shadow-xl backdrop-blur-md",
+            activeIndex === 0
+              ? "translate-x-0"
+              : activeIndex === geometry.points.length - 1
+                ? "-translate-x-full"
+                : "-translate-x-1/2",
+          )}
           style={{ left: `${(activePoint.x / width) * 100}%`, top: `${(activePoint.y / height) * 100}%` }}
         >
           <p className="text-[10px] font-medium text-white/55">
@@ -135,7 +142,14 @@ export function LineChart({ data, className, markerIndex }: LineChartProps) {
 
       {markerIndex !== undefined && activeIndex === null && geometry.points[markerIndex] && (
         <span
-          className="pointer-events-none absolute -translate-x-1/2 rounded-full bg-[#eeeeff] px-2 py-1 text-[9px] font-bold text-[#5656c9]"
+          className={cn(
+            "pointer-events-none absolute rounded-full bg-[#eeeeff] px-2 py-1 text-[9px] font-bold text-[#5656c9]",
+            markerIndex === 0
+              ? "translate-x-0"
+              : markerIndex === geometry.points.length - 1
+                ? "-translate-x-full"
+                : "-translate-x-1/2",
+          )}
           style={{ left: `${(geometry.points[markerIndex].x / width) * 100}%`, top: 0 }}
         >
           Rent increase

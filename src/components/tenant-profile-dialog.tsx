@@ -3,7 +3,7 @@
 import { CalendarDays, CircleDollarSign, FileText, Mail, Phone, ReceiptText, WalletCards, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
-import { formatBillingMonth } from "@/lib/financial-year";
+import { formatBillingMonth, formatElectricityReadingDate } from "@/lib/financial-year";
 import type { PaymentRecord } from "@/lib/payments";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { TenantAnalytics } from "@/lib/tenant-analytics";
@@ -146,7 +146,7 @@ export function TenantProfileDialog({
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[650px] text-left">
-                <thead><tr className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-white/30"><th className="px-5 py-3">Bill</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Month</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Pending</th><th className="px-4 py-3">Status</th></tr></thead>
+                <thead><tr className="bg-white/[0.025] text-[9px] uppercase tracking-[0.12em] text-white/30"><th className="px-5 py-3">Bill</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">Period / date</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Pending</th><th className="px-4 py-3">Status</th></tr></thead>
                 <tbody>
                   {[...tenantRentBills.map((bill) => ({ ...bill, type: "Rent" })), ...tenantElectricityBills.map((bill) => ({ ...bill, type: "Electricity" }))]
                     .sort((a, b) => b.billingPeriod.localeCompare(a.billingPeriod))
@@ -154,7 +154,11 @@ export function TenantProfileDialog({
                       <tr key={`${bill.type}-${bill.id}`} className="border-t border-white/[0.07] text-xs text-white/65 transition-colors hover:bg-white/[0.02]">
                         <td className="px-5 py-3 font-semibold text-[#edede8]">{bill.billNumber}</td>
                         <td className="px-4 py-3 text-white/45">{bill.type}</td>
-                        <td className="px-4 py-3 text-white/45">{formatBillingMonth(bill.billingPeriod)}</td>
+                        <td className="px-4 py-3 text-white/45">
+                          {bill.type === "Electricity"
+                            ? formatElectricityReadingDate(bill.billingPeriod)
+                            : formatBillingMonth(bill.billingPeriod)}
+                        </td>
                         <td className="px-4 py-3 font-medium text-[#edede8]">{formatCurrency(bill.amount)}</td>
                         <td className="px-4 py-3 font-medium text-[#dda676]">{formatCurrency(bill.pending)}</td>
                         <td className="px-4 py-3"><span className={cn("inline-flex border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em]", bill.status === "Paid" ? "border-[#7aa18b]/30 bg-[#7aa18b]/10 text-[#9bc4ab]" : bill.status === "Overdue" ? "border-[#c96a4e]/30 bg-[#c96a4e]/10 text-[#df8a70]" : "border-[#e4c77a]/30 bg-[#e4c77a]/10 text-[#e4c77a]")}>{bill.status}</span></td>

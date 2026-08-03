@@ -356,7 +356,10 @@ export default function RentManagementSoftwarePage() {
       <footer className="border-t border-white/10 px-5 py-10 sm:px-10 lg:px-[72px]">
         <div className="mx-auto flex max-w-[1120px] flex-col justify-between gap-5 text-xs text-white/40 sm:flex-row sm:items-center">
           <Link href="/" className="text-white/65 transition hover:text-white">Bhada</Link>
-          <p>Rent management software for independent landlords in India.</p>
+          <div className="flex flex-col gap-2 text-right sm:flex-row sm:gap-5">
+            <Link href="/rent-tracking" className="transition hover:text-white">Rent tracking software</Link>
+            <p>Rent management software for independent landlords in India.</p>
+          </div>
         </div>
       </footer>
     </main>

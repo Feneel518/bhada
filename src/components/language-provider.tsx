@@ -1,6 +1,7 @@
 "use client";
 
 import { Globe2 } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Select,
@@ -387,6 +388,7 @@ function translateValue(value: string, language: AppLanguage) {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [language, setLanguageState] = useState<AppLanguage>("en");
   const textRecordsRef = useRef(new WeakMap<Text, { source: string; applied: string }>());
   const attributeRecordsRef = useRef(
@@ -476,7 +478,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   return (
     <LanguageContext.Provider value={value}>
       {children}
-      <LanguageSwitcher />
+      {pathname === "/" && <LanguageSwitcher floating />}
     </LanguageContext.Provider>
   );
 }
@@ -485,12 +487,16 @@ export function useLanguage() {
   return useContext(LanguageContext);
 }
 
-function LanguageSwitcher() {
+export function LanguageSwitcher({ floating = false }: { floating?: boolean }) {
   const { language, setLanguage } = useLanguage();
   return (
     <div
       data-i18n-ignore
-      className="bhada-language-switcher fixed bottom-4 z-[110] shadow-[0_18px_50px_rgba(0,0,0,.32)] sm:bottom-5"
+      className={
+        floating
+          ? "bhada-language-switcher fixed bottom-4 z-[110] shadow-[0_18px_50px_rgba(0,0,0,.32)] sm:bottom-5"
+          : "w-full"
+      }
     >
       <Select
         value={language}
@@ -498,7 +504,9 @@ function LanguageSwitcher() {
       >
         <SelectTrigger
           aria-label="Choose language"
-          className="h-11 w-[142px] border-white/15 bg-[#171717] px-3 text-[#edede8] hover:border-[#e4c77a]/45 hover:bg-[#1d1d1c] focus:border-[#e4c77a]/60 [&>svg:last-child]:text-[#e4c77a]/70"
+          className={`h-11 border-white/15 bg-[#171717] px-3 text-[#edede8] hover:border-[#e4c77a]/45 hover:bg-[#1d1d1c] focus:border-[#e4c77a]/60 [&>svg:last-child]:text-[#e4c77a]/70 ${
+            floating ? "w-[142px]" : "w-full"
+          }`}
         >
           <span className="flex min-w-0 items-center gap-2.5">
             <Globe2 className="size-4 shrink-0 text-[#e4c77a]" aria-hidden="true" />

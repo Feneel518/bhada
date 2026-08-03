@@ -208,7 +208,7 @@ export async function GET(request: Request) {
 
   return csvResponse(
     `bhada-payments-FY${financialYearStart}-${String(financialYearEnd).slice(-2)}.csv`,
-    ["Record type", "Reference", "Tenant", "Property", "Unit", "Billing period", "Payment date", "Due date", "Base amount", "GST amount", "TDS amount", "Total amount", "Paid", "Pending / balance", "Status", "Payment method", "Notes"],
+    ["Record type", "Reference", "Tenant", "Property", "Unit", "Billing period / reading date", "Payment date", "Due date", "Base amount", "GST amount", "TDS amount", "Total amount", "Paid", "Pending / balance", "Status", "Payment method", "Notes"],
     [...rentRows, ...electricityRows, ...paymentRows],
   );
 }

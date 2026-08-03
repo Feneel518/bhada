@@ -44,6 +44,16 @@ function optionalNumber(raw: string, label: string) {
   return { value };
 }
 
+function isValidDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return date.getUTCFullYear() === Number(year)
+    && date.getUTCMonth() === Number(month) - 1
+    && date.getUTCDate() === Number(day);
+}
+
 export async function saveUnit(
   _previousState: UnitActionState,
   formData: FormData,
@@ -59,21 +69,21 @@ export async function saveUnit(
   const area = optionalNumber(value("areaSqft"), "Area");
   const openingMeterReading = optionalNumber(value("openingMeterReading"), "Opening meter reading");
   const status = value("status") as UnitStatus;
-  const openingMeterMonth = value("openingMeterReadingDate");
+  const openingMeterDate = value("openingMeterReadingDate");
   const errors: UnitActionState["errors"] = {};
 
   if (!unitNumber) errors.unitNumber = "Unit number is required.";
   if (area.error) errors.areaSqft = area.error;
   if (openingMeterReading.error) errors.openingMeterReading = openingMeterReading.error;
   if (!statuses.includes(status)) errors.status = "Choose a valid unit status.";
-  if (openingMeterMonth && !/^\d{4}-\d{2}$/.test(openingMeterMonth)) {
-    errors.openingMeterReadingDate = "Choose a valid opening reading month.";
+  if (openingMeterDate && !isValidDate(openingMeterDate)) {
+    errors.openingMeterReadingDate = "Choose a valid opening reading date.";
   }
-  if ((openingMeterReading.value === null) !== !openingMeterMonth) {
+  if ((openingMeterReading.value === null) !== !openingMeterDate) {
     if (openingMeterReading.value === null) {
       errors.openingMeterReading = "Enter the opening reading.";
     } else {
-      errors.openingMeterReadingDate = "Choose the opening reading month.";
+      errors.openingMeterReadingDate = "Choose the opening reading date.";
     }
   }
 
@@ -139,8 +149,8 @@ export async function saveUnit(
     : [];
   if (id && !existingUnit) return error("Unit not found or you no longer have access to it.");
 
-  const openingDate = openingMeterMonth
-    ? new Date(`${openingMeterMonth}-01T12:00:00+05:30`)
+  const openingDate = openingMeterDate
+    ? new Date(`${openingMeterDate}T12:00:00+05:30`)
     : null;
   const lastReadingIsOpening =
     !existingUnit?.lastMeterReadingDate ||

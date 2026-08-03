@@ -26,6 +26,19 @@ const fail = (
   errors?: ElectricityBillActionState["errors"],
 ): ElectricityBillActionState => ({ status: "error", message, errors });
 
+function parseIndiaDate(value: string, hour = 12) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  const calendarCheck = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (
+    calendarCheck.getUTCFullYear() !== Number(year) ||
+    calendarCheck.getUTCMonth() !== Number(month) - 1 ||
+    calendarCheck.getUTCDate() !== Number(day)
+  ) return null;
+  return new Date(`${value}T${String(hour).padStart(2, "0")}:00:00+05:30`);
+}
+
 export async function createElectricityBill(
   _previousState: ElectricityBillActionState,
   formData: FormData,
@@ -36,15 +49,16 @@ export async function createElectricityBill(
   const text = (name: string, maxLength = 250) =>
     String(formData.get(name) ?? "").trim().slice(0, maxLength);
   const unitId = text("unitId", 100);
-  const billingPeriod = text("billingPeriod", 7);
+  const billingPeriod = text("billingPeriod", 10);
   const currentReadingInput = text("currentReading", 30);
   const unitRateInput = text("unitRate", 30);
   const dueDateInput = text("dueDate", 10);
   const errors: ElectricityBillActionState["errors"] = {};
 
   if (!unitId) errors.unitId = "Choose a unit.";
-  if (!/^\d{4}-\d{2}$/.test(billingPeriod)) {
-    errors.billingPeriod = "Choose a billing month.";
+  const readingDate = parseIndiaDate(billingPeriod);
+  if (!readingDate) {
+    errors.billingPeriod = "Choose a valid meter reading date.";
   }
   if (!/^\d+(?:\.\d{1,3})?$/.test(currentReadingInput)) {
     errors.currentReading = "Enter a valid meter reading with up to 3 decimal places.";
@@ -52,10 +66,8 @@ export async function createElectricityBill(
   if (!/^\d+(?:\.\d{1,4})?$/.test(unitRateInput) || Number(unitRateInput) <= 0) {
     errors.unitRate = "Enter a positive rate with up to 4 decimal places.";
   }
-  const dueDate = /^\d{4}-\d{2}-\d{2}$/.test(dueDateInput)
-    ? new Date(`${dueDateInput}T00:00:00+05:30`)
-    : null;
-  if (!dueDate || Number.isNaN(dueDate.getTime())) {
+  const dueDate = parseIndiaDate(dueDateInput, 0);
+  if (!dueDate) {
     errors.dueDate = "Choose a valid due date.";
   }
   if (Object.keys(errors).length) {
@@ -89,14 +101,14 @@ export async function createElectricityBill(
   }
   if (ownedUnit.lastMeterReading === null || !ownedUnit.lastMeterReadingDate) {
     return fail("Set an opening meter reading for this unit first.", {
-      unitId: "Edit the unit and add its opening reading and month.",
+      unitId: "Edit the unit and add its opening reading and date.",
     });
   }
 
-  const previousPeriod = ownedUnit.lastMeterReadingDate.toISOString().slice(0, 7);
+  const previousPeriod = ownedUnit.lastMeterReadingDate.toISOString().slice(0, 10);
   if (billingPeriod <= previousPeriod) {
-    return fail("The reading month must be after the unit's previous reading month.", {
-      billingPeriod: `Choose a month after ${previousPeriod}.`,
+    return fail("The reading date must be after the unit's previous reading date.", {
+      billingPeriod: `Choose a date after ${previousPeriod}.`,
     });
   }
 
@@ -118,17 +130,16 @@ export async function createElectricityBill(
     )
     .limit(1);
   if (duplicate) {
-    return fail("This unit already has an electricity bill for that month.", {
-      billingPeriod: "Choose another month.",
+    return fail("This unit already has an electricity bill for that date.", {
+      billingPeriod: "Choose another date.",
     });
   }
 
   const id = crypto.randomUUID();
-  const billNumber = `ELEC-${billingPeriod.replace("-", "")}-${id.slice(0, 6).toUpperCase()}`;
+  const billNumber = `ELEC-${billingPeriod.replaceAll("-", "")}-${id.slice(0, 6).toUpperCase()}`;
   const unitsConsumed = currentReading - ownedUnit.lastMeterReading;
   const unitRate = Number(unitRateInput);
   const amount = unitsConsumed * unitRate;
-  const readingDate = new Date(`${billingPeriod}-01T12:00:00+05:30`);
   await db.batch([
     db.insert(electricityBill).values({
       id,
@@ -149,7 +160,7 @@ export async function createElectricityBill(
       .update(unit)
       .set({
         lastMeterReading: currentReading,
-        lastMeterReadingDate: readingDate,
+        lastMeterReadingDate: readingDate!,
         updatedAt: new Date(),
       })
       .where(and(eq(unit.id, unitId), eq(unit.landlordId, owner.id))),
