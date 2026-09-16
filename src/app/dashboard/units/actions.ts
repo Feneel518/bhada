@@ -21,6 +21,7 @@ type UnitField =
 export type UnitActionState = {
   status: "idle" | "success" | "error";
   message: string;
+  id?: string;
   errors?: Partial<Record<UnitField, string>>;
 };
 
@@ -175,6 +176,7 @@ export async function saveUnit(
     updatedAt: new Date(),
   };
 
+  const savedId = id || crypto.randomUUID();
   if (id) {
     const [updated] = await db
       .update(unit)
@@ -184,11 +186,11 @@ export async function saveUnit(
 
     if (!updated) return error("Unit not found or you no longer have access to it.");
   } else {
-    await db.insert(unit).values({ id: crypto.randomUUID(), ...values });
+    await db.insert(unit).values({ id: savedId, ...values });
   }
 
   refreshUnitViews();
-  return { status: "success", message: id ? "Unit updated." : "Unit added." };
+  return { status: "success", message: id ? "Unit updated." : "Unit added.", id: savedId };
 }
 
 export async function deleteUnit(id: string): Promise<UnitActionState> {

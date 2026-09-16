@@ -12,6 +12,7 @@ import { planLimits } from "@/lib/plans";
 export type PropertyActionState = {
   status: "idle" | "success" | "error";
   message: string;
+  id?: string;
   errors?: Partial<Record<"name" | "address" | "city" | "state" | "postalCode", string>>;
 };
 
@@ -63,6 +64,7 @@ export async function saveProperty(
   };
   const owner = await ensureLandlord(session.user);
   const limits = planLimits(owner);
+  const savedId = id || crypto.randomUUID();
 
   if (id) {
     const [updated] = await db
@@ -87,7 +89,7 @@ export async function saveProperty(
     }
 
     await db.insert(property).values({
-      id: crypto.randomUUID(),
+      id: savedId,
       landlordId: owner.id,
       ...values,
     });
@@ -97,6 +99,7 @@ export async function saveProperty(
   return {
     status: "success",
     message: id ? "Property updated." : "Property added.",
+    id: savedId,
   };
 }
 
