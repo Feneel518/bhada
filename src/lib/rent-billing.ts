@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, gte, lt, lte, sql } from "drizzle-orm";
+import { and, asc, eq, lte } from "drizzle-orm";
 import { db } from "@/db";
 import {
   landlord,
@@ -10,6 +10,7 @@ import {
   tenant,
 } from "@/db/schema";
 import { getCurrentFinancialYear, getFinancialYear } from "@/lib/financial-year";
+import { getRentMonthMetrics } from "@/lib/rent-month-metrics";
 
 export type RentBillRecord = {
   id: string;
@@ -208,7 +209,7 @@ export async function getRentBilling(
     ? getCurrentFinancialYear(now)
     : getFinancialYear(financialYearStart);
 
-  const [billRows, rentPayments, openingBalances, priorBillTotals] = await Promise.all([
+  const [billRows, rentPayments, openingBalances] = await Promise.all([
     db
       .select({
         id: rentBill.id,
@@ -231,7 +232,6 @@ export async function getRentBilling(
       .where(
         and(
           eq(landlord.userId, userId),
-          gte(rentBill.billingPeriod, financialYear.startPeriod),
           lte(rentBill.billingPeriod, financialYear.endPeriod),
         ),
       )
@@ -255,20 +255,6 @@ export async function getRentBilling(
       .from(tenant)
       .innerJoin(landlord, eq(tenant.landlordId, landlord.id))
       .where(eq(landlord.userId, userId)),
-    db
-      .select({
-        tenantId: rentBill.tenantId,
-        amount: sql<string>`coalesce(sum(${rentBill.amount}), 0)`,
-      })
-      .from(rentBill)
-      .innerJoin(landlord, eq(rentBill.landlordId, landlord.id))
-      .where(
-        and(
-          eq(landlord.userId, userId),
-          lt(rentBill.billingPeriod, financialYear.startPeriod),
-        ),
-      )
-      .groupBy(rentBill.tenantId),
   ]);
 
   const availableByTenant = new Map<string, number>();
@@ -289,18 +275,6 @@ export async function getRentBilling(
     availableByTenant.set(item.tenantId, Math.max(0, available - openingPaid));
     openingBalancePending += pending;
     if (pending > 0.005) openingBalanceCount += 1;
-  }
-
-  let priorBillsPending = 0;
-  let priorBalanceCount = 0;
-  for (const item of priorBillTotals) {
-    const amount = Number(item.amount);
-    const available = availableByTenant.get(item.tenantId) ?? 0;
-    const paid = Math.min(amount, available);
-    const pending = Math.max(0, amount - paid);
-    availableByTenant.set(item.tenantId, Math.max(0, available - paid));
-    priorBillsPending += pending;
-    if (pending > 0.005) priorBalanceCount += 1;
   }
 
   const today = dateParts(now);
@@ -354,11 +328,9 @@ export async function getRentBilling(
     ),
   );
 
-  const currentBills = bills.filter((bill) => bill.billingPeriod === currentPeriod);
-  const billedThisMonth = currentBills.reduce((sum, bill) => sum + bill.amount, 0);
-  const pendingThisMonth = currentBills.reduce((sum, bill) => sum + bill.pending, 0);
+  const monthMetrics = getRentMonthMetrics(bills, currentPeriod);
   const pendingTotal =
-    openingBalancePending + priorBillsPending + bills.reduce((sum, bill) => sum + bill.pending, 0);
+    openingBalancePending + bills.reduce((sum, bill) => sum + bill.pending, 0);
   const overdueBills = bills.filter((bill) => bill.status === "Overdue");
 
   return {
@@ -368,18 +340,12 @@ export async function getRentBilling(
       month: "long",
       year: "numeric",
     }).format(now),
-    billedThisMonth,
-    paidThisMonth: Math.max(0, billedThisMonth - pendingThisMonth),
-    pendingThisMonth,
+    ...monthMetrics,
     openingBalancePending,
     pendingTotal,
     overdueTotal:
-      openingBalancePending + priorBillsPending + overdueBills.reduce((sum, bill) => sum + bill.pending, 0),
-    overdueCount: openingBalanceCount + priorBalanceCount + overdueBills.length,
-    collectionRate:
-      billedThisMonth > 0
-        ? Math.round(((billedThisMonth - pendingThisMonth) / billedThisMonth) * 1000) / 10
-        : 0,
-    bills: bills.reverse(),
+      openingBalancePending + overdueBills.reduce((sum, bill) => sum + bill.pending, 0),
+    overdueCount: openingBalanceCount + overdueBills.length,
+    bills: bills.filter((bill) => bill.billingPeriod >= financialYear.startPeriod).reverse(),
   };
 }

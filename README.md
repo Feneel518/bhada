@@ -97,6 +97,19 @@ pauses, and cancellations are synchronized through signed webhooks.
 
 ## Commands
 
+The dashboard includes a guided Property → Unit → Tenant setup. Only the property
+name, unit number, tenant name and monthly rent are needed; the due day defaults
+to the 1st. Existing properties and vacant units can be reused, and completed
+steps are saved immediately. Optional details remain available through Edit.
+
+Overview metrics follow the current collection month (rent bill due dates),
+while Payments retains its selected financial year. Income ranges use calendar
+year and quarter boundaries. Run the dashboard regression checks with Node 24:
+
+```bash
+node --test scripts/dashboard-metrics.test.mjs
+```
+
 ```bash
 npm run lint
 npm run build

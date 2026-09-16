@@ -10,7 +10,7 @@ import { getTenants } from "@/lib/tenants";
 import { getPayments } from "@/lib/payments";
 import { getRentBilling } from "@/lib/rent-billing";
 import { getElectricityBills } from "@/lib/electricity-billing";
-import { resolveFinancialYearStart } from "@/lib/financial-year";
+import { getCurrentFinancialYear, resolveFinancialYearStart } from "@/lib/financial-year";
 import { getAvailableFinancialYears } from "@/lib/financial-year-server";
 import { getTenantAnalytics } from "@/lib/tenant-analytics";
 import { getIncomeOverview } from "@/lib/dashboard-analytics";
@@ -46,6 +46,8 @@ export default async function DashboardPage({
     : "Overview";
   const now = new Date();
   const financialYearStart = resolveFinancialYearStart(params.fy, now);
+  // Finish bill generation before any other query reads balances or analytics.
+  const overviewRentBilling = await getRentBilling(session.user.id, now);
   const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, incomeOverview, subscriptionReceipts] = await Promise.all([
     db
       .select()
@@ -55,7 +57,9 @@ export default async function DashboardPage({
     getProperties(session.user.id),
     getTenants(session.user.id),
     getPayments(session.user.id),
-    getRentBilling(session.user.id, now, financialYearStart),
+    financialYearStart === getCurrentFinancialYear(now).startYear
+      ? Promise.resolve(overviewRentBilling)
+      : getRentBilling(session.user.id, now, financialYearStart),
     getElectricityBills(session.user.id, now, financialYearStart),
     getAvailableFinancialYears(session.user.id, financialYearStart, now),
     getTenantAnalytics(session.user.id),
@@ -75,6 +79,7 @@ export default async function DashboardPage({
       tenants={tenants}
       payments={payments}
       rentBilling={rentBilling}
+      overviewRentBilling={overviewRentBilling}
       electricityBills={electricityBills}
       financialYearStart={financialYearStart}
       financialYearOptions={financialYearOptions}

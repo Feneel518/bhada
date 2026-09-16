@@ -59,6 +59,11 @@ const money = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value)}`;
 
+const meterReading = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    maximumFractionDigits: 3,
+  }).format(value);
+
 function gstTaxableAmount(bill: RentBill) {
   return bill.gstRate > 0 ? (bill.gstAmount * 100) / bill.gstRate : 0;
 }
@@ -143,17 +148,19 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   pdf.text("BILLED TO:", 26, 66);
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(9.5);
-  pdf.text(tenant?.name || bill.tenantName, 26, 74);
-  let billedToY = 80;
+  const drawBilledToLine = (value: string, y: number) => {
+    const lines = (pdf.splitTextToSize(value, 75) as string[]).slice(0, 2);
+    pdf.text(lines, 26, y, { lineHeightFactor: 1.15 });
+    return y + Math.max(1, lines.length) * 5.5;
+  };
+  let billedToY = drawBilledToLine(tenant?.name || bill.tenantName, 74);
   if (tenant?.phone) {
-    pdf.text(tenant.phone, 26, billedToY);
-    billedToY += 6;
+    billedToY = drawBilledToLine(tenant.phone, billedToY);
   }
   if (propertyLine) {
-    pdf.text(propertyLine, 26, billedToY, { maxWidth: 75 });
-    billedToY += 6;
+    billedToY = drawBilledToLine(propertyLine, billedToY);
   }
-  if (tenant?.email) pdf.text(tenant.email, 26, billedToY, { maxWidth: 75 });
+  if (tenant?.email) billedToY = drawBilledToLine(tenant.email, billedToY);
 
   pdf.setFontSize(10);
   pdf.text(`Invoice No. ${bill.billNumber}`, 185, 61, { align: "right" });
@@ -162,7 +169,31 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   pdf.setTextColor(...muted);
   pdf.text(`Due ${formatDate(bill.dueDate)}  |  ${bill.status}`, 185, 75, { align: "right" });
 
-  const tableTop = 101;
+  const readingTop = Math.max(87, billedToY + 4);
+  const tableTop = document.kind === "electricity" ? readingTop + 34 : 101;
+  if (document.kind === "electricity") {
+    const readings = [
+      ["LAST READING", meterReading(document.bill.previousReading)],
+      ["CURRENT READING", meterReading(document.bill.currentReading)],
+      ["UNITS CONSUMED", meterReading(document.bill.unitsConsumed)],
+    ] as const;
+    const readingColumns = [26, 82, 138];
+
+    pdf.setDrawColor(...ink);
+    pdf.setLineWidth(0.25);
+    pdf.line(26, readingTop, 185, readingTop);
+    readings.forEach(([label, value], index) => {
+      pdf.setFont(pdfFont, "bold");
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(...muted);
+      pdf.text(label, readingColumns[index], readingTop + 8);
+      pdf.setFont(pdfFont, "normal");
+      pdf.setFontSize(11);
+      pdf.setTextColor(...ink);
+      pdf.text(`${value} units`, readingColumns[index], readingTop + 17);
+    });
+    pdf.line(26, readingTop + 23, 185, readingTop + 23);
+  }
   const columns = { item: 28, quantity: 124, unitPrice: 154, total: 184 };
   pdf.setDrawColor(...ink);
   pdf.setLineWidth(0.25);
@@ -216,12 +247,13 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   });
 
   if (document.kind === "electricity" && document.bill.note) {
+    const noteLines = (pdf.splitTextToSize(document.bill.note, 65) as string[]).slice(0, 7);
     pdf.setFont(pdfFont, "bold");
     pdf.setFontSize(8);
-    pdf.text("NOTE", 26, 187);
+    pdf.text("NOTE", 26, summaryTop);
     pdf.setFont(pdfFont, "normal");
     pdf.setTextColor(...muted);
-    pdf.text(document.bill.note, 26, 194, { maxWidth: 95 });
+    pdf.text(noteLines, 26, summaryTop + 7, { lineHeightFactor: 1.15 });
   }
 
   pdf.setTextColor(...ink);
@@ -243,14 +275,28 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   businessDetails.forEach((line, index) => pdf.text(line, 26, 252 + index * 5.5));
   if (!businessDetails.length) pdf.text("Computer-generated invoice", 26, 252);
 
+  const businessName = issuer.businessName || "Bhada Property Management";
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(17);
-  pdf.text(issuer.businessName || "Bhada Property Management", 185, 253, { align: "right", maxWidth: 82 });
+  let businessNameLines = pdf.splitTextToSize(businessName, 82) as string[];
+  if (businessNameLines.length > 2) {
+    pdf.setFontSize(14);
+    businessNameLines = pdf.splitTextToSize(businessName, 82) as string[];
+  }
+  const businessLineHeight = 6.5;
+  const businessNameY = 252 - (businessNameLines.length - 1) * businessLineHeight;
+  pdf.text(businessNameLines, 185, businessNameY, {
+    align: "right",
+    lineHeightFactor: 1.15,
+  });
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(8);
   pdf.setTextColor(...muted);
-  if (issuerAddress) pdf.text(issuerAddress, 185, 261, { align: "right", maxWidth: 82 });
-  pdf.text("Generated with bhada", 185, 278, { align: "right" });
+  if (issuerAddress) {
+    const addressLines = (pdf.splitTextToSize(issuerAddress, 82) as string[]).slice(0, 3);
+    pdf.text(addressLines, 185, 261, { align: "right", lineHeightFactor: 1.15 });
+  }
+  pdf.text("Generated with bhada", 185, 286, { align: "right" });
 
   return pdf.output("blob");
 }
@@ -359,21 +405,36 @@ export function BillDocumentDialog({
             </header>
 
             <section className="mt-9 grid grid-cols-2 gap-8">
-              <div className="text-[11px] leading-[1.65] sm:text-sm">
+              <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-sm">
                 <p className="font-bold">BILLED TO:</p>
                 <p className="mt-1">{tenant?.name || bill.tenantName}</p>
                 {tenant?.phone && <p>{tenant.phone}</p>}
                 {propertyLine && <p>{propertyLine}</p>}
                 {tenant?.email && <p>{tenant.email}</p>}
               </div>
-              <div className="text-right text-[11px] leading-[1.65] sm:text-sm">
-                <p>Invoice No. {bill.billNumber}</p>
+              <div className="min-w-0 break-words text-right text-[11px] leading-[1.65] sm:text-sm">
+                <p className="break-all">Invoice No. {bill.billNumber}</p>
                 <p>{formatDate(new Date().toISOString().slice(0, 10))}</p>
                 <p className="mt-1 text-[10px] text-black/55 sm:text-xs">Due {formatDate(bill.dueDate)} · {bill.status}</p>
               </div>
             </section>
 
-            <div className="mt-14 overflow-x-auto sm:mt-16">
+            {document.kind === "electricity" && (
+              <section aria-label="Electricity meter readings" className="mt-10 grid grid-cols-3 border-y border-black px-2 py-4">
+                {[
+                  ["Last reading", document.bill.previousReading],
+                  ["Current reading", document.bill.currentReading],
+                  ["Units consumed", document.bill.unitsConsumed],
+                ].map(([label, value]) => (
+                  <div key={String(label)} className="min-w-0 px-1 first:pl-0 last:pr-0 sm:px-3">
+                    <p className="text-[8px] font-bold tracking-[0.08em] text-black/55 uppercase sm:text-[10px]">{label}</p>
+                    <p className="mt-1 break-words text-sm tabular-nums sm:text-lg">{meterReading(Number(value))} <span className="text-[9px] text-black/55 sm:text-xs">units</span></p>
+                  </div>
+                ))}
+              </section>
+            )}
+
+            <div className={document.kind === "electricity" ? "mt-8 overflow-x-auto" : "mt-14 overflow-x-auto sm:mt-16"}>
               <div className="min-w-[520px]">
                 <div className="grid grid-cols-[minmax(0,1fr)_76px_100px_100px] border-y border-black px-2 py-3 text-xs font-bold sm:text-sm">
                   <span>Item</span><span className="text-center">Quantity</span><span className="text-center">Unit Price</span><span className="text-right">Total</span>
@@ -402,8 +463,8 @@ export function BillDocumentDialog({
 
             <footer className="mt-24 sm:mt-32">
               <p className="text-xl sm:text-2xl">Thank you for your Business!</p>
-              <div className="mt-10 grid gap-8 sm:grid-cols-2 sm:items-end">
-                <div className="text-[11px] leading-[1.65] sm:text-xs">
+              <div className="mt-10 grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
+                <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-xs">
                   <p className="font-bold">BUSINESS INFORMATION</p>
                   {issuer.gstin && <p className="mt-1">GSTIN: {issuer.gstin}</p>}
                   {issuer.pan && <p>PAN: {issuer.pan}</p>}
@@ -411,9 +472,9 @@ export function BillDocumentDialog({
                   {issuer.email && <p>{issuer.email}</p>}
                   {!issuer.gstin && !issuer.pan && !issuer.phone && !issuer.email && <p className="mt-1">Computer-generated invoice</p>}
                 </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-2xl leading-tight sm:text-3xl">{issuer.businessName || "Bhada Property Management"}</p>
-                  {issuerAddress && <p className="mt-2 text-[10px] leading-4 sm:text-xs">{issuerAddress}</p>}
+                <div className="min-w-0 text-left sm:text-right">
+                  <p className="break-words text-xl leading-tight sm:text-2xl">{issuer.businessName || "Bhada Property Management"}</p>
+                  {issuerAddress && <p className="mt-2 break-words text-[10px] leading-4 sm:text-xs">{issuerAddress}</p>}
                 </div>
               </div>
             </footer>

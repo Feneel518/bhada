@@ -84,6 +84,8 @@ import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button"
 import type { SubscriptionReceipt } from "@/lib/subscription-receipts";
 import { cn, formatCurrency } from "@/lib/utils";
 import styles from "./dashboard.module.css";
+import { PropertyOnboarding } from "@/components/property-onboarding";
+import { filterIncomePeriod } from "@/lib/income-period";
 
 const LineChart = dynamic(() => import("@/components/ui/line-chart").then((module) => module.LineChart));
 const BillDocumentDialog = dynamic(
@@ -132,7 +134,7 @@ const helpCenterSections = [
       {
         question: "How do I set up my portfolio?",
         answer:
-          "Start in Properties: add a property, then add its units. Next, open Tenants and assign each tenant to an available unit. Once the tenant’s rent and billing details are saved, Bhada can prepare the portfolio’s rent view.",
+          "Select Set up rental on Overview to add a property, its unit and a tenant in one guided flow. Reuse an existing property or vacant unit, or keep the unit vacant. Each completed step is saved. Add extra lease, identity and tax details later using Edit tenant.",
       },
       {
         question: "What does the Overview show?",
@@ -149,7 +151,7 @@ const helpCenterSections = [
       {
         question: "How do I add a property and its units?",
         answer:
-          "Open Properties and select Add property. Save the property’s name and address, then use Add unit on its card. Each unit can include a number, status, floor, area, and an opening electricity meter reading.",
+          "Open Properties and select Add property to start the guided property, unit and tenant setup. Add unit on a property card starts with that property already selected. Floor, area and opening electricity meter readings can be added later using Edit unit.",
       },
       {
         question: "How do I update a property or unit?",
@@ -266,6 +268,7 @@ export function Dashboard({
   tenants,
   payments,
   rentBilling,
+  overviewRentBilling,
   electricityBills,
   financialYearStart,
   financialYearOptions,
@@ -283,6 +286,7 @@ export function Dashboard({
   tenants: TenantRecord[];
   payments: PaymentRecord[];
   rentBilling: RentBillingSummary;
+  overviewRentBilling: RentBillingSummary;
   electricityBills: ElectricityBillRecord[];
   financialYearStart: number;
   financialYearOptions: FinancialYearOption[];
@@ -303,6 +307,7 @@ export function Dashboard({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [electricityBillOpen, setElectricityBillOpen] = useState(false);
   const [propertyOpen, setPropertyOpen] = useState(false);
+  const [onboarding, setOnboarding] = useState<{ propertyId?: string } | null>(null);
   const [editingProperty, setEditingProperty] = useState<PropertyRecord | null>(null);
   const [unitEditor, setUnitEditor] = useState<{
     property: PropertyRecord;
@@ -477,37 +482,18 @@ export function Dashboard({
   }
 
   function openProperty(propertyToEdit: PropertyRecord | null = null) {
-    if (!propertyToEdit && properties.length >= limits.propertyLimit) {
-      showPlanLimit(
-        `Your ${limits.name} plan includes ${limits.propertyLimit} ${limits.propertyLimit === 1 ? "property" : "properties"}.`,
-      );
-      return;
-    }
+    if (!propertyToEdit) { setOnboarding({}); return; }
     setEditingProperty(propertyToEdit);
     setPropertyOpen(true);
   }
 
   function openUnit(property: PropertyRecord, unit: UnitRecord | null = null) {
-    if (!unit && totalUnitCount >= limits.unitLimit) {
-      showPlanLimit(
-        `Your ${limits.name} plan includes ${limits.unitLimit} units.`,
-      );
-      return;
-    }
+    if (!unit) { setOnboarding({ propertyId: property.id }); return; }
     setUnitEditor({ property, unit });
   }
 
-  function showPlanLimit(message: string) {
-    toast(message, {
-      description: `Portfolio supports up to ${PORTFOLIO_PLAN.propertyLimit} properties and ${PORTFOLIO_PLAN.unitLimit} units for ₹${PORTFOLIO_PLAN.monthlyPrice}/month.`,
-      action: {
-        label: "View plans",
-        onClick: () => window.location.assign("/#pricing"),
-      },
-    });
-  }
-
   function openTenant(tenantToEdit: TenantRecord | null = null) {
+    if (!tenantToEdit) { setOnboarding({}); return; }
     setEditingTenant(tenantToEdit);
     setTenantOpen(true);
   }
@@ -748,8 +734,8 @@ export function Dashboard({
             />
             <div
               className="flex h-10 items-center gap-2 border-b border-white/15 px-0.5 sm:gap-2.5"
-              aria-label={`${rentBilling.collectionRate}% collected this month, ${formatCurrency(rentBilling.pendingTotal)} pending`}
-              title={`${rentBilling.periodLabel}: ${formatCurrency(rentBilling.paidThisMonth)} collected · ${formatCurrency(rentBilling.pendingTotal)} pending`}
+              aria-label={`${overviewRentBilling.collectionRate}% collected this month, ${formatCurrency(overviewRentBilling.pendingTotal)} pending`}
+              title={`${overviewRentBilling.periodLabel}: ${formatCurrency(overviewRentBilling.paidThisMonth)} collected · ${formatCurrency(overviewRentBilling.pendingTotal)} pending`}
             >
               <CircleDollarSign className="size-4 shrink-0 text-[#e4c77a]" />
               <span className="hidden leading-none min-[380px]:block">
@@ -757,7 +743,7 @@ export function Dashboard({
                   This month
                 </span>
                 <span className="mt-1 block whitespace-nowrap text-xs font-semibold text-[#edede8]">
-                  {rentBilling.collectionRate}% collected
+                  {overviewRentBilling.collectionRate}% collected
                 </span>
               </span>
               <span className="hidden md:block">
@@ -765,7 +751,7 @@ export function Dashboard({
                   Pending
                 </span>
                 <span className="mt-1 block whitespace-nowrap text-xs font-semibold text-[#e4c77a]">
-                  {formatCurrency(rentBilling.pendingTotal)}
+                  {formatCurrency(overviewRentBilling.pendingTotal)}
                 </span>
               </span>
             </div>
@@ -811,8 +797,8 @@ export function Dashboard({
               period={period}
               setPeriod={setPeriod}
               payments={visiblePayments}
-              rentBilling={rentBilling}
-              properties={visibleProperties}
+              rentBilling={overviewRentBilling}
+              properties={properties}
               totalProperties={properties.length}
               incomeOverview={incomeOverview}
               onAddProperty={() => openProperty()}
@@ -906,6 +892,7 @@ export function Dashboard({
           onOpenChange={setPropertyOpen}
         />
       )}
+      {onboarding && <PropertyOnboarding properties={properties} initialPropertyId={onboarding.propertyId} onClose={() => setOnboarding(null)} />}
       {unitEditor && (
         <UnitDialog
           property={unitEditor.property}
@@ -1124,15 +1111,15 @@ function Overview({
           <p className="mt-1.5 text-[13px] text-[#747b8b] sm:text-sm">Here&apos;s how your portfolio is doing this month.</p>
         </div>
         <Button variant="outline" onClick={onAddProperty} className="w-full sm:w-auto">
-          <Plus className="size-4" /> Add property
+          <Plus className="size-4" /> Set up rental
         </Button>
       </div>
 
       <div className="animate-rise-delay mt-5 grid grid-cols-2 gap-2 sm:mt-7 sm:gap-4 xl:grid-cols-4">
-        <MetricCard icon={WalletCards} label="Billed this month" value={formatCurrency(rentBilling.billedThisMonth)} note={`${rentBilling.periodLabel} rent bills`} trend="up" tone="indigo" />
+        <MetricCard icon={WalletCards} label="Rent due this month" value={formatCurrency(rentBilling.billedThisMonth)} note={`${rentBilling.periodLabel} rent dues`} trend="up" tone="indigo" />
         <MetricCard icon={CircleDollarSign} label="Collected" value={formatCurrency(rentBilling.paidThisMonth)} note={`${rentBilling.collectionRate}% collection rate`} trend="up" tone="green" />
         <MetricCard icon={CalendarDays} label="Pending rent" value={formatCurrency(rentBilling.pendingTotal)} note={`${rentBilling.overdueCount} overdue bill${rentBilling.overdueCount === 1 ? "" : "s"}`} trend="down" tone="orange" />
-        <MetricCard icon={Building2} label="Active properties" value={String(totalProperties)} note="Across your portfolio" trend="up" tone="pink" />
+        <MetricCard icon={Building2} label="Properties" value={String(totalProperties)} note="Across your portfolio" trend="up" tone="pink" />
       </div>
 
       <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
@@ -1248,8 +1235,7 @@ function IncomeChart({
   period: string;
   data: IncomeOverviewPoint[];
 }) {
-  const count = period === "This quarter" ? 3 : period === "Last 6 months" ? 6 : 12;
-  const visibleData = data.slice(-count);
+  const visibleData = filterIncomePeriod(data, period);
   return <LineChart key={period} data={visibleData} />;
 }
 
@@ -3160,7 +3146,7 @@ function TenantDialog({
     : 0;
   const previewPayable = baseRent + previewGst - previewTds;
   const units = properties.flatMap((item) =>
-    item.units.map((unit) => ({
+    item.units.filter((unit) => !unit.tenant || unit.tenant.id === tenant?.id).map((unit) => ({
       id: unit.id,
       label: `${item.name} · Unit ${unit.unitNumber}`,
     })),
