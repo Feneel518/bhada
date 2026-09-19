@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, CircleDollarSign, FileText, Mail, Phone, ReceiptText, WalletCards, Zap } from "lucide-react";
+import { CalendarDays, CircleDollarSign, FileText, Mail, Phone, Printer, ReceiptText, WalletCards, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { ElectricityBillRecord } from "@/lib/electricity-billing";
 import { formatBillingMonth, formatElectricityReadingDate } from "@/lib/financial-year";
@@ -27,6 +28,7 @@ export function TenantProfileDialog({
   rentBills,
   electricityBills,
   financialYearLabel,
+  onViewLedger,
   onClose,
 }: {
   tenant: TenantRecord | null;
@@ -35,6 +37,7 @@ export function TenantProfileDialog({
   rentBills: RentBillingSummary["bills"];
   electricityBills: ElectricityBillRecord[];
   financialYearLabel: string;
+  onViewLedger: (tenant: TenantRecord) => void;
   onClose: () => void;
 }) {
   if (!tenant) return null;
@@ -66,6 +69,9 @@ export function TenantProfileDialog({
               </div>
             </div>
           </div>
+          <Button type="button" variant="outline" className="mt-4" onClick={() => onViewLedger(tenant)}>
+            <Printer className="size-4" /> Print ledger
+          </Button>
         </div>
 
         <div className="space-y-4 p-4 sm:p-6">

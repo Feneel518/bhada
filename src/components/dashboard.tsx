@@ -77,6 +77,7 @@ import {
 import type { PropertyRecord, UnitRecord, UnitStatus } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import type { TenantAnalytics } from "@/lib/tenant-analytics";
+import type { TenantLedgerRecord } from "@/lib/tenant-ledgers";
 import type { NotificationItem } from "@/lib/notifications";
 import { FREE_PLAN, PORTFOLIO_PLAN } from "@/lib/plans";
 import { NotificationCenter } from "@/components/notification-center";
@@ -93,6 +94,9 @@ const BillDocumentDialog = dynamic(
 );
 const TenantProfileDialog = dynamic(
   () => import("@/components/tenant-profile-dialog").then((module) => module.TenantProfileDialog),
+);
+const TenantLedgerDialog = dynamic(
+  () => import("@/components/tenant-ledger-document").then((module) => module.TenantLedgerDialog),
 );
 const ProfileForm = dynamic(
   () => import("@/app/dashboard/profile/profile-form").then((module) => module.ProfileForm),
@@ -200,7 +204,7 @@ const helpCenterSections = [
       {
         question: "Can I download or share a bill?",
         answer:
-          "Yes. In Payments, open a rent or electricity bill to preview it, then choose Download PDF or Share. If sharing is unavailable on the device, Bhada downloads the PDF instead.",
+          "Yes. In Payments, open a rent or electricity bill to preview it, then choose Download PDF or Share. To print a tenant ledger, open the tenant’s financial profile and select Print ledger. If sharing is unavailable on the device, Bhada downloads the PDF instead.",
       },
     ],
   },
@@ -229,7 +233,7 @@ const helpCenterSections = [
       {
         question: "Where do I update my billing identity?",
         answer:
-          "Open Settings to update the landlord or business details used across the account and on generated bills. Save the form before returning to the dashboard.",
+          "Open Settings to update the landlord or business details used across the account and on generated bills. The Documents section also controls whether invoices print the tenant’s total outstanding balance. Save the form before returning to the dashboard.",
       },
       {
         question: "What appears in notifications?",
@@ -274,6 +278,7 @@ export function Dashboard({
   financialYearOptions,
   issuer,
   tenantAnalytics,
+  tenantLedgers,
   incomeOverview,
   notifications,
   subscriptionReceipts,
@@ -292,6 +297,7 @@ export function Dashboard({
   financialYearOptions: FinancialYearOption[];
   issuer: BillIssuer;
   tenantAnalytics: TenantAnalytics[];
+  tenantLedgers: TenantLedgerRecord[];
   incomeOverview: IncomeOverviewPoint[];
   notifications: NotificationItem[];
   subscriptionReceipts: SubscriptionReceipt[];
@@ -316,6 +322,7 @@ export function Dashboard({
   const [tenantOpen, setTenantOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantRecord | null>(null);
   const [profileTenant, setProfileTenant] = useState<TenantRecord | null>(null);
+  const [ledgerTenant, setLedgerTenant] = useState<TenantRecord | null>(null);
   const [billDocument, setBillDocument] = useState<BillDocument | null>(null);
   const [focusedPaymentId, setFocusedPaymentId] = useState<string | null>(null);
   const [focusedSubscriptionReceiptId, setFocusedSubscriptionReceiptId] = useState<string | null>(null);
@@ -328,6 +335,10 @@ export function Dashboard({
     0,
   );
   const limits = subscription.active ? PORTFOLIO_PLAN : FREE_PLAN;
+  const outstandingFor = (tenantId: string | null) =>
+    tenantId
+      ? tenantAnalytics.find((item) => item.tenantId === tenantId)?.totalPending ?? 0
+      : 0;
 
   const visiblePayments = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
@@ -394,6 +405,7 @@ export function Dashboard({
       void Promise.all([
         import("@/components/bill-document"),
         import("@/components/tenant-profile-dialog"),
+        import("@/components/tenant-ledger-document"),
       ]);
     }, 350);
     return () => window.clearTimeout(timer);
@@ -453,6 +465,7 @@ export function Dashboard({
             kind: "rent",
             bill,
             tenant: tenants.find((item) => item.id === bill.tenantId) ?? null,
+            accountOutstanding: outstandingFor(bill.tenantId),
           });
         }
         break;
@@ -465,6 +478,7 @@ export function Dashboard({
             kind: "electricity",
             bill,
             tenant: tenants.find((item) => item.id === bill.tenantId) ?? null,
+            accountOutstanding: outstandingFor(bill.tenantId),
           });
         }
         break;
@@ -843,6 +857,7 @@ export function Dashboard({
                 kind: "rent",
                 bill,
                 tenant: tenants.find((item) => item.id === bill.tenantId) ?? null,
+                accountOutstanding: outstandingFor(bill.tenantId),
               })}
               onViewElectricityBill={(bill) => setBillDocument({
                 kind: "electricity",
@@ -850,6 +865,7 @@ export function Dashboard({
                 tenant: bill.tenantId
                   ? tenants.find((item) => item.id === bill.tenantId) ?? null
                   : null,
+                accountOutstanding: outstandingFor(bill.tenantId),
               })}
             />
           )}
@@ -929,7 +945,20 @@ export function Dashboard({
           rentBills={rentBilling.bills}
           electricityBills={electricityBills}
           financialYearLabel={rentBilling.financialYearLabel}
+          onViewLedger={(tenant) => {
+            setProfileTenant(null);
+            setLedgerTenant(tenant);
+          }}
           onClose={() => setProfileTenant(null)}
+        />
+      )}
+      {ledgerTenant && (
+        <TenantLedgerDialog
+          tenant={ledgerTenant}
+          ledger={tenantLedgers.find((item) => item.tenantId === ledgerTenant.id) ?? null}
+          financialYearLabel={rentBilling.financialYearLabel}
+          issuer={issuer}
+          onClose={() => setLedgerTenant(null)}
         />
       )}
     </div>

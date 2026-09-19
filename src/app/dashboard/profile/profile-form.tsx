@@ -7,6 +7,7 @@ import {
   CalendarClock,
   Check,
   CreditCard,
+  FileText,
   Landmark,
   LoaderCircle,
   MapPin,
@@ -25,6 +26,7 @@ const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 export type ProfileValues = {
   businessName: string;
   rentBillingPeriod: "previous" | "current";
+  showOutstandingOnInvoice: boolean;
   phone: string;
   gstin: string;
   pan: string;
@@ -50,6 +52,7 @@ const profileSections = [
   { id: "tax", label: "Tax details", description: "GSTIN and PAN", icon: ReceiptText },
   { id: "address", label: "Address", description: "Business location", icon: MapPin },
   { id: "billing", label: "Rent billing", description: "Monthly bill period", icon: CalendarClock },
+  { id: "documents", label: "Documents", description: "Invoice preferences", icon: FileText },
 ] as const;
 
 type ProfileSection = (typeof profileSections)[number]["id"];
@@ -105,6 +108,7 @@ export function ProfileForm({
       });
       const payload = (await response.json()) as SaveResult;
       setResult(payload);
+      if (payload.status === "success") router.refresh();
     } catch {
       setResult({ status: "error", message: "We couldn’t save your profile. Please try again." });
     } finally {
@@ -456,6 +460,31 @@ export function ProfileForm({
                   Adding a new tenant never creates a bill automatically.
                 </p>
               </Field>
+            </SettingSection>
+
+            <SettingSection
+              hidden={activeSection !== "documents"}
+              eyebrow="Client documents"
+              title="Invoice preferences"
+              description="Choose the account information shown on invoices you share with tenants."
+              icon={FileText}
+            >
+              <label className="flex cursor-pointer items-start gap-3 border border-white/10 bg-white/[0.018] p-4 transition-colors hover:border-white/20">
+                <input
+                  type="checkbox"
+                  name="showOutstandingOnInvoice"
+                  defaultChecked={initialValues.showOutstandingOnInvoice}
+                  className="mt-0.5 size-4 shrink-0 accent-[#e4c77a]"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-[#edede8]">
+                    Print total outstanding on invoices
+                  </span>
+                  <span className="mt-1 block max-w-2xl text-xs leading-5 text-white/35">
+                    Adds the tenant’s full outstanding account balance below the amount due for this invoice.
+                  </span>
+                </span>
+              </label>
             </SettingSection>
 
             <footer className="mt-3 flex flex-col gap-4 border border-white/10 bg-[#151515] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">

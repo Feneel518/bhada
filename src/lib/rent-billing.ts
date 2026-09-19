@@ -18,6 +18,7 @@ export type RentBillRecord = {
   tenantName: string;
   billNumber: string;
   billingPeriod: string;
+  issueDate: string;
   dueDate: string;
   baseAmount: number;
   gstRate: number;
@@ -217,6 +218,7 @@ export async function getRentBilling(
         tenantName: tenant.name,
         billNumber: rentBill.billNumber,
         billingPeriod: rentBill.billingPeriod,
+        createdAt: rentBill.createdAt,
         baseAmount: rentBill.baseAmount,
         gstRate: rentBill.gstRate,
         gstAmount: rentBill.gstAmount,
@@ -303,6 +305,10 @@ export async function getRentBilling(
       tenantName: bill.tenantName,
       billNumber: bill.billNumber,
       billingPeriod: bill.billingPeriod,
+      issueDate: (() => {
+        const issued = dateParts(bill.createdAt);
+        return `${period(issued.year, issued.month)}-${String(issued.day).padStart(2, "0")}`;
+      })(),
       dueDate: (() => {
         const due = dateParts(bill.dueDate);
         return `${period(due.year, due.month)}-${String(due.day).padStart(2, "0")}`;

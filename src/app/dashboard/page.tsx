@@ -13,6 +13,7 @@ import { getElectricityBills } from "@/lib/electricity-billing";
 import { getCurrentFinancialYear, resolveFinancialYearStart } from "@/lib/financial-year";
 import { getAvailableFinancialYears } from "@/lib/financial-year-server";
 import { getTenantAnalytics } from "@/lib/tenant-analytics";
+import { getTenantLedgers } from "@/lib/tenant-ledgers";
 import { getIncomeOverview } from "@/lib/dashboard-analytics";
 import { getNotifications } from "@/lib/notifications";
 import { hasPortfolioAccess } from "@/lib/plans";
@@ -48,7 +49,7 @@ export default async function DashboardPage({
   const financialYearStart = resolveFinancialYearStart(params.fy, now);
   // Finish bill generation before any other query reads balances or analytics.
   const overviewRentBilling = await getRentBilling(session.user.id, now);
-  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, incomeOverview, subscriptionReceipts] = await Promise.all([
+  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, tenantLedgers, incomeOverview, subscriptionReceipts] = await Promise.all([
     db
       .select()
       .from(landlord)
@@ -63,6 +64,7 @@ export default async function DashboardPage({
     getElectricityBills(session.user.id, now, financialYearStart),
     getAvailableFinancialYears(session.user.id, financialYearStart, now),
     getTenantAnalytics(session.user.id),
+    getTenantLedgers(session.user.id, financialYearStart),
     getIncomeOverview(session.user.id, now),
     getSubscriptionReceipts(session.user.id),
   ]);
@@ -84,6 +86,7 @@ export default async function DashboardPage({
       financialYearStart={financialYearStart}
       financialYearOptions={financialYearOptions}
       tenantAnalytics={tenantAnalytics}
+      tenantLedgers={tenantLedgers}
       incomeOverview={incomeOverview}
       notifications={notifications}
       subscriptionReceipts={subscriptionReceipts}
@@ -96,6 +99,7 @@ export default async function DashboardPage({
       profile={{
         businessName: profile?.businessName ?? session.user.name,
         rentBillingPeriod: profile?.rentBillingPeriod === "current" ? "current" : "previous",
+        showOutstandingOnInvoice: profile?.showOutstandingOnInvoice ?? true,
         phone: profile?.phone ?? "",
         gstin: profile?.gstin ?? "",
         pan: profile?.pan ?? "",
@@ -114,6 +118,7 @@ export default async function DashboardPage({
         city: profile?.city ?? "",
         state: profile?.state ?? "",
         pincode: profile?.pincode ?? "",
+        showOutstandingOnInvoice: profile?.showOutstandingOnInvoice ?? true,
       }}
       user={{
         id: session.user.id,

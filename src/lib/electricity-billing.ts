@@ -22,6 +22,7 @@ export type ElectricityBillRecord = {
   unitNumber: string;
   billNumber: string;
   billingPeriod: string;
+  issueDate: string;
   previousReading: number;
   currentReading: number;
   unitsConsumed: number;
@@ -67,6 +68,7 @@ export async function getElectricityBills(
         unitNumber: unit.unitNumber,
         billNumber: electricityBill.billNumber,
         billingPeriod: electricityBill.billingPeriod,
+        createdAt: electricityBill.createdAt,
         previousReading: electricityBill.previousReading,
         currentReading: electricityBill.currentReading,
         unitsConsumed: electricityBill.unitsConsumed,
@@ -167,6 +169,7 @@ export async function getElectricityBills(
       unitNumber: bill.unitNumber,
       billNumber: bill.billNumber,
       billingPeriod: bill.billingPeriod,
+      issueDate: dateKey(bill.createdAt),
       previousReading: Number(bill.previousReading),
       currentReading: Number(bill.currentReading),
       unitsConsumed: Number(bill.unitsConsumed),

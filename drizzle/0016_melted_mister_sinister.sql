@@ -1,0 +1,1 @@
+ALTER TABLE "landlord" ADD COLUMN "show_outstanding_on_invoice" boolean DEFAULT true NOT NULL;
