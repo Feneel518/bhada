@@ -25,6 +25,7 @@ export type BillIssuer = {
   city: string;
   state: string;
   pincode: string;
+  showOutstandingOnInvoice: boolean;
 };
 
 export type BillTenant = Pick<
@@ -33,8 +34,8 @@ export type BillTenant = Pick<
 >;
 
 export type BillDocument =
-  | { kind: "rent"; bill: RentBill; tenant: BillTenant | null }
-  | { kind: "electricity"; bill: ElectricityBillRecord; tenant: BillTenant | null };
+  | { kind: "rent"; bill: RentBill; tenant: BillTenant | null; accountOutstanding: number }
+  | { kind: "electricity"; bill: ElectricityBillRecord; tenant: BillTenant | null; accountOutstanding: number };
 
 type InvoiceRow = {
   item: string;
@@ -164,7 +165,7 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
 
   pdf.setFontSize(10);
   pdf.text(`Invoice No. ${bill.billNumber}`, 185, 61, { align: "right" });
-  pdf.text(formatDate(new Date().toISOString().slice(0, 10)), 185, 68, { align: "right" });
+  pdf.text(formatDate(bill.issueDate), 185, 68, { align: "right" });
   pdf.setFontSize(8);
   pdf.setTextColor(...muted);
   pdf.text(`Due ${formatDate(bill.dueDate)}  |  ${bill.status}`, 185, 75, { align: "right" });
@@ -223,8 +224,12 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   const summaryRows: Array<[string, string, boolean?]> = [
     ["Subtotal", money(subtotalFor(document))],
     ["Tax / adjustments", money(taxFor(document))],
+    ["Invoice total", money(bill.amount)],
     ...(bill.paid > 0 ? [["Amount received", `− ${money(bill.paid)}`] as [string, string]] : []),
-    ["Total Due", money(bill.pending), true],
+    ["Amount due", money(bill.pending), true],
+    ...(issuer.showOutstandingOnInvoice
+      ? [["Total outstanding", money(document.accountOutstanding), true] as [string, string, boolean]]
+      : []),
   ];
   const summaryLeft = 100;
   const summaryLabelX = 104;
@@ -414,7 +419,7 @@ export function BillDocumentDialog({
               </div>
               <div className="min-w-0 break-words text-right text-[11px] leading-[1.65] sm:text-sm">
                 <p className="break-all">Invoice No. {bill.billNumber}</p>
-                <p>{formatDate(new Date().toISOString().slice(0, 10))}</p>
+                <p>{formatDate(bill.issueDate)}</p>
                 <p className="mt-1 text-[10px] text-black/55 sm:text-xs">Due {formatDate(bill.dueDate)} · {bill.status}</p>
               </div>
             </section>
@@ -450,11 +455,18 @@ export function BillDocumentDialog({
             <div className="ml-auto mt-4 w-full max-w-[265px] text-xs sm:text-sm">
               <InvoiceSummaryLine label="Subtotal" value={formatCurrency(subtotalFor(document))} />
               <InvoiceSummaryLine label="Tax / adjustments" value={formatCurrency(taxFor(document))} />
+              <InvoiceSummaryLine label="Invoice total" value={formatCurrency(bill.amount)} />
               {bill.paid > 0 && <InvoiceSummaryLine label="Amount received" value={`− ${formatCurrency(bill.paid)}`} />}
               <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-5 border-t border-black py-4">
-                <span className="text-xl font-bold leading-tight sm:text-2xl">Total<br />Due</span>
+                <span className="text-xl font-bold leading-tight sm:text-2xl">Amount<br />Due</span>
                 <span className="text-xl sm:text-2xl">{formatCurrency(bill.pending)}</span>
               </div>
+              {issuer.showOutstandingOnInvoice && (
+                <div className="grid grid-cols-[1fr_auto] items-center gap-5 border-t-2 border-black py-4">
+                  <span className="font-bold">Total outstanding</span>
+                  <span className="font-bold">{formatCurrency(document.accountOutstanding)}</span>
+                </div>
+              )}
             </div>
 
             {document.kind === "electricity" && document.bill.note && (

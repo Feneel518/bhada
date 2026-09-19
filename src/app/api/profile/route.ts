@@ -20,6 +20,7 @@ export async function PUT(request: Request) {
   const optional = (name: string) => value(name) || null;
   const businessName = value("businessName");
   const rentBillingPeriod = value("rentBillingPeriod");
+  const showOutstandingOnInvoice = formData.get("showOutstandingOnInvoice") === "on";
   const pan = value("pan").toUpperCase();
 
   if (!businessName) {
@@ -50,6 +51,7 @@ export async function PUT(request: Request) {
   const profile = {
     businessName,
     rentBillingPeriod,
+    showOutstandingOnInvoice,
     phone: optional("phone"),
     gstin: value("gstin").toUpperCase() || null,
     pan: pan || null,
