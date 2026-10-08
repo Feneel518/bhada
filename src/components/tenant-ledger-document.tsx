@@ -37,7 +37,7 @@ function fileName(tenant: TenantRecord, financialYearLabel: string) {
   return `Tenant-Ledger-${safeName}-${financialYearLabel.replace(/[^a-z0-9-]/gi, "-")}.pdf`;
 }
 
-async function createLedgerPdf(
+export async function createLedgerPdf(
   tenant: TenantRecord,
   ledger: TenantLedgerRecord,
   financialYearLabel: string,
@@ -62,21 +62,35 @@ async function createLedgerPdf(
   };
 
   const tableHeader = (top: number) => {
-    const columns = { date: 27, description: 51, reference: 111, debit: 145, credit: 166, balance: 184 };
+    const columns = { date: 27, description: 52, debit: 140, credit: 162, balance: 184 };
     pdf.setDrawColor(...ink);
     pdf.setLineWidth(0.25);
+    pdf.setFont(pdfFont, "normal");
+    pdf.setFontSize(7);
+    pdf.setTextColor(...muted);
+    pdf.text("Amounts in INR", 185, top - 3, { align: "right" });
     pdf.line(26, top, 185, top);
     pdf.setFont(pdfFont, "bold");
     pdf.setFontSize(7.5);
     pdf.setTextColor(...ink);
     pdf.text("Date", columns.date, top + 7);
     pdf.text("Description", columns.description, top + 7);
-    pdf.text("Reference", columns.reference, top + 7);
     pdf.text("Debit", columns.debit, top + 7, { align: "right" });
     pdf.text("Credit", columns.credit, top + 7, { align: "right" });
     pdf.text("Balance", columns.balance, top + 7, { align: "right" });
     pdf.line(26, top + 11, 185, top + 11);
     return columns;
+  };
+
+  const tableMoney = (value: number) =>
+    `${new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(value))}${value < -0.005 ? " CR" : ""}`;
+
+  const drawTableAmount = (value: string, x: number, y: number, bold = false) => {
+    pdf.setFont(pdfFont, bold ? "bold" : "normal");
+    pdf.setFontSize(7.5);
+    const width = pdf.getTextWidth(value);
+    if (width > 19) pdf.setFontSize(Math.max(6, 7.5 * 19 / width));
+    pdf.text(value, x, y, { align: "right", maxWidth: 19 });
   };
 
   pageBase();
@@ -109,7 +123,13 @@ async function createLedgerPdf(
   let y = tableTop + 20;
 
   for (const entry of ledger.entries) {
-    if (y > 258) {
+    pdf.setFont(pdfFont, "normal");
+    pdf.setFontSize(7.5);
+    const descriptionLines = pdf.splitTextToSize(entry.description, 64) as string[];
+    const referenceLines = pdf.splitTextToSize(`Ref: ${entry.reference}`, 64) as string[];
+    const rowHeight = Math.max(13, (descriptionLines.length + referenceLines.length) * 4.3 + 4);
+
+    if (y + rowHeight > 268) {
       pdf.addPage();
       pageNumber += 1;
       pageBase();
@@ -129,20 +149,20 @@ async function createLedgerPdf(
     pdf.setFontSize(7.5);
     pdf.setTextColor(...ink);
     pdf.text(dateLabel(entry.date), columns.date, y);
-    pdf.text(entry.description, columns.description, y, { maxWidth: 54 });
+    pdf.text(descriptionLines, columns.description, y, { lineHeightFactor: 1.2 });
     pdf.setTextColor(...muted);
-    pdf.text(entry.reference, columns.reference, y, { maxWidth: 28 });
+    pdf.setFontSize(7);
+    pdf.text(referenceLines, columns.description, y + descriptionLines.length * 4.3, { lineHeightFactor: 1.2 });
     pdf.setTextColor(...ink);
-    pdf.text(entry.debit ? money(entry.debit) : "—", columns.debit, y, { align: "right" });
-    pdf.text(entry.credit ? money(entry.credit) : "—", columns.credit, y, { align: "right" });
-    pdf.setFont(pdfFont, "bold");
-    pdf.text(money(entry.balance), columns.balance, y, { align: "right" });
+    drawTableAmount(entry.debit ? tableMoney(entry.debit) : "—", columns.debit, y);
+    drawTableAmount(entry.credit ? tableMoney(entry.credit) : "—", columns.credit, y);
+    drawTableAmount(tableMoney(entry.balance), columns.balance, y, true);
     pdf.setDrawColor(145, 145, 138);
-    pdf.line(26, y + 5, 185, y + 5);
-    y += 11;
+    pdf.line(26, y + rowHeight - 4, 185, y + rowHeight - 4);
+    y += rowHeight;
   }
 
-  if (y > 244) {
+  if (y + 37 > 270) {
     pdf.addPage();
     pageNumber += 1;
     pageBase();

@@ -204,7 +204,7 @@ const helpCenterSections = [
       {
         question: "Can I download or share a bill?",
         answer:
-          "Yes. In Payments, open a rent or electricity bill to preview it, then choose Download PDF or Share. To print a tenant ledger, open the tenant’s financial profile and select Print ledger. If sharing is unavailable on the device, Bhada downloads the PDF instead.",
+          "Yes. In Payments, open a rent or electricity bill to preview it, then choose Print, Download PDF, or Share. To print a tenant ledger, open the tenant’s financial profile and select Print ledger. If sharing is unavailable on the device, Bhada downloads the PDF instead.",
       },
     ],
   },
