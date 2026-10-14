@@ -4,7 +4,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useActionState, useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
 import {
-  ArrowDownRight,
   ArrowUpRight,
   Building2,
   CalendarDays,
@@ -86,6 +85,10 @@ import type { SubscriptionReceipt } from "@/lib/subscription-receipts";
 import { cn, formatCurrency } from "@/lib/utils";
 import styles from "./dashboard.module.css";
 import { PropertyOnboarding } from "@/components/property-onboarding";
+import { WorkspaceGuide } from "@/components/workspace-guide";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import type { SubscriptionView } from "@/lib/plans";
 import { filterIncomePeriod } from "@/lib/income-period";
 
 const LineChart = dynamic(() => import("@/components/ui/line-chart").then((module) => module.LineChart));
@@ -283,6 +286,7 @@ export function Dashboard({
   notifications,
   subscriptionReceipts,
   subscription,
+  rentalAccess,
 }: {
   user: DashboardUser;
   initialSection?: DashboardSection;
@@ -301,15 +305,12 @@ export function Dashboard({
   incomeOverview: IncomeOverviewPoint[];
   notifications: NotificationItem[];
   subscriptionReceipts: SubscriptionReceipt[];
-  subscription: {
-    active: boolean;
-    status: string;
-    currentPeriodEnd: string | null;
-    cancelAtPeriodEnd: boolean;
-  };
+  subscription: SubscriptionView;
+  rentalAccess: { propertyIds: string[]; unitIds: string[]; hasLockedRentals: boolean };
 }) {
   const [active, setActive] = useState<DashboardSection>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [electricityBillOpen, setElectricityBillOpen] = useState(false);
   const [propertyOpen, setPropertyOpen] = useState(false);
@@ -335,6 +336,9 @@ export function Dashboard({
     0,
   );
   const limits = subscription.active ? PORTFOLIO_PLAN : FREE_PLAN;
+  const writableProperties = properties.filter((item) => rentalAccess.propertyIds.includes(item.id))
+    .map((item) => ({ ...item, units: item.units.filter((rental) => rentalAccess.unitIds.includes(rental.id)) }));
+  const writableTenants = tenants.filter((item) => rentalAccess.unitIds.includes(item.unitId));
   const outstandingFor = (tenantId: string | null) =>
     tenantId
       ? tenantAnalytics.find((item) => item.tenantId === tenantId)?.totalPending ?? 0
@@ -496,17 +500,20 @@ export function Dashboard({
   }
 
   function openProperty(propertyToEdit: PropertyRecord | null = null) {
+    if (propertyToEdit && !rentalAccess.propertyIds.includes(propertyToEdit.id)) { toast.error("This property is read-only on your current plan."); return; }
     if (!propertyToEdit) { setOnboarding({}); return; }
     setEditingProperty(propertyToEdit);
     setPropertyOpen(true);
   }
 
   function openUnit(property: PropertyRecord, unit: UnitRecord | null = null) {
+    if (!rentalAccess.propertyIds.includes(property.id) || (unit && !rentalAccess.unitIds.includes(unit.id))) { toast.error("This rental is read-only on your current plan."); return; }
     if (!unit) { setOnboarding({ propertyId: property.id }); return; }
     setUnitEditor({ property, unit });
   }
 
   function openTenant(tenantToEdit: TenantRecord | null = null) {
+    if (tenantToEdit && !rentalAccess.unitIds.includes(tenantToEdit.unitId)) { toast.error("This tenant's rental is read-only on your current plan."); return; }
     if (!tenantToEdit) { setOnboarding({}); return; }
     setEditingTenant(tenantToEdit);
     setTenantOpen(true);
@@ -525,22 +532,7 @@ export function Dashboard({
     .slice(0, 2)
     .toUpperCase();
 
-  return (
-    <div className={cn("dashboard-shell min-h-screen lg:grid lg:grid-cols-[248px_1fr]", styles.shell)}>
-      {sidebarOpen && (
-        <button
-          aria-label="Close menu"
-          className="fixed inset-0 z-40 bg-[#171a24]/30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[248px] flex-col border-r px-4 py-5 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0",
-          styles.sidebar,
-          sidebarOpen ? "translate-x-0" : "-translate-x-full",
-        )}
-      >
+  const navigationContent = (<>
         <div className="flex h-11 items-center justify-between px-2">
           <Link
             href="/dashboard"
@@ -552,7 +544,7 @@ export function Dashboard({
               wordmarkClassName="text-[18px] text-[#edede8]"
             />
           </Link>
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+          <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Close navigation" onClick={() => setSidebarOpen(false)}>
             <X className="size-5" />
           </Button>
         </div>
@@ -627,7 +619,7 @@ export function Dashboard({
               <Sparkles className="size-4" /> {limits.name}
             </div>
             <span className="border border-white/10 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.08em] text-white/40 uppercase">
-              {subscription.active ? "Active" : "Free"}
+              {subscription.trialActive ? "Trial" : subscription.active ? "Active" : "Free"}
             </span>
           </div>
           <div className="mt-3 h-1 overflow-hidden bg-white/10">
@@ -641,7 +633,7 @@ export function Dashboard({
           </p>
           {subscription.active ? (
             <p className="mt-3 text-[11px] font-semibold text-[#e4c77a]">
-              {subscription.cancelAtPeriodEnd ? "Downgrade scheduled" : "Portfolio billing is active"}
+              {subscription.trialActive ? "Free trial · no automatic charge" : subscription.cancelAtPeriodEnd ? "Downgrade scheduled" : "Portfolio billing is active"}
             </p>
           ) : (
             <PortfolioCheckoutButton
@@ -677,7 +669,20 @@ export function Dashboard({
             <LogOut className="size-4" />
           </button>
         </div>
+  </>);
+
+  return (
+    <div className={cn("dashboard-shell min-h-screen lg:grid lg:grid-cols-[248px_1fr]", styles.shell)}>
+      <aside className={cn("sticky top-0 hidden h-dvh flex-col overflow-y-auto border-r px-4 py-5 lg:flex", styles.sidebar)}>
+        {navigationContent}
       </aside>
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" showCloseButton={false} className="workspace-navigation">
+          <SheetTitle className="sr-only">Bhada navigation</SheetTitle>
+          <SheetDescription className="sr-only">Your rentals, plan and settings</SheetDescription>
+          {navigationContent}
+        </SheetContent>
+      </Sheet>
 
       <main className="min-w-0">
         <header className={cn("sticky top-0 z-30 flex h-16 items-center gap-2 border-b px-3 sm:h-[72px] sm:gap-3 sm:px-7 lg:px-9", styles.topbar)}>
@@ -747,7 +752,7 @@ export function Dashboard({
               onNavigate={openNotification}
             />
             <div
-              className="flex h-10 items-center gap-2 border-b border-white/15 px-0.5 sm:gap-2.5"
+              className="hidden h-10 items-center gap-2 border-b border-white/15 px-0.5 sm:flex sm:gap-2.5"
               aria-label={`${overviewRentBilling.collectionRate}% collected this month, ${formatCurrency(overviewRentBilling.pendingTotal)} pending`}
               title={`${overviewRentBilling.periodLabel}: ${formatCurrency(overviewRentBilling.paidThisMonth)} collected · ${formatCurrency(overviewRentBilling.pendingTotal)} pending`}
             >
@@ -798,10 +803,15 @@ export function Dashboard({
           )}
         </header>
 
+        <div className="mx-auto w-full max-w-[1440px] px-4 pt-4 sm:px-7 lg:px-9">
+          <WorkspaceGuide userId={user.id} subscription={subscription} hasLockedRentals={rentalAccess.hasLockedRentals} showOffer={active === "Overview"}
+            onPlan={() => { setShowPlan(true); navigateToSection("Profile"); }} />
+        </div>
+
         <div
           key={active}
           className={cn(
-            "mx-auto w-full min-w-0 max-w-[1440px] px-3 py-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] min-[380px]:px-4 sm:px-7 sm:py-7 sm:pb-8 lg:px-9 lg:py-9",
+            "mx-auto w-full min-w-0 max-w-[1440px] px-4 pt-3 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-7 lg:px-9 lg:pb-9",
             styles.content,
             styles.sectionTransition,
           )}
@@ -816,18 +826,19 @@ export function Dashboard({
               totalProperties={properties.length}
               incomeOverview={incomeOverview}
               onAddProperty={() => openProperty()}
+              onRecordPayment={() => setPaymentOpen(true)}
               onViewPayments={() => navigateToSection("Payments")}
               onViewProperties={() => navigateToSection("Properties")}
               firstName={firstName}
             />
           ) : active === "Profile" && profile ? (
             <ProfileForm
-              key={focusedSubscriptionReceiptId ?? "profile"}
+              key={focusedSubscriptionReceiptId ?? (showPlan ? "plan" : "profile")}
               email={user.email}
               initialValues={profile}
               subscription={subscription}
               receipts={subscriptionReceipts}
-              initialSection={focusedSubscriptionReceiptId ? "receipts" : "business"}
+              initialSection={focusedSubscriptionReceiptId ? "receipts" : showPlan ? "plan" : "business"}
               focusedReceiptId={focusedSubscriptionReceiptId ?? undefined}
             />
           ) : active === "Help center" ? (
@@ -844,6 +855,7 @@ export function Dashboard({
               properties={visibleProperties}
               tenants={visibleTenants}
               portfolioActive={subscription.active}
+              allowedPropertyIds={rentalAccess.propertyIds}
               onAddProperty={() => openProperty()}
               onEditProperty={openProperty}
               onAddUnit={(property) => openUnit(property)}
@@ -885,20 +897,22 @@ export function Dashboard({
             <span>{item.label}</span>
           </Link>
         ))}
+        <button type="button" className={cn(styles.mobileNavItem, (active === "Profile" || active === "Help center") && styles.mobileNavItemActive)}
+          aria-label="More: settings and help" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}><Menu className="size-[19px]" /><span>More</span></button>
       </nav>
 
       {paymentOpen && (
         <RecordPaymentDialog
           open
           onOpenChange={setPaymentOpen}
-          tenants={tenants}
+          tenants={writableTenants}
         />
       )}
       {electricityBillOpen && (
         <ElectricityBillDialog
           open
           onOpenChange={setElectricityBillOpen}
-          properties={properties}
+          properties={writableProperties}
         />
       )}
       {propertyOpen && (
@@ -908,7 +922,7 @@ export function Dashboard({
           onOpenChange={setPropertyOpen}
         />
       )}
-      {onboarding && <PropertyOnboarding properties={properties} initialPropertyId={onboarding.propertyId} onClose={() => setOnboarding(null)} />}
+      {onboarding && <PropertyOnboarding properties={writableProperties} initialPropertyId={onboarding.propertyId} onClose={() => setOnboarding(null)} />}
       {unitEditor && (
         <UnitDialog
           property={unitEditor.property}
@@ -1096,6 +1110,7 @@ function Overview({
   totalProperties,
   incomeOverview,
   onAddProperty,
+  onRecordPayment,
   onViewPayments,
   onViewProperties,
   firstName,
@@ -1108,6 +1123,7 @@ function Overview({
   totalProperties: number;
   incomeOverview: IncomeOverviewPoint[];
   onAddProperty: () => void;
+  onRecordPayment: () => void;
   onViewPayments: () => void;
   onViewProperties: () => void;
   firstName: string;
@@ -1131,27 +1147,40 @@ function Overview({
 
   return (
     <>
-      <div className="animate-rise flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-5">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-5">
         <div>
           <p className="mb-1 text-xs font-medium text-[#888e9d] sm:text-sm">{todayLabel}</p>
           <h1 className="font-display text-[27px] leading-tight tracking-[-0.045em] text-[#222836] sm:text-[34px]">
             {greeting}, {firstName}
           </h1>
-          <p className="mt-1.5 text-[13px] text-[#747b8b] sm:text-sm">Here&apos;s how your portfolio is doing this month.</p>
+          <p className="mt-1.5 text-[13px] text-[#747b8b] sm:text-sm">A clear view of your rent, all in one place.</p>
         </div>
-        <Button variant="outline" onClick={onAddProperty} className="w-full sm:w-auto">
-          <Plus className="size-4" /> Set up rental
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Button variant="outline" onClick={onAddProperty}><Plus data-icon="inline-start" />Set up rental</Button>
+          <Button onClick={onRecordPayment}><Plus data-icon="inline-start" />Record payment</Button>
+        </div>
+      </div>
+
+      <section className={styles.rentSummary} aria-label="This month's rent summary">
+        <div className={styles.collectionHeadline}>
+          <div><p>Rent collected / {rentBilling.periodLabel}</p><h2>{formatCurrency(rentBilling.paidThisMonth)}</h2></div>
+          <Badge variant="secondary">{rentBilling.collectionRate}% collected</Badge>
+        </div>
+        <div className={styles.collectionTrack} role="progressbar" aria-label="Rent collected" aria-valuenow={Math.min(100, Math.max(0, rentBilling.collectionRate))} aria-valuemin={0} aria-valuemax={100}>
+          <span style={{ width: `${Math.min(100, Math.max(0, rentBilling.collectionRate))}%` }} />
+        </div>
+        <div className={styles.rentSummaryDetails}>
+          <div><span>Billed this month</span><strong>{formatCurrency(rentBilling.billedThisMonth)}</strong></div>
+          <div><span>Total pending</span><strong>{formatCurrency(rentBilling.pendingTotal)}</strong></div>
+          <div><span>Properties</span><strong>{totalProperties}</strong></div>
+        </div>
+        <Button variant="ghost" onClick={onViewPayments} className="mt-4 w-full justify-between">
+          {rentBilling.overdueCount ? `${rentBilling.overdueCount} overdue bill${rentBilling.overdueCount === 1 ? "" : "s"} to review` : "View bills and payments"}<ArrowUpRight data-icon="inline-end" />
         </Button>
-      </div>
+      </section>
 
-      <div className="animate-rise-delay mt-5 grid grid-cols-2 gap-2 sm:mt-7 sm:gap-4 xl:grid-cols-4">
-        <MetricCard icon={WalletCards} label="Rent due this month" value={formatCurrency(rentBilling.billedThisMonth)} note={`${rentBilling.periodLabel} rent dues`} trend="up" tone="indigo" />
-        <MetricCard icon={CircleDollarSign} label="Collected" value={formatCurrency(rentBilling.paidThisMonth)} note={`${rentBilling.collectionRate}% collection rate`} trend="up" tone="green" />
-        <MetricCard icon={CalendarDays} label="Pending rent" value={formatCurrency(rentBilling.pendingTotal)} note={`${rentBilling.overdueCount} overdue bill${rentBilling.overdueCount === 1 ? "" : "s"}`} trend="down" tone="orange" />
-        <MetricCard icon={Building2} label="Properties" value={String(totalProperties)} note="Across your portfolio" trend="up" tone="pink" />
-      </div>
-
-      <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+        <PaymentTable rows={rows} onViewAll={onViewPayments} />
         <section className="min-w-0 overflow-hidden rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)] sm:p-6">
           <div className="flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-start min-[380px]:justify-between min-[380px]:gap-4">
             <div>
@@ -1172,88 +1201,12 @@ function Overview({
           <IncomeChart period={period} data={incomeOverview} />
         </section>
 
-        <section className="flex h-full flex-col rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)] sm:p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="font-display text-base font-bold tracking-[-0.025em]">{rentBilling.periodLabel} rent</h2>
-              <p className="mt-1 text-xs text-[#8b91a0]">Payment collection progress</p>
-            </div>
-            <button className="grid size-8 place-items-center rounded-lg text-[#8b91a0] hover:bg-[#f3f4f7]">
-              <Ellipsis className="size-5" />
-            </button>
-          </div>
-          <div className="mt-6 flex items-center gap-3 sm:mt-7 sm:gap-6">
-            <div
-              className="relative grid size-[96px] shrink-0 place-items-center rounded-full sm:size-[118px]"
-              style={{ background: `conic-gradient(#e4c77a 0 ${rentBilling.collectionRate}%, #2a2a28 ${rentBilling.collectionRate}% 100%)` }}
-            >
-              <div className="grid size-[72px] place-items-center rounded-full bg-white text-center sm:size-[88px]">
-                <div>
-                  <p className="font-display text-xl font-extrabold tracking-[-0.04em]">{rentBilling.collectionRate}%</p>
-                  <p className="text-[10px] text-[#9298a7]">collected</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex-1 space-y-3">
-              <Legend dot="#e4c77a" label="Paid" value={formatCurrency(rentBilling.paidThisMonth)} />
-              <Legend dot="#eea05a" label="Pending" value={formatCurrency(rentBilling.pendingThisMonth)} />
-              <Legend dot="#ea6f62" label="Overdue" value={formatCurrency(rentBilling.overdueTotal)} />
-            </div>
-          </div>
-          <div className="mt-auto pt-7">
-            <Button onClick={onViewPayments} variant="outline" className="w-full">
-              View all payments
-            </Button>
-          </div>
-        </section>
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.55fr_1fr]">
-        <PaymentTable rows={rows} onViewAll={onViewPayments} />
+      <div className="mt-4">
         <PropertyList properties={properties} onAdd={onAddProperty} onViewAll={onViewProperties} />
       </div>
     </>
-  );
-}
-
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  note,
-  trend,
-  tone,
-}: {
-  icon: typeof Building2;
-  label: string;
-  value: string;
-  note: string;
-  trend: "up" | "down";
-  tone: "indigo" | "green" | "orange" | "pink";
-}) {
-  const tones = {
-    indigo: "border border-[#e4c77a]/30 bg-[#e4c77a]/10 text-[#e4c77a]",
-    green: "border border-[#7aa18b]/30 bg-[#7aa18b]/10 text-[#9bc4ab]",
-    orange: "border border-[#c99162]/30 bg-[#c99162]/10 text-[#dda676]",
-    pink: "border border-[#b77f96]/30 bg-[#b77f96]/10 text-[#d29bb2]",
-  };
-  return (
-    <article className="group min-w-0 rounded-[22px] border border-white/80 bg-white p-3.5 shadow-[0_8px_30px_rgba(32,38,55,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_45px_rgba(32,38,55,.075)] sm:p-5">
-      <div className="flex items-center justify-between">
-        <span className={cn("grid size-9 place-items-center rounded-xl sm:size-10", tones[tone])}>
-          <Icon className="size-[17px] sm:size-[19px]" strokeWidth={2.1} />
-        </span>
-        <button className="hidden text-[#a0a5b2] hover:text-[#666d7d] sm:block">
-          <Ellipsis className="size-5" />
-        </button>
-      </div>
-      <p className="mt-4 truncate text-[11px] font-medium text-[#858b9a] sm:mt-5 sm:text-xs">{label}</p>
-      <p className="mt-1 truncate font-display text-lg tracking-[-0.045em] text-[#242a38] sm:text-[23px]">{value}</p>
-      <p className={cn("mt-2 flex items-start gap-1 text-[10px] font-semibold leading-4 sm:mt-3 sm:text-[11px]", trend === "up" ? "text-[#479078]" : "text-[#c06b58]")}>
-        {trend === "up" ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
-        {note}
-      </p>
-    </article>
   );
 }
 
@@ -1268,15 +1221,6 @@ function IncomeChart({
   return <LineChart key={period} data={visibleData} />;
 }
 
-function Legend({ dot, label, value }: { dot: string; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="size-2 rounded-full" style={{ background: dot }} />
-      <span className="text-[#7b8291]">{label}</span>
-      <span className="ml-auto font-bold text-[#353b49]">{value}</span>
-    </div>
-  );
-}
 
 function PaymentTable({
   rows,
@@ -1481,6 +1425,7 @@ function SectionView({
   properties,
   tenants,
   portfolioActive,
+  allowedPropertyIds,
   onAddProperty,
   onEditProperty,
   onAddUnit,
@@ -1503,6 +1448,7 @@ function SectionView({
   properties: PropertyRecord[];
   tenants: TenantRecord[];
   portfolioActive: boolean;
+  allowedPropertyIds: string[];
   onAddProperty: () => void;
   onEditProperty: (property: PropertyRecord) => void;
   onAddUnit: (property: PropertyRecord) => void;
@@ -1577,6 +1523,7 @@ function SectionView({
                 <PropertyCard
                   key={property.id}
                   property={property}
+                  readOnly={!allowedPropertyIds.includes(property.id)}
                   onEdit={onEditProperty}
                   onAddUnit={onAddUnit}
                   onEditUnit={onEditUnit}
@@ -2056,11 +2003,13 @@ function TenantCard({
 
 function PropertyCard({
   property,
+  readOnly,
   onEdit,
   onAddUnit,
   onEditUnit,
 }: {
   property: PropertyRecord;
+  readOnly: boolean;
   onEdit: (property: PropertyRecord) => void;
   onAddUnit: (property: PropertyRecord) => void;
   onEditUnit: (property: PropertyRecord, unit: UnitRecord) => void;
@@ -2087,6 +2036,7 @@ function PropertyCard({
 
   return (
     <article className="rounded-[20px] border border-[#e7e9ef] bg-white p-5 shadow-[0_1px_2px_rgba(25,29,41,.02)]">
+      {readOnly && <Badge variant="outline" className="mb-3">Read-only on One Door</Badge>}
       <div className="flex items-center justify-between">
         <span
           className="grid size-11 place-items-center rounded-xl border"

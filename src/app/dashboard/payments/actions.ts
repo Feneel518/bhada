@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { paymentAllocation, paymentReceipt, tenant } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
+import { getRentalAccess, RENTAL_LOCK_MESSAGE } from "@/lib/plan-access";
 
 type PaymentField = "tenantId" | "paidAt" | "allocations";
 
@@ -118,7 +119,7 @@ export async function recordPayment(
 
   const owner = await ensureLandlord(session.user);
   const [ownedTenant] = await db
-    .select({ id: tenant.id })
+    .select({ id: tenant.id, unitId: tenant.unitId })
     .from(tenant)
     .where(and(eq(tenant.id, tenantId), eq(tenant.landlordId, owner.id)))
     .limit(1);
@@ -126,6 +127,7 @@ export async function recordPayment(
     tenantId: "Choose one of your tenants.",
   });
 
+  if (!(await getRentalAccess(owner)).unitIds.includes(ownedTenant.unitId)) return fail(RENTAL_LOCK_MESSAGE);
   const receiptId = crypto.randomUUID();
   const receiptNumber = `RCPT-${paidAtInput.replaceAll("-", "")}-${receiptId.slice(0, 6).toUpperCase()}`;
   const totalPaise = allocations.reduce((sum, allocation) => sum + allocation.totalPaise, 0);

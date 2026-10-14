@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { tenant, unit } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
+import { getRentalAccess, RENTAL_LOCK_MESSAGE } from "@/lib/plan-access";
 
 type TenantField =
   | "unitId"
@@ -167,6 +168,8 @@ export async function saveTenant(
   }
 
   const owner = await ensureLandlord(session.user);
+  const access = await getRentalAccess(owner);
+  if (!access.unitIds.includes(unitId)) return error(RENTAL_LOCK_MESSAGE);
   const [ownedUnit] = await db
     .select({ id: unit.id })
     .from(unit)
@@ -238,6 +241,7 @@ export async function saveTenant(
       .limit(1);
     if (!existing) return error("Tenant not found or you no longer have access to it.");
     previousUnitId = existing.unitId;
+    if (!access.unitIds.includes(previousUnitId)) return error(RENTAL_LOCK_MESSAGE);
     await db.update(tenant).set(values).where(and(eq(tenant.id, id), eq(tenant.landlordId, owner.id)));
   } else {
     await db.insert(tenant).values({ id: crypto.randomUUID(), ...values });

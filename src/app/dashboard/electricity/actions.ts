@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { electricityBill, tenant, unit } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
+import { getRentalAccess, RENTAL_LOCK_MESSAGE } from "@/lib/plan-access";
 
 type ElectricityBillField =
   | "unitId"
@@ -75,6 +76,9 @@ export async function createElectricityBill(
   }
 
   const owner = await ensureLandlord(session.user);
+  if (!(await getRentalAccess(owner)).unitIds.includes(unitId)) {
+    return { status: "error", message: RENTAL_LOCK_MESSAGE };
+  }
   const [ownedUnit] = await db
     .select({
       id: unit.id,

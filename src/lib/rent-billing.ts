@@ -11,6 +11,7 @@ import {
 } from "@/db/schema";
 import { getCurrentFinancialYear, getFinancialYear } from "@/lib/financial-year";
 import { getRentMonthMetrics } from "@/lib/rent-month-metrics";
+import { getPlanAccount, getRentalAccess } from "@/lib/plan-access";
 
 export type RentBillRecord = {
   id: string;
@@ -116,6 +117,8 @@ export async function generateMonthlyRentBills(now = new Date(), userId?: string
   const activeTenants = await db
     .select({
       id: tenant.id,
+      unitId: tenant.unitId,
+      userId: landlord.userId,
       landlordId: tenant.landlordId,
       leaseStart: tenant.leaseStart,
       leaseEnd: tenant.leaseEnd,
@@ -135,8 +138,15 @@ export async function generateMonthlyRentBills(now = new Date(), userId?: string
     .where(and(...tenantConditions));
 
   const rows: (typeof rentBill.$inferInsert)[] = [];
+  const accessByUser = new Map(await Promise.all(
+    [...new Set(activeTenants.map((renter) => renter.userId))].map(async (id) => {
+      const account = await getPlanAccount(id);
+      return [id, account ? await getRentalAccess(account) : null] as const;
+    }),
+  ));
 
   for (const renter of activeTenants) {
+    if (!accessByUser.get(renter.userId)?.unitIds.includes(renter.unitId)) continue;
     if (!renter.monthlyRent || renter.monthlyRent <= 0) continue;
 
     const effectiveBillingDay = Math.min(
