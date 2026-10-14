@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test scripts/*.test.mjs",
+    "test:ui": "node scripts/check-ui.mjs",
     "build:cloudflare": "opennextjs-cloudflare build",
     "db:generate": "drizzle-kit generate",
     "db:add-rent-due-day": "node scripts/add-rent-due-day.mjs",
@@ -43,6 +45,7 @@
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.2",
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",

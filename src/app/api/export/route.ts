@@ -1,12 +1,10 @@
-import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { db } from "@/db";
-import { landlord } from "@/db/schema";
 import { getElectricityBills } from "@/lib/electricity-billing";
 import { resolveFinancialYearStart } from "@/lib/financial-year";
 import { getPayments } from "@/lib/payments";
 import { hasPortfolioAccess } from "@/lib/plans";
+import { getPlanAccount } from "@/lib/plan-access";
 import { getProperties } from "@/lib/properties";
 import { getRentBilling } from "@/lib/rent-billing";
 import { getTenants } from "@/lib/tenants";
@@ -47,16 +45,7 @@ export async function GET(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return errorResponse("Authentication required.", 401);
 
-  const [account] = await db
-    .select({
-      plan: landlord.plan,
-      subscriptionStatus: landlord.subscriptionStatus,
-      subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
-      subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
-    })
-    .from(landlord)
-    .where(eq(landlord.userId, session.user.id))
-    .limit(1);
+  const account = await getPlanAccount(session.user.id);
 
   if (!account || !hasPortfolioAccess(account)) {
     return errorResponse("CSV export is included with Portfolio.", 403);

@@ -1,9 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-import { db } from "@/db";
-import { landlord } from "@/db/schema";
 import { Dashboard } from "@/components/dashboard";
 import { getProperties } from "@/lib/properties";
 import { getTenants } from "@/lib/tenants";
@@ -16,7 +13,8 @@ import { getTenantAnalytics } from "@/lib/tenant-analytics";
 import { getTenantLedgers } from "@/lib/tenant-ledgers";
 import { getIncomeOverview } from "@/lib/dashboard-analytics";
 import { getNotifications } from "@/lib/notifications";
-import { hasPortfolioAccess } from "@/lib/plans";
+import { hasPortfolioAccess, hasTrialAccess, isTrialEligible } from "@/lib/plans";
+import { getPlanAccount, getRentalAccess } from "@/lib/plan-access";
 import { getSubscriptionReceipts } from "@/lib/subscription-receipts";
 
 const dashboardSections = new Set([
@@ -49,12 +47,8 @@ export default async function DashboardPage({
   const financialYearStart = resolveFinancialYearStart(params.fy, now);
   // Finish bill generation before any other query reads balances or analytics.
   const overviewRentBilling = await getRentBilling(session.user.id, now);
-  const [[profile], properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, tenantLedgers, incomeOverview, subscriptionReceipts] = await Promise.all([
-    db
-      .select()
-      .from(landlord)
-      .where(eq(landlord.userId, session.user.id))
-      .limit(1),
+  const [profile, properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, tenantLedgers, incomeOverview, subscriptionReceipts] = await Promise.all([
+    getPlanAccount(session.user.id),
     getProperties(session.user.id),
     getTenants(session.user.id),
     getPayments(session.user.id),
@@ -73,6 +67,7 @@ export default async function DashboardPage({
     { rentBilling, electricityBills, tenants },
     now,
   );
+  const rentalAccess = profile ? await getRentalAccess(profile) : { propertyIds: [], unitIds: [], hasLockedRentals: false };
 
   return (
     <Dashboard
@@ -95,7 +90,11 @@ export default async function DashboardPage({
         status: profile?.subscriptionStatus ?? "none",
         currentPeriodEnd: profile?.subscriptionCurrentPeriodEnd?.toISOString() ?? null,
         cancelAtPeriodEnd: profile?.subscriptionCancelAtPeriodEnd ?? false,
+        trialActive: Boolean(profile && hasTrialAccess(profile)),
+        trialEligible: profile ? isTrialEligible(profile) && !profile.razorpaySubscriptionId : true,
+        trialEndsAt: profile?.trialEndsAt?.toISOString() ?? null,
       }}
+      rentalAccess={rentalAccess}
       profile={{
         businessName: profile?.businessName ?? session.user.name,
         rentBillingPeriod: profile?.rentBillingPeriod === "current" ? "current" : "previous",

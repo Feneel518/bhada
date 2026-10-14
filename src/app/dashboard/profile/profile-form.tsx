@@ -19,6 +19,8 @@ import { FormSelect } from "@/components/ui/form-controls";
 import { SubscriptionBillingHistory } from "@/components/subscription-receipt-card";
 import { LanguageSwitcher } from "@/components/language-provider";
 import type { SubscriptionReceipt } from "@/lib/subscription-receipts";
+import type { SubscriptionView } from "@/lib/plans";
+import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button";
 
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -67,12 +69,7 @@ export function ProfileForm({
 }: {
   email: string;
   initialValues: ProfileValues;
-  subscription: {
-    active: boolean;
-    status: string;
-    currentPeriodEnd: string | null;
-    cancelAtPeriodEnd: boolean;
-  };
+  subscription: SubscriptionView;
   receipts: SubscriptionReceipt[];
   initialSection?: ProfileSection;
   focusedReceiptId?: string;
@@ -247,10 +244,12 @@ export function ProfileForm({
                     Current plan
                   </p>
                   <h2 className="mt-1.5 font-display text-lg font-semibold tracking-[-0.025em] text-[#edede8]">
-                    {subscription.active ? "Portfolio plan" : "One Door plan"}
+                    {subscription.trialActive ? "Portfolio trial" : subscription.active ? "Portfolio plan" : "One Door plan"}
                   </h2>
                   <p className="mt-1 max-w-xl text-xs leading-5 text-white/40">
-                    {cancelAtPeriodEnd
+                    {subscription.trialActive
+                      ? `Free trial until ${subscription.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }) : "your trial ends"}. No automatic charge. Afterward, extra rentals become read-only and CSV export is locked.`
+                      : cancelAtPeriodEnd && subscription.active
                       ? `Your subscription will not renew${paidThrough ? ` after ${paidThrough}` : ""}. Portfolio access stays available until then.`
                       : subscription.active
                         ? `₹49 per month${paidThrough ? ` · current period ends ${paidThrough}` : ""}.`
@@ -258,7 +257,7 @@ export function ProfileForm({
                   </p>
                 </div>
               </div>
-              {subscription.active && !cancelAtPeriodEnd && (
+              {subscription.active && !subscription.trialActive && !cancelAtPeriodEnd && (
                 <Button
                   type="button"
                   variant="outline"
@@ -270,7 +269,8 @@ export function ProfileForm({
                   {cancelPending ? "Scheduling..." : "Downgrade plan"}
                 </Button>
               )}
-              {cancelAtPeriodEnd && (
+              {(!subscription.active || subscription.trialActive) && <PortfolioCheckoutButton className="workspace-upgrade" />}
+              {cancelAtPeriodEnd && subscription.active && (
                 <span className="shrink-0 border border-[#e4c77a]/25 bg-[#e4c77a]/[0.05] px-3 py-2 text-xs font-semibold text-[#e4c77a]">
                   Cancellation scheduled
                 </span>

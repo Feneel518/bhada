@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -21,6 +21,7 @@ export async function POST() {
   const [account] = await db
     .select({
       id: landlord.id,
+      updatedAt: landlord.updatedAt,
       razorpaySubscriptionId: landlord.razorpaySubscriptionId,
       subscriptionStatus: landlord.subscriptionStatus,
       subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
@@ -61,7 +62,7 @@ export async function POST() {
           },
         );
 
-    await db
+    const updated = await db
       .update(landlord)
       .set({
         plan: subscriptionPlan(subscription.status),
@@ -70,7 +71,10 @@ export async function POST() {
         subscriptionCancelAtPeriodEnd: true,
         updatedAt: new Date(),
       })
-      .where(eq(landlord.id, account.id));
+      .where(and(eq(landlord.id, account.id), sql`date_trunc('milliseconds', ${landlord.updatedAt}) = ${account.updatedAt.toISOString()}::timestamp`,
+        eq(landlord.razorpaySubscriptionId, account.razorpaySubscriptionId)))
+      .returning({ id: landlord.id });
+    if (!updated.length) return Response.json({ message: "Your billing status changed while cancellation was being confirmed. Refresh your plan settings." }, { status: 409 });
 
     revalidatePath("/");
     revalidatePath("/dashboard");

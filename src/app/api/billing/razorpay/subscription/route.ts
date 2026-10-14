@@ -4,10 +4,12 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { landlord } from "@/db/schema";
 import { ensureLandlord } from "@/lib/landlords";
-import { hasPortfolioAccess } from "@/lib/plans";
+import { hasPaidPortfolioAccess } from "@/lib/plans";
 import {
   razorpayConfig,
   razorpayRequest,
+  subscriptionPeriodEnd,
+  subscriptionPlan,
   type RazorpaySubscription,
 } from "@/lib/razorpay";
 
@@ -19,7 +21,7 @@ export async function POST() {
 
   try {
     const owner = await ensureLandlord(session.user);
-    if (hasPortfolioAccess(owner)) {
+    if (hasPaidPortfolioAccess(owner)) {
       return Response.json({ message: "Portfolio is already active." }, { status: 409 });
     }
 
@@ -38,17 +40,20 @@ export async function POST() {
     let subscription: RazorpaySubscription | null = null;
     if (
       account?.razorpaySubscriptionId
-      && ["created", "authenticated"].includes(account.subscriptionStatus)
     ) {
       subscription = await razorpayRequest<RazorpaySubscription>(
         `/subscriptions/${account.razorpaySubscriptionId}`,
-      ).catch(() => null);
-      if (
-        subscription?.plan_id !== planId
-        || !["created", "authenticated"].includes(subscription.status)
-      ) {
-        subscription = null;
+      );
+      if (subscription.plan_id !== planId) throw new Error("Unexpected subscription plan.");
+      if (["active", "pending", "halted", "paused"].includes(subscription.status)) {
+        await db.update(landlord).set({
+          plan: subscriptionPlan(subscription.status), subscriptionStatus: subscription.status,
+          subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription),
+          subscriptionCancelAtPeriodEnd: Boolean(subscription.has_scheduled_changes), updatedAt: new Date(),
+        }).where(eq(landlord.id, owner.id));
+        return Response.json({ message: "You already have a subscription. Refresh your plan settings or resolve the existing payment before starting another." }, { status: 409 });
       }
+      if (!["created", "authenticated"].includes(subscription.status)) subscription = null;
     }
 
     if (!subscription) {
@@ -72,6 +77,7 @@ export async function POST() {
           razorpaySubscriptionId: subscription.id,
           subscriptionStatus: subscription.status,
           subscriptionCancelAtPeriodEnd: false,
+          subscriptionCurrentPeriodEnd: null,
           plan: "one_door",
           updatedAt: new Date(),
         })

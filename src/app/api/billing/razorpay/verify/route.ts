@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { landlord, saasBillingEvent } from "@/db/schema";
+import { hasPaidPortfolioAccess } from "@/lib/plans";
 import {
   hmacHex,
   razorpayConfig,
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   const [account] = await db
-    .select({ id: landlord.id })
+    .select({ id: landlord.id, updatedAt: landlord.updatedAt })
     .from(landlord)
     .where(eq(landlord.userId, session.user.id))
     .limit(1);
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
       return Response.json({ message: "Payment has not been captured yet." }, { status: 409 });
     }
 
-    await db.batch([
+    const [updated] = await db.batch([
       db
         .update(landlord)
         .set({
@@ -92,7 +93,8 @@ export async function POST(request: Request) {
           subscriptionCancelAtPeriodEnd: Boolean(subscription.has_scheduled_changes),
           updatedAt: new Date(),
         })
-        .where(eq(landlord.id, account.id)),
+        .where(and(eq(landlord.id, account.id), eq(landlord.razorpaySubscriptionId, subscriptionId), sql`date_trunc('milliseconds', ${landlord.updatedAt}) = ${account.updatedAt.toISOString()}::timestamp`))
+        .returning({ id: landlord.id }),
       db
         .insert(saasBillingEvent)
         .values({
@@ -108,11 +110,16 @@ export async function POST(request: Request) {
         .onConflictDoNothing({ target: saasBillingEvent.id }),
     ]);
 
+    if (!updated.length) return Response.json({ message: "Your billing status changed. Refresh your dashboard to see the latest plan." }, { status: 409 });
+    const active = hasPaidPortfolioAccess({ plan: subscriptionPlan(subscription.status),
+      subscriptionStatus: subscription.status, subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription) });
+
     revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/owner");
     return Response.json({
-      message: "Portfolio is now active.",
+      message: active ? "Portfolio is now active." : "Payment received. Portfolio will unlock when Razorpay confirms an active billing period.",
+      active,
       receipt: {
         receiptNumber: `BHADA-${payment.id.slice(4).toUpperCase()}`,
         paymentId: payment.id,

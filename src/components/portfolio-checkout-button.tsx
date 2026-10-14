@@ -114,24 +114,30 @@ export function PortfolioCheckoutButton({
         },
         theme: { color: "#E4C77A" },
         handler: async (payment: CheckoutResponse) => {
-          const verifyResponse = await fetch("/api/billing/razorpay/verify", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(payment),
-          });
-          const result = await verifyResponse.json() as {
-            message?: string;
-            receipt?: PaymentReceipt;
-          };
-          if (!verifyResponse.ok || !result.receipt) {
-            toast.error(result.message || "Payment verification failed.");
-            setPending(false);
-            return;
-          }
+          try {
+            const verifyResponse = await fetch("/api/billing/razorpay/verify", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(payment),
+            });
+            const result = await verifyResponse.json() as {
+              message?: string;
+              receipt?: PaymentReceipt;
+              active?: boolean;
+            };
+            if (!verifyResponse.ok || !result.receipt) {
+              toast.error(result.message || "Payment verification failed.");
+              setPending(false);
+              return;
+            }
 
-          toast.success("Portfolio activated", { description: result.message });
-          setPending(false);
-          setReceipt(result.receipt);
+            toast.success(result.active ? "Portfolio activated" : "Payment received", { description: result.message });
+            setPending(false);
+            setReceipt(result.receipt);
+          } catch {
+            toast.error("Couldn't confirm the payment yet. Refresh your plan settings before trying again.");
+            setPending(false);
+          }
         },
         modal: {
           ondismiss: () => setPending(false),

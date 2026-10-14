@@ -3,6 +3,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { landlord } from "@/db/schema";
+import { withTrial } from "@/lib/plan-access";
 
 export async function ensureLandlord(user: { id: string; name: string }) {
   const [existing] = await db
@@ -17,7 +18,7 @@ export async function ensureLandlord(user: { id: string; name: string }) {
     .where(eq(landlord.userId, user.id))
     .limit(1);
 
-  if (existing) return existing;
+  if (existing) return withTrial(existing);
 
   const [created] = await db
     .insert(landlord)
@@ -35,7 +36,7 @@ export async function ensureLandlord(user: { id: string; name: string }) {
       subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
     });
 
-  if (created) return created;
+  if (created) return withTrial(created);
 
   const [concurrent] = await db
     .select({
@@ -50,5 +51,5 @@ export async function ensureLandlord(user: { id: string; name: string }) {
     .limit(1);
 
   if (!concurrent) throw new Error("Unable to create landlord profile.");
-  return concurrent;
+  return withTrial(concurrent);
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, LoaderCircle, Share2 } from "lucide-react";
+import { Download, LoaderCircle, Printer, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BhadaMark } from "@/components/brand-logo";
@@ -171,7 +171,7 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   pdf.text(`Due ${formatDate(bill.dueDate)}  |  ${bill.status}`, 185, 75, { align: "right" });
 
   const readingTop = Math.max(87, billedToY + 4);
-  const tableTop = document.kind === "electricity" ? readingTop + 34 : 101;
+  const tableTop = document.kind === "electricity" ? readingTop + 34 : Math.max(101, billedToY + 5);
   if (document.kind === "electricity") {
     const readings = [
       ["LAST READING", meterReading(document.bill.previousReading)],
@@ -251,6 +251,7 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
     pdf.text(value, summaryValueX, y, { align: "right" });
   });
 
+  let noteBottom = 0;
   if (document.kind === "electricity" && document.bill.note) {
     const noteLines = (pdf.splitTextToSize(document.bill.note, 65) as string[]).slice(0, 7);
     pdf.setFont(pdfFont, "bold");
@@ -259,16 +260,25 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
     pdf.setFont(pdfFont, "normal");
     pdf.setTextColor(...muted);
     pdf.text(noteLines, 26, summaryTop + 7, { lineHeightFactor: 1.15 });
+    noteBottom = summaryTop + 7 + noteLines.length * 4;
   }
 
+  let footerTop = Math.max(226, summaryTop + summaryRows.length * 12 + 12, noteBottom + 12);
+  if (footerTop > 235) {
+    pdf.addPage();
+    pdf.setFillColor(...paper);
+    pdf.rect(0, 0, 210, 297, "F");
+    footerTop = 45;
+  }
+  const footerOffset = footerTop - 226;
   pdf.setTextColor(...ink);
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(14);
-  pdf.text("Thank you for your Business!", 26, 226);
+  pdf.text("Thank you for your Business!", 26, footerTop);
 
   pdf.setFont(pdfFont, "bold");
   pdf.setFontSize(8);
-  pdf.text("BUSINESS INFORMATION", 26, 244);
+  pdf.text("BUSINESS INFORMATION", 26, 244 + footerOffset);
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(8.5);
   const businessDetails = [
@@ -277,8 +287,8 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
     issuer.phone,
     issuer.email,
   ].filter(Boolean);
-  businessDetails.forEach((line, index) => pdf.text(line, 26, 252 + index * 5.5));
-  if (!businessDetails.length) pdf.text("Computer-generated invoice", 26, 252);
+  businessDetails.forEach((line, index) => pdf.text(line, 26, 252 + footerOffset + index * 5.5));
+  if (!businessDetails.length) pdf.text("Computer-generated invoice", 26, 252 + footerOffset);
 
   const businessName = issuer.businessName || "Bhada Property Management";
   pdf.setFont(pdfFont, "normal");
@@ -289,7 +299,7 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
     businessNameLines = pdf.splitTextToSize(businessName, 82) as string[];
   }
   const businessLineHeight = 6.5;
-  const businessNameY = 252 - (businessNameLines.length - 1) * businessLineHeight;
+  const businessNameY = 252 + footerOffset - (businessNameLines.length - 1) * businessLineHeight;
   pdf.text(businessNameLines, 185, businessNameY, {
     align: "right",
     lineHeightFactor: 1.15,
@@ -299,7 +309,7 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   pdf.setTextColor(...muted);
   if (issuerAddress) {
     const addressLines = (pdf.splitTextToSize(issuerAddress, 82) as string[]).slice(0, 3);
-    pdf.text(addressLines, 185, 261, { align: "right", lineHeightFactor: 1.15 });
+    pdf.text(addressLines, 185, 261 + footerOffset, { align: "right", lineHeightFactor: 1.15 });
   }
   pdf.text("Generated with bhada", 185, 286, { align: "right" });
 
@@ -326,7 +336,7 @@ export function BillDocumentDialog({
   issuer: BillIssuer;
   onClose: () => void;
 }) {
-  const [working, setWorking] = useState<"download" | "share" | null>(null);
+  const [working, setWorking] = useState<"download" | "share" | "print" | null>(null);
   if (!document) return null;
 
   const bill = document.bill;
@@ -377,39 +387,66 @@ export function BillDocumentDialog({
     }
   }
 
+  async function print() {
+    if (!document) return;
+    const printWindow = window.open("about:blank", "_blank");
+    if (!printWindow) {
+      toast.error("Allow pop-ups to open the printable invoice.");
+      return;
+    }
+
+    setWorking("print");
+    try {
+      const blob = await createPdf(document, issuer);
+      const url = URL.createObjectURL(blob);
+      printWindow.location.href = url;
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      toast.success("Invoice opened for printing");
+    } catch {
+      printWindow.close();
+      toast.error("Couldn’t open the printable invoice.");
+    } finally {
+      setWorking(null);
+    }
+  }
+
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-h-[94vh] max-w-[880px] overflow-y-auto p-0">
-        <div className="flex flex-col gap-4 border-b border-white/10 bg-[#171717] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-          <div>
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[880px] overflow-x-hidden overflow-y-auto p-0">
+        <div className="flex flex-col gap-4 border-b border-white/10 bg-[#171717] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <div className="min-w-0 pr-9 sm:pr-0">
             <DialogTitle>Invoice copy</DialogTitle>
-            <DialogDescription className="mt-1">Preview, download, or share this invoice as a PDF.</DialogDescription>
+            <DialogDescription className="mt-1">Preview, print, download, or share this invoice as a PDF.</DialogDescription>
           </div>
-          <div className="flex gap-2 pr-7 sm:pr-0">
-            <Button variant="outline" onClick={share} disabled={working !== null}>
+          <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:shrink-0">
+            <Button className="min-w-0 px-2 sm:px-4" variant="outline" onClick={print} disabled={working !== null}>
+              {working === "print" ? <LoaderCircle className="size-4 animate-spin" /> : <Printer className="size-4" />} Print
+            </Button>
+            <Button className="min-w-0 px-2 sm:px-4" variant="outline" onClick={share} disabled={working !== null}>
               {working === "share" ? <LoaderCircle className="size-4 animate-spin" /> : <Share2 className="size-4" />} Share
             </Button>
-            <Button onClick={download} disabled={working !== null}>
-              {working === "download" ? <LoaderCircle className="size-4 animate-spin" /> : <Download className="size-4" />} Download PDF
+            <Button className="min-w-0 px-2 sm:px-4" onClick={download} disabled={working !== null}>
+              {working === "download" ? <LoaderCircle className="size-4 animate-spin" /> : <Download className="size-4" />}
+              <span className="sm:hidden">PDF</span><span className="hidden sm:inline">Download PDF</span>
             </Button>
           </div>
         </div>
 
-        <div className="bg-[#dddcd6] p-3 sm:p-7">
-          <article className="font-display mx-auto min-h-[900px] max-w-[720px] bg-[#f7f7f3] px-7 py-10 text-[#121210] shadow-[0_14px_45px_rgba(35,40,55,.12)] sm:px-14 sm:py-14">
-            <header className="grid grid-cols-2 items-start gap-8">
+        <div className="bg-[#dddcd6] p-2 sm:p-7">
+          <article className="font-display mx-auto min-h-[540px] w-full max-w-[720px] overflow-hidden bg-[#f7f7f3] px-4 py-7 text-[#121210] shadow-[0_14px_45px_rgba(35,40,55,.12)] sm:min-h-[900px] sm:px-14 sm:py-14">
+            <header className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:grid-cols-2 sm:gap-8">
               <div className="flex w-fit flex-col items-center gap-2.5">
-                <span className="grid size-20 place-items-center bg-black sm:size-24">
+                <span className="grid size-14 place-items-center bg-black sm:size-24">
                   <BhadaMark className="size-[calc(100%-8px)] text-[#f7f7f3]" />
                 </span>
-                <span className="text-2xl sm:text-3xl">Bhada</span>
+                <span className="text-lg sm:text-3xl">Bhada</span>
               </div>
-              <h2 className="text-[clamp(2.7rem,9vw,5.5rem)] font-normal leading-[0.9] tracking-[-0.04em] text-right">
+              <h2 className="min-w-0 text-[clamp(1.75rem,9vw,5.5rem)] font-normal leading-[0.9] tracking-[-0.04em] text-right">
                 INVOICE
               </h2>
             </header>
 
-            <section className="mt-9 grid grid-cols-2 gap-8">
+            <section className="mt-8 grid grid-cols-2 gap-4 sm:mt-9 sm:gap-8">
               <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-sm">
                 <p className="font-bold">BILLED TO:</p>
                 <p className="mt-1">{tenant?.name || bill.tenantName}</p>
@@ -439,32 +476,36 @@ export function BillDocumentDialog({
               </section>
             )}
 
-            <div className={document.kind === "electricity" ? "mt-8 overflow-x-auto" : "mt-14 overflow-x-auto sm:mt-16"}>
-              <div className="min-w-[520px]">
-                <div className="grid grid-cols-[minmax(0,1fr)_76px_100px_100px] border-y border-black px-2 py-3 text-xs font-bold sm:text-sm">
+            <div className={document.kind === "electricity" ? "mt-8" : "mt-12 sm:mt-16"}>
+              <div className="min-w-0">
+                <div className="hidden grid-cols-[minmax(0,1fr)_76px_100px_100px] border-y border-black px-2 py-3 text-xs font-bold sm:grid sm:text-sm">
                   <span>Item</span><span className="text-center">Quantity</span><span className="text-center">Unit Price</span><span className="text-right">Total</span>
                 </div>
                 {rows.map((row) => (
-                  <div key={row.item} className="grid grid-cols-[minmax(0,1fr)_76px_100px_100px] items-center border-b border-black/70 px-2 py-4 text-xs sm:text-sm">
-                    <span>{row.item}</span><span className="text-center">{row.quantity}</span><span className="text-center">{row.unitPrice.replace("INR ", "₹")}</span><span className="text-right">{row.total.replace("INR ", "₹")}</span>
+                  <div key={row.item} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 border-b border-black/70 px-1 py-3 text-[11px] first:border-t first:border-black sm:grid-cols-[minmax(0,1fr)_76px_100px_100px] sm:items-center sm:border-t-0 sm:px-2 sm:py-4 sm:text-sm">
+                    <span className="min-w-0 break-words">{row.item}</span>
+                    <span className="whitespace-nowrap text-right font-bold sm:hidden">{row.total.replace("INR ", "₹")}</span>
+                    <span className="col-span-2 text-[10px] text-black/55 sm:col-auto sm:text-center sm:text-sm sm:text-black">Qty {row.quantity}</span>
+                    <span className="hidden text-center sm:block">{row.unitPrice.replace("INR ", "₹")}</span>
+                    <span className="hidden text-right sm:block">{row.total.replace("INR ", "₹")}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="ml-auto mt-4 w-full max-w-[265px] text-xs sm:text-sm">
+            <div className="ml-auto mt-4 w-full max-w-[265px] text-[11px] sm:text-sm">
               <InvoiceSummaryLine label="Subtotal" value={formatCurrency(subtotalFor(document))} />
               <InvoiceSummaryLine label="Tax / adjustments" value={formatCurrency(taxFor(document))} />
               <InvoiceSummaryLine label="Invoice total" value={formatCurrency(bill.amount)} />
               {bill.paid > 0 && <InvoiceSummaryLine label="Amount received" value={`− ${formatCurrency(bill.paid)}`} />}
-              <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-5 border-t border-black py-4">
-                <span className="text-xl font-bold leading-tight sm:text-2xl">Amount<br />Due</span>
-                <span className="text-xl sm:text-2xl">{formatCurrency(bill.pending)}</span>
+              <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-black py-4 sm:gap-5">
+                <span className="text-lg font-bold leading-tight sm:text-2xl">Amount<br />Due</span>
+                <span className="whitespace-nowrap text-lg sm:text-2xl">{formatCurrency(bill.pending)}</span>
               </div>
               {issuer.showOutstandingOnInvoice && (
-                <div className="grid grid-cols-[1fr_auto] items-center gap-5 border-t-2 border-black py-4">
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t-2 border-black py-4 sm:gap-5">
                   <span className="font-bold">Total outstanding</span>
-                  <span className="font-bold">{formatCurrency(document.accountOutstanding)}</span>
+                  <span className="whitespace-nowrap text-right font-bold">{formatCurrency(document.accountOutstanding)}</span>
                 </div>
               )}
             </div>
@@ -473,7 +514,7 @@ export function BillDocumentDialog({
               <div className="mt-8 max-w-md text-xs leading-5"><span className="font-bold">Note: </span>{document.bill.note}</div>
             )}
 
-            <footer className="mt-24 sm:mt-32">
+            <footer className="mt-16 sm:mt-32">
               <p className="text-xl sm:text-2xl">Thank you for your Business!</p>
               <div className="mt-10 grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
                 <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-xs">
@@ -498,5 +539,5 @@ export function BillDocumentDialog({
 }
 
 function InvoiceSummaryLine({ label, value }: { label: string; value: string }) {
-  return <div className="flex justify-between gap-5 px-1 py-2.5"><span className="font-bold">{label}</span><span>{value}</span></div>;
+  return <div className="flex min-w-0 justify-between gap-3 px-1 py-2.5 sm:gap-5"><span className="min-w-0 font-bold">{label}</span><span className="shrink-0 whitespace-nowrap text-right">{value}</span></div>;
 }

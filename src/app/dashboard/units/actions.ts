@@ -1,13 +1,14 @@
 "use server";
 
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq, ne, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { db } from "@/db";
-import { property, unit } from "@/db/schema";
+import { landlord, property, unit } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
 import { planLimits } from "@/lib/plans";
+import { getRentalAccess, RENTAL_LOCK_MESSAGE } from "@/lib/plan-access";
 import type { UnitStatus } from "@/lib/properties";
 
 type UnitField =
@@ -95,6 +96,10 @@ export async function saveUnit(
 
   const owner = await ensureLandlord(session.user);
   const limits = planLimits(owner);
+  const access = await getRentalAccess(owner);
+  if (!access.propertyIds.includes(propertyId) || (id && !access.unitIds.includes(id))) {
+    return error(RENTAL_LOCK_MESSAGE);
+  }
   const [ownedProperty] = await db
     .select({ id: property.id })
     .from(property)
@@ -186,7 +191,22 @@ export async function saveUnit(
 
     if (!updated) return error("Unit not found or you no longer have access to it.");
   } else {
-    await db.insert(unit).values({ id: savedId, ...values });
+    const [, inserted] = await db.batch([
+      db.execute(sql`select id from landlord where id = ${owner.id} for update`),
+      db.insert(unit).select(db.select({
+        id: sql<string>`${savedId}`.as("id"), propertyId: sql<string>`${propertyId}`.as("propertyId"), landlordId: landlord.id,
+        unitNumber: sql<string>`${unitNumber}`.as("unitNumber"), floor: sql<string>`${values.floor}`.as("floor"),
+        areaSqft: sql<number>`${values.areaSqft}`.as("areaSqft"), status: sql<UnitStatus>`${status}::unit_status`.as("status"),
+        openingMeterReading: sql<number>`${values.openingMeterReading}`.as("openingMeterReading"),
+        openingMeterReadingDate: sql<Date>`${openingDate?.toISOString() ?? null}::timestamp`.as("openingMeterReadingDate"),
+        lastMeterReading: sql<number>`${values.lastMeterReading ?? null}`.as("lastMeterReading"),
+        lastMeterReadingDate: sql<Date>`${values.lastMeterReadingDate?.toISOString() ?? null}::timestamp`.as("lastMeterReadingDate"),
+        createdAt: sql<Date>`now()`.as("createdAt"), updatedAt: sql<Date>`now()`.as("updatedAt"),
+      }).from(landlord).where(and(eq(landlord.id, owner.id),
+        sql`(select count(*) from unit where landlord_id = ${owner.id}) < ${limits.unitLimit}`)))
+        .returning({ id: unit.id }),
+    ]);
+    if (!inserted.length) return error(`${limits.name} unit limit reached. Refresh to see your units.`);
   }
 
   refreshUnitViews();

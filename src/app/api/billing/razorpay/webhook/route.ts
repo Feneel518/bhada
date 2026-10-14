@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { landlord, saasBillingEvent } from "@/db/schema";
 import {
   hmacHex,
   razorpayConfig,
+  razorpayRequest,
   safeEqualHex,
   subscriptionPeriodEnd,
   subscriptionPlan,
@@ -53,7 +54,10 @@ export async function POST(request: Request) {
     return Response.json({ message: "Webhook authentication failed." }, { status: 401 });
   }
 
-  const body = JSON.parse(rawBody) as WebhookPayload;
+  let body: WebhookPayload;
+  try { body = JSON.parse(rawBody) as WebhookPayload; }
+  catch { return Response.json({ message: "Invalid webhook payload." }, { status: 400 }); }
+  if (!body || typeof body !== "object") return Response.json({ message: "Invalid webhook payload." }, { status: 400 });
   const subscription = body.payload?.subscription?.entity;
   const payment = body.payload?.payment?.entity;
   if (!body.event || (!subscription?.id && !payment?.subscription_id)) {
@@ -62,31 +66,37 @@ export async function POST(request: Request) {
 
   try {
     const { planId } = razorpayConfig();
-    let account: { id: string } | undefined;
+    let account: { id: string; updatedAt: Date } | undefined;
     const subscriptionId = subscription?.id ?? payment?.subscription_id;
 
     if (subscriptionId) {
       [account] = await db
-        .select({ id: landlord.id })
+        .select({ id: landlord.id, updatedAt: landlord.updatedAt })
         .from(landlord)
         .where(eq(landlord.razorpaySubscriptionId, subscriptionId))
         .limit(1);
     }
 
-    if (subscription?.id && subscription.plan_id === planId) {
-      await db
+    if (account && subscription?.id && subscription.plan_id === planId) {
+      // Webhooks can be duplicated or arrive out of order. Reconcile with the
+      // provider's current state instead of restoring access from an old payload.
+      const current = await razorpayRequest<RazorpaySubscription>(`/subscriptions/${subscription.id}`);
+      if (current.plan_id !== planId) throw new Error("Unexpected subscription plan.");
+      const updated = await db
         .update(landlord)
         .set({
-          plan: subscriptionPlan(subscription.status),
-          subscriptionStatus: subscription.status,
-          subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription),
+          plan: subscriptionPlan(current.status),
+          subscriptionStatus: current.status,
+          subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(current),
           subscriptionCancelAtPeriodEnd:
-            subscription.status === "cancelled"
+            current.status === "cancelled"
               ? false
-              : Boolean(subscription.has_scheduled_changes),
+              : Boolean(current.has_scheduled_changes),
           updatedAt: new Date(),
         })
-        .where(eq(landlord.razorpaySubscriptionId, subscription.id));
+        .where(and(eq(landlord.razorpaySubscriptionId, subscription.id), sql`date_trunc('milliseconds', ${landlord.updatedAt}) = ${account.updatedAt.toISOString()}::timestamp`))
+        .returning({ id: landlord.id });
+      if (!updated.length) throw new Error("Billing changed concurrently; retry reconciliation.");
 
       if (account) {
         await db

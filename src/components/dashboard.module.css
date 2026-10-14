@@ -64,11 +64,12 @@
 .mobileNav {
   position: fixed;
   z-index: 38;
-  right: 0.75rem;
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
-  left: 0.75rem;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding-bottom: env(safe-area-inset-bottom);
   display: none;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 4.25rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(22, 22, 21, 0.96);
@@ -85,8 +86,8 @@
   justify-content: center;
   flex-direction: column;
   gap: 0.35rem;
-  color: rgba(237, 237, 232, 0.38);
-  font-size: 0.61rem;
+  color: rgba(237, 237, 232, 0.65);
+  font-size: 0.69rem;
   font-weight: 600;
   line-height: 1;
   transition:
@@ -115,7 +116,7 @@
 }
 
 .sectionTransition {
-  animation: section-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: none;
 }
 
 .loadingShell {
@@ -241,7 +242,7 @@
 .shell :global(article),
 .shell :global(form) {
   border-color: rgba(255, 255, 255, 0.11) !important;
-  border-radius: 0 !important;
+  border-radius: 10px !important;
   background-color: #171717 !important;
   box-shadow: none !important;
 }
@@ -272,7 +273,7 @@
 .shell :global(textarea),
 .shell :global(select) {
   border-color: rgba(255, 255, 255, 0.09) !important;
-  border-radius: 0 !important;
+  border-radius: 10px !important;
   background: rgba(255, 255, 255, 0.018) !important;
   color: rgba(237, 237, 232, 0.82) !important;
   box-shadow: none !important;
@@ -289,15 +290,6 @@
   border-color: rgba(255, 255, 255, 0.22) !important;
   background: rgba(255, 255, 255, 0.028) !important;
   outline: none;
-}
-
-.shell :global([class*="rounded-xl"]),
-.shell :global([class*="rounded-2xl"]),
-.shell :global([class*="rounded-[18px]"]),
-.shell :global([class*="rounded-[20px]"]),
-.shell :global([class*="rounded-[22px]"]),
-.shell :global([class*="rounded-[24px]"]) {
-  border-radius: 0 !important;
 }
 
 .shell :global([class*="border-[#e"]),
@@ -348,7 +340,7 @@
 .shell :global([class*="text-[#9c"]),
 .shell :global([class*="text-[#a0"]),
 .shell :global([class*="text-[#a1"]) {
-  color: rgba(237, 237, 232, 0.46) !important;
+  color: rgba(237, 237, 232, 0.68) !important;
 }
 
 .shell :global([class*="text-[#5555c7]"]),
@@ -361,7 +353,7 @@
 
 .shell :global(button[data-slot="button"][data-variant="default"]) {
   border: 1px solid #e4c77a !important;
-  border-radius: 0 !important;
+  border-radius: 10px !important;
   background: #e4c77a !important;
   color: #111111 !important;
   box-shadow: 0 8px 24px rgba(228, 199, 122, 0.09) !important;
@@ -374,7 +366,7 @@
 
 .shell :global(button[data-slot="button"][data-variant="outline"]) {
   border-color: rgba(228, 199, 122, 0.45) !important;
-  border-radius: 0 !important;
+  border-radius: 10px !important;
   background: rgba(228, 199, 122, 0.045) !important;
   color: #e4c77a !important;
   box-shadow: none !important;
@@ -439,4 +431,34 @@
   .loadingProgress {
     animation: none;
   }
+}
+
+/* A compact rent ledger: amount first, thin rules, actions near the thumb. */
+.rentSummary { margin-top: 24px; padding: 24px; }
+.collectionHeadline { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.collectionHeadline p { color: var(--muted-foreground); font-size: 13px; }
+.collectionHeadline h2 { margin-top: 6px; font-family: var(--font-body), sans-serif; font-size: clamp(30px, 6vw, 44px); font-weight: 600; letter-spacing: -.05em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.collectionTrack { height: 4px; overflow: hidden; margin-block: 22px; background: var(--border); border-radius: 4px; }
+.collectionTrack span { display: block; height: 100%; background: var(--primary); }
+.rentSummaryDetails { display: grid; grid-template-columns: 1fr 1fr .6fr; gap: 14px; }
+.rentSummaryDetails > div { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.rentSummaryDetails > div + div { border-left: 1px solid var(--border); padding-left: 16px; }
+.rentSummaryDetails span { color: var(--muted-foreground); font-size: 12px; }
+.rentSummaryDetails strong { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.shell h1, .shell h2, .shell h3 { font-family: var(--font-body), sans-serif; font-weight: 600; }
+.shell :global([class*="text-white/25"]),
+.shell :global([class*="text-white/30"]),
+.shell :global([class*="text-white/35"]),
+.shell :global([class*="text-white/40"]),
+.shell :global([class*="text-white/45"]),
+.shell :global([class*="text-white/50"]) { color: var(--muted-foreground); }
+.shell :global(.animate-rise), .shell :global(.animate-rise-delay) { animation: none; }
+@media (max-width: 639px) {
+  .rentSummary { padding: 18px 16px 12px; }
+  .collectionHeadline { align-items: flex-start; gap: 8px; }
+  .collectionHeadline :global([data-slot="badge"]) { font-size: 10px; margin-top: 3px; }
+  .rentSummaryDetails { gap: 10px; }
+  .rentSummaryDetails strong { font-size: 16px; }
+  .rentSummaryDetails > div + div { padding-left: 10px; }
+  .shell :global(button[aria-label]), .shell :global(a[aria-label]) { min-height: 44px; min-width: 44px; }
 }
