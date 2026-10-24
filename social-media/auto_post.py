@@ -237,6 +237,8 @@ def publish():
             "mode": "customScheduled",
             "dueAt": due.isoformat().replace("+00:00", "Z"),
             "aiAssisted": True,
+            "assets": [],
+            "needsApproval": False,
         }
         if key == "instagram":
             payload["assets"] = [{"image": {"url": image_url}}]
