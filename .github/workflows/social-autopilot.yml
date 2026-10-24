@@ -1,0 +1,55 @@
+name: Bhadaa Social Autopilot
+on:
+  schedule:
+    - cron: "10 3 * * *" # 08:40 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-autopilot
+  cancel-in-progress: false
+
+jobs:
+  social:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Safe default: no generation or publishing until manually enabled.
+    if: ${{ vars.SOCIAL_AUTOPILOT_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r social-media/requirements.txt
+      - name: Generate copy and static graphic
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python social-media/auto_post.py prepare
+      - name: Make image publicly reachable and persist prepared content
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add social-media/content social-media/generated
+          if ! git diff --cached --quiet; then
+            git commit -m "Social content for $(TZ=Asia/Kolkata date +%F)"
+            git push
+          fi
+      - name: Schedule Buffer posts (only after opt-in)
+        env:
+          AUTOPOST_ENABLED: ${{ vars.SOCIAL_PUBLISH_ENABLED }}
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_X_CHANNEL_ID: ${{ vars.BUFFER_X_CHANNEL_ID }}
+          BUFFER_INSTAGRAM_CHANNEL_ID: ${{ vars.BUFFER_INSTAGRAM_CHANNEL_ID }}
+        run: python social-media/auto_post.py publish
+      - name: Persist scheduling receipts even on partial failure
+        if: always()
+        run: |
+          git add social-media/content 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Save social publishing receipts"
+            git push
+          fi
