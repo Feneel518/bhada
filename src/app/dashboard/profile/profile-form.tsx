@@ -11,6 +11,7 @@ import {
   Landmark,
   LoaderCircle,
   MapPin,
+  QrCode,
   ReceiptText,
   Save,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { LanguageSwitcher } from "@/components/language-provider";
 import type { SubscriptionReceipt } from "@/lib/subscription-receipts";
 import type { SubscriptionView } from "@/lib/plans";
 import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button";
+import { isValidUpiId } from "@/lib/upi";
 
 const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
@@ -36,12 +38,15 @@ export type ProfileValues = {
   city: string;
   state: string;
   pincode: string;
+  upiId: string;
+  dailySummaryEmail: boolean;
 };
 
 type SaveResult = {
   status: "idle" | "success" | "error";
   message: string;
   panError?: string;
+  upiError?: string;
 };
 
 const inputClass =
@@ -51,6 +56,7 @@ const profileSections = [
   { id: "plan", label: "Plan", description: "Subscription and access", icon: CreditCard },
   { id: "receipts", label: "Billing history", description: "Receipts and payments", icon: ReceiptText },
   { id: "business", label: "Business", description: "Name and contact", icon: Building2 },
+  { id: "payouts", label: "Getting paid", description: "UPI for tenant payments", icon: QrCode },
   { id: "tax", label: "Tax details", description: "GSTIN and PAN", icon: ReceiptText },
   { id: "address", label: "Address", description: "Business location", icon: MapPin },
   { id: "billing", label: "Rent billing", description: "Monthly bill period", icon: CalendarClock },
@@ -79,6 +85,7 @@ export function ProfileForm({
   const [pending, setPending] = useState(false);
   const [gstin, setGstin] = useState(initialValues.gstin);
   const [pan, setPan] = useState(initialValues.pan);
+  const [upiId, setUpiId] = useState(initialValues.upiId);
   const [cancelPending, setCancelPending] = useState(false);
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(subscription.cancelAtPeriodEnd);
   const [cancellationMessage, setCancellationMessage] = useState("");
@@ -92,6 +99,11 @@ export function ProfileForm({
     pan.length > 0 && !PAN_REGEX.test(pan)
       ? "Enter a valid PAN, for example ABCDE1234F."
       : result.panError ?? "";
+
+  const upiError =
+    upiId.length > 0 && !isValidUpiId(upiId)
+      ? "Enter a UPI ID like yourname@okhdfcbank."
+      : result.upiError ?? "";
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -335,6 +347,38 @@ export function ProfileForm({
             </SettingSection>
 
             <SettingSection
+              hidden={activeSection !== "payouts"}
+              eyebrow="Collections"
+              title="Getting paid"
+              description="Tenants see a Pay now button and a UPI QR code on every bill you share."
+              icon={QrCode}
+            >
+              <Field label="UPI ID" hint="e.g. shahrentals@okhdfcbank">
+                <input
+                  className={inputClass}
+                  name="upiId"
+                  value={upiId}
+                  onChange={(event) => setUpiId(event.target.value.replace(/\s/g, ""))}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="email"
+                  aria-invalid={Boolean(upiError)}
+                  aria-describedby={upiError ? "upi-error" : "upi-help"}
+                  placeholder="yourname@bank"
+                />
+                {upiError ? (
+                  <p id="upi-error" className="mt-2 text-xs font-medium text-[#d98678]">{upiError}</p>
+                ) : (
+                  <p id="upi-help" className="mt-2.5 max-w-2xl text-xs leading-5 text-white/35">
+                    Find it in Google Pay, PhonePe, Paytm or your bank app under your profile. Money goes straight
+                    to your account. Bhadaa never touches it.
+                  </p>
+                )}
+              </Field>
+            </SettingSection>
+
+            <SettingSection
               hidden={activeSection !== "tax"}
               eyebrow="Compliance"
               title="Tax details"
@@ -482,6 +526,22 @@ export function ProfileForm({
                   </span>
                   <span className="mt-1 block max-w-2xl text-xs leading-5 text-white/35">
                     Adds the tenant’s full outstanding account balance below the amount due for this invoice.
+                  </span>
+                </span>
+              </label>
+              <label className="mt-3 flex cursor-pointer items-start gap-3 border border-white/10 bg-white/[0.018] p-4 transition-colors hover:border-white/20">
+                <input
+                  type="checkbox"
+                  name="dailySummaryEmail"
+                  defaultChecked={initialValues.dailySummaryEmail}
+                  className="mt-0.5 size-4 shrink-0 accent-[#e4c77a]"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-[#edede8]">
+                    Morning rent summary email
+                  </span>
+                  <span className="mt-1 block max-w-2xl text-xs leading-5 text-white/35">
+                    On days when rent is due or overdue, get a short email listing who to remind. Nothing is sent on quiet days.
                   </span>
                 </span>
               </label>

@@ -12,6 +12,8 @@ import { drawBhadaPdfLogo, loadGotuPdfFont } from "@/lib/bhada-pdf-logo";
 import type { RentBillingSummary } from "@/lib/rent-billing";
 import type { TenantRecord } from "@/lib/tenants";
 import { formatCurrency } from "@/lib/utils";
+import { upiPayLink, upiQrDataUrl } from "@/lib/upi";
+import { UpiPayCard } from "@/components/upi-pay-card";
 
 type RentBill = RentBillingSummary["bills"][number];
 
@@ -26,6 +28,7 @@ export type BillIssuer = {
   state: string;
   pincode: string;
   showOutstandingOnInvoice: boolean;
+  upiId?: string;
 };
 
 export type BillTenant = Pick<
@@ -111,6 +114,16 @@ function subtotalFor(document: BillDocument) {
 
 function taxFor(document: BillDocument) {
   return document.bill.amount - subtotalFor(document);
+}
+
+export function upiLinkFor(document: BillDocument, issuer: BillIssuer) {
+  if (!issuer.upiId || document.bill.pending <= 0.005) return null;
+  return upiPayLink({
+    upiId: issuer.upiId,
+    payeeName: issuer.businessName || "Landlord",
+    amount: document.bill.pending,
+    note: `${document.kind === "rent" ? "Rent" : "Electricity"} ${document.bill.billNumber}`,
+  });
 }
 
 function filenameFor(document: BillDocument) {
@@ -252,15 +265,32 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   });
 
   let noteBottom = 0;
+  let leftColumnTop = summaryTop;
+  const upiLink = upiLinkFor(document, issuer);
+  if (upiLink && issuer.upiId) {
+    const qr = await upiQrDataUrl(upiLink);
+    pdf.setFont(pdfFont, "bold");
+    pdf.setFontSize(8);
+    pdf.setTextColor(...ink);
+    pdf.text("PAY BY UPI", 26, summaryTop);
+    pdf.addImage(qr, "PNG", 26, summaryTop + 3, 30, 30);
+    pdf.setFont(pdfFont, "normal");
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(...muted);
+    pdf.text(["Scan with any UPI app", issuer.upiId, money(bill.pending)], 59, summaryTop + 9, { lineHeightFactor: 1.4 });
+    leftColumnTop = summaryTop + 40;
+    noteBottom = leftColumnTop;
+  }
   if (document.kind === "electricity" && document.bill.note) {
     const noteLines = (pdf.splitTextToSize(document.bill.note, 65) as string[]).slice(0, 7);
     pdf.setFont(pdfFont, "bold");
     pdf.setFontSize(8);
-    pdf.text("NOTE", 26, summaryTop);
+    pdf.setTextColor(...ink);
+    pdf.text("NOTE", 26, leftColumnTop);
     pdf.setFont(pdfFont, "normal");
     pdf.setTextColor(...muted);
-    pdf.text(noteLines, 26, summaryTop + 7, { lineHeightFactor: 1.15 });
-    noteBottom = summaryTop + 7 + noteLines.length * 4;
+    pdf.text(noteLines, 26, leftColumnTop + 7, { lineHeightFactor: 1.15 });
+    noteBottom = leftColumnTop + 7 + noteLines.length * 4;
   }
 
   let footerTop = Math.max(226, summaryTop + summaryRows.length * 12 + 12, noteBottom + 12);
@@ -311,7 +341,7 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
     const addressLines = (pdf.splitTextToSize(issuerAddress, 82) as string[]).slice(0, 3);
     pdf.text(addressLines, 185, 261 + footerOffset, { align: "right", lineHeightFactor: 1.15 });
   }
-  pdf.text("Generated with bhada", 185, 286, { align: "right" });
+  pdf.text("Sent via Bhadaa · free rent management for landlords · bhadaa.in", 185, 286, { align: "right" });
 
   return pdf.output("blob");
 }
@@ -342,6 +372,7 @@ export function BillDocumentDialog({
   const bill = document.bill;
   const tenant = document.tenant;
   const rows = invoiceRows(document);
+  const upiLink = upiLinkFor(document, issuer);
   const issuerAddress = [issuer.address, issuer.city, issuer.state, issuer.pincode].filter(Boolean).join(", ");
   const propertyLine = tenant
     ? `${tenant.propertyName} · Unit ${tenant.unitNumber}`
@@ -509,6 +540,12 @@ export function BillDocumentDialog({
                 </div>
               )}
             </div>
+
+            {upiLink && issuer.upiId && (
+              <div className="mt-8 max-w-md">
+                <UpiPayCard link={upiLink} upiId={issuer.upiId} amount={bill.pending} />
+              </div>
+            )}
 
             {document.kind === "electricity" && document.bill.note && (
               <div className="mt-8 max-w-md text-xs leading-5"><span className="font-bold">Note: </span>{document.bill.note}</div>

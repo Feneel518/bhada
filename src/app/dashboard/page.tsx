@@ -106,6 +106,8 @@ export default async function DashboardPage({
         city: profile?.city ?? "",
         state: profile?.state ?? "",
         pincode: profile?.pincode ?? "",
+        upiId: profile?.upiId ?? "",
+        dailySummaryEmail: profile?.dailySummaryEmail ?? true,
       }}
       issuer={{
         businessName: profile?.businessName ?? session.user.name,
@@ -118,6 +120,7 @@ export default async function DashboardPage({
         state: profile?.state ?? "",
         pincode: profile?.pincode ?? "",
         showOutstandingOnInvoice: profile?.showOutstandingOnInvoice ?? true,
+        upiId: profile?.upiId ?? "",
       }}
       user={{
         id: session.user.id,

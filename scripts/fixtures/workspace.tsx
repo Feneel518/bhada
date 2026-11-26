@@ -2,7 +2,7 @@ import { Dashboard } from "@/components/dashboard";
 import type { ComponentProps } from "react";
 
 type Props = ComponentProps<typeof Dashboard>;
-const profile: NonNullable<Props["profile"]> = { businessName: "Shah Rentals", rentBillingPeriod: "previous", showOutstandingOnInvoice: true, phone: "", gstin: "", pan: "", address: "Ahmedabad", city: "Ahmedabad", state: "Gujarat", pincode: "380001" };
+const profile: NonNullable<Props["profile"]> = { businessName: "Shah Rentals", rentBillingPeriod: "previous", showOutstandingOnInvoice: true, phone: "", gstin: "", pan: "", address: "Ahmedabad", city: "Ahmedabad", state: "Gujarat", pincode: "380001", upiId: "shahrentals@okhdfcbank", dailySummaryEmail: true };
 const tenants: Props["tenants"] = ["Aarav Mehta", "Priya Shah"].map((name, i) => ({
   id: `tenant-${i}`, unitId: `unit-${i}`, propertyName: "Shanti Residency", unitNumber: `${i + 101}`, name,
   email: "", phone: "", aadhaarMasked: "", panMasked: "", gstin: "", emergencyContact: "", emergencyPhone: "",
