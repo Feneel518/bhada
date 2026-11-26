@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { CalendarDays, Check, CircleDollarSign, LoaderCircle, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { DatePickerInput, FormSelect } from "@/components/ui/form-controls";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { saveTenant, type TenantActionState } from "@/app/dashboard/tenants/actions";
+import { resetTenantPortal } from "@/app/dashboard/claims/actions";
 import type { PropertyRecord } from "@/lib/properties";
 import type { TenantRecord } from "@/lib/tenants";
 import { formatCurrency } from "@/lib/utils";
@@ -367,6 +368,8 @@ export function TenantDialog({
             </Field>
           </section>
 
+          {tenant && <PortalLinkReset tenantId={tenant.id} />}
+
           <label className="flex items-center gap-3 border border-[#7aa18b]/25 bg-[#7aa18b]/[0.07] px-4 py-3 text-sm font-semibold text-[#9bc4ab]">
             <input className="size-4 accent-[#9bc4ab]" type="checkbox" name="isActive" defaultChecked={tenant?.isActive ?? true} />
             Active tenant (marks the unit occupied)
@@ -453,5 +456,28 @@ export function LeaseFieldGroup({
       </div>
       {children}
     </div>
+  );
+}
+
+function PortalLinkReset({ tenantId }: { tenantId: string }) {
+  const [pending, startTransition] = useTransition();
+  function reset() {
+    if (!window.confirm("Create a new private link for this tenant? The old link stops working right away, so send them the new one.")) return;
+    startTransition(async () => {
+      const result = await resetTenantPortal(tenantId);
+      if (result.status === "success") toast.success(result.message);
+      else toast.error(result.message);
+    });
+  }
+  return (
+    <section className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#e4c77a]/70">Tenant’s private link</p>
+        <p className="mt-1.5 text-xs leading-5 text-white/40">If the link was shared with someone else, reset it. Send the new one from the tenant card.</p>
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={reset} disabled={pending}>
+        {pending && <LoaderCircle className="animate-spin" />}Reset link
+      </Button>
+    </section>
   );
 }

@@ -101,6 +101,19 @@ export function PropertyDialog({
               placeholder="400001"
             />
           </Field>
+          <Field label="Electricity rate (₹ per unit)">
+            <input
+              className={inputClass}
+              name="electricityRate"
+              inputMode="decimal"
+              defaultValue={property?.electricityRate ?? ""}
+              aria-invalid={Boolean(state.errors?.electricityRate)}
+              placeholder="e.g. 8.50"
+            />
+            {state.errors?.electricityRate
+              ? <FieldError message={state.errors.electricityRate} />
+              : <p className="mt-1.5 text-[10px] leading-4 text-white/35">Used for submeter bills, including readings your tenants send. Leave blank if you don’t bill electricity.</p>}
+          </Field>
           <div aria-live="polite" className="min-h-5">
             {state.status === "error" && (
               <p className="text-xs font-medium text-[#c65c4d]">{state.message}</p>

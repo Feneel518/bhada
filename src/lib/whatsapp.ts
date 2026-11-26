@@ -60,7 +60,7 @@ export function reminderMessage({
       overdue
         ? `आपका किराया ${money}${date ? ` (${date} तक देय था)` : ""} अभी बाकी है।`
         : `याद दिला रहे हैं: आपका किराया ${money}${date ? ` ${date} तक` : ""} देय है।`,
-      billUrl ? `बिल देखें और UPI से भुगतान करें: ${billUrl}` : "",
+      billUrl ? `बिल देखें, UPI से भुगतान करें या बताएँ कि भुगतान कर दिया: ${billUrl}` : "",
       !billUrl && upiId ? `UPI: ${upiId}` : "",
       `धन्यवाद,\n${landlordName}`,
     ].filter(Boolean).join("\n\n");
@@ -72,7 +72,7 @@ export function reminderMessage({
       overdue
         ? `તમારું ભાડું ${money}${date ? ` (${date} સુધીમાં ભરવાનું હતું)` : ""} હજી બાકી છે.`
         : `યાદ અપાવીએ છીએ: તમારું ભાડું ${money}${date ? ` ${date} સુધીમાં` : ""} ભરવાનું છે.`,
-      billUrl ? `બિલ જુઓ અને UPIથી ચૂકવો: ${billUrl}` : "",
+      billUrl ? `બિલ જુઓ, UPIથી ચૂકવો અથવા જણાવો કે ચૂકવી દીધું: ${billUrl}` : "",
       !billUrl && upiId ? `UPI: ${upiId}` : "",
       `આભાર,\n${landlordName}`,
     ].filter(Boolean).join("\n\n");
@@ -83,7 +83,7 @@ export function reminderMessage({
     overdue
       ? `A gentle reminder that rent of ${money}${date ? ` was due on ${date}` : " is overdue"}.`
       : `A friendly reminder that rent of ${money} is due${date ? ` on ${date}` : ""}.`,
-    billUrl ? `View the bill and pay by UPI: ${billUrl}` : "",
+    billUrl ? `See your bills, pay by UPI, or tell me you've paid: ${billUrl}` : "",
     !billUrl && upiId ? `UPI: ${upiId}` : "",
     `Thank you,\n${landlordName}`,
   ].filter(Boolean).join("\n\n");
@@ -130,4 +130,25 @@ export function billShareMessage({
   if (language === "hi") return `नमस्ते ${firstName} जी,\n\nआपका ${label}: ${url}\n\n${landlordName}`;
   if (language === "gu") return `નમસ્તે ${firstName},\n\nતમારું ${label}: ${url}\n\n${landlordName}`;
   return `Hi ${firstName},\n\nHere is your ${label}: ${url}\n\n${landlordName}`;
+}
+
+export function portalInviteMessage({
+  tenantName,
+  landlordName,
+  url,
+  language = "en",
+}: {
+  tenantName: string;
+  landlordName: string;
+  url: string;
+  language?: MessageLanguage;
+}) {
+  const firstName = tenantName.trim().split(/\s+/)[0] || tenantName;
+  if (language === "hi") {
+    return `नमस्ते ${firstName} जी,\n\nयह आपका किराया पेज है। यहाँ अपने बिल और रसीदें देखें, UPI से भुगतान करें, और भुगतान करने के बाद "I've paid" दबाएँ:\n${url}\n\nयह लिंक सिर्फ़ आपके लिए है।\n${landlordName}`;
+  }
+  if (language === "gu") {
+    return `નમસ્તે ${firstName},\n\nઆ તમારું ભાડા પેજ છે. અહીં બિલ અને રસીદ જુઓ, UPIથી ચૂકવો, અને ચૂકવ્યા પછી "I've paid" દબાવો:\n${url}\n\nઆ લિંક ફક્ત તમારા માટે છે.\n${landlordName}`;
+  }
+  return `Hi ${firstName},\n\nThis is your rent page. See your bills and receipts, pay by UPI, and tap "I've paid" after you pay:\n${url}\n\nThis link is just for you, please don't share it.\n${landlordName}`;
 }

@@ -37,6 +37,8 @@ export type TenantRecord = {
   isActive: boolean;
   openingBalance: number;
   creditBalance: number;
+  /** Secret for the tenant's private page, /t/<portalToken>. */
+  portalToken: string;
 };
 
 const dateValue = (value: Date | null) => value?.toISOString().slice(0, 10) ?? "";
@@ -76,6 +78,7 @@ export async function getTenants(userId: string): Promise<TenantRecord[]> {
       isActive: tenant.isActive,
       openingBalance: tenant.openingBalance,
       creditBalance: tenant.creditBalance,
+      portalToken: tenant.portalToken,
     })
     .from(tenant)
     .innerJoin(landlord, eq(tenant.landlordId, landlord.id))

@@ -4,22 +4,18 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { db } from "@/db";
-import { electricityBill, tenant, unit } from "@/db/schema";
+import { meterReadingSubmission, property, unit } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { insertElectricityBill, parseIndiaDate, type ElectricityBillField } from "@/lib/electricity-bill-write";
 import { ensureLandlord } from "@/lib/landlords";
-import { getRentalAccess, RENTAL_LOCK_MESSAGE } from "@/lib/plan-access";
-
-type ElectricityBillField =
-  | "unitId"
-  | "billingPeriod"
-  | "currentReading"
-  | "unitRate"
-  | "dueDate";
+import { shareUrl } from "@/lib/share-links";
 
 export type ElectricityBillActionState = {
   status: "idle" | "success" | "error";
   message: string;
   errors?: Partial<Record<ElectricityBillField, string>>;
+  /** Lets the dialog offer "Send to tenant" right after the bill is created. */
+  bill?: { id: string; billNumber: string; tenantId: string | null; amount: number; shareUrl: string };
 };
 
 const fail = (
@@ -27,17 +23,9 @@ const fail = (
   errors?: ElectricityBillActionState["errors"],
 ): ElectricityBillActionState => ({ status: "error", message, errors });
 
-function parseIndiaDate(value: string, hour = 12) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  const [, year, month, day] = match;
-  const calendarCheck = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-  if (
-    calendarCheck.getUTCFullYear() !== Number(year) ||
-    calendarCheck.getUTCMonth() !== Number(month) - 1 ||
-    calendarCheck.getUTCDate() !== Number(day)
-  ) return null;
-  return new Date(`${value}T${String(hour).padStart(2, "0")}:00:00+05:30`);
+function refresh() {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/profile");
 }
 
 export async function createElectricityBill(
@@ -54,13 +42,11 @@ export async function createElectricityBill(
   const currentReadingInput = text("currentReading", 30);
   const unitRateInput = text("unitRate", 30);
   const dueDateInput = text("dueDate", 10);
+  const submissionId = text("submissionId", 100) || undefined;
   const errors: ElectricityBillActionState["errors"] = {};
 
   if (!unitId) errors.unitId = "Choose a unit.";
-  const readingDate = parseIndiaDate(billingPeriod);
-  if (!readingDate) {
-    errors.billingPeriod = "Choose a valid meter reading date.";
-  }
+  if (!parseIndiaDate(billingPeriod)) errors.billingPeriod = "Choose a valid meter reading date.";
   if (!/^\d+(?:\.\d{1,3})?$/.test(currentReadingInput)) {
     errors.currentReading = "Enter a valid meter reading with up to 3 decimal places.";
   }
@@ -68,109 +54,105 @@ export async function createElectricityBill(
     errors.unitRate = "Enter a positive rate with up to 4 decimal places.";
   }
   const dueDate = parseIndiaDate(dueDateInput, 0);
-  if (!dueDate) {
-    errors.dueDate = "Choose a valid due date.";
-  }
-  if (Object.keys(errors).length) {
-    return fail("Please correct the highlighted fields.", errors);
-  }
+  if (!dueDate) errors.dueDate = "Choose a valid due date.";
+  if (Object.keys(errors).length) return fail("Please correct the highlighted fields.", errors);
 
   const owner = await ensureLandlord(session.user);
-  if (!(await getRentalAccess(owner)).unitIds.includes(unitId)) {
-    return { status: "error", message: RENTAL_LOCK_MESSAGE };
+  if (submissionId) {
+    const [submission] = await db
+      .select({ status: meterReadingSubmission.status, unitId: meterReadingSubmission.unitId })
+      .from(meterReadingSubmission)
+      .where(and(eq(meterReadingSubmission.id, submissionId), eq(meterReadingSubmission.landlordId, owner.id)))
+      .limit(1);
+    if (!submission || submission.status !== "pending") return fail("This reading was already approved or rejected.");
+    if (submission.unitId !== unitId) return fail("Keep the unit the tenant sent the reading for.", { unitId: "Keep the tenant's unit." });
   }
-  const [ownedUnit] = await db
+
+  const result = await insertElectricityBill(owner, {
+    unitId,
+    billingPeriod,
+    currentReading: Number(currentReadingInput),
+    unitRate: Number(unitRateInput),
+    dueDate: dueDate!,
+    note: text("note", 1_000) || null,
+    submissionId,
+  });
+  if (!result.ok) return fail(result.message, result.errors);
+
+  refresh();
+  return {
+    status: "success",
+    message: `Electricity bill ${result.billNumber} added.`,
+    bill: { ...result, shareUrl: await shareUrl("electricity", result.id) },
+  };
+}
+
+function addDays(date: string, days: number) {
+  const value = new Date(`${date}T12:00:00+05:30`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(value);
+}
+
+/** One-tap approval of a tenant's reading, using the property's rate. Due in 7 days. */
+export async function approveMeterReading(submissionId: string): Promise<ElectricityBillActionState> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return fail("Your session has expired. Please sign in again.");
+  const owner = await ensureLandlord(session.user);
+
+  const [submission] = await db
     .select({
-      id: unit.id,
-      activeTenantId: tenant.id,
-      lastMeterReading: unit.lastMeterReading,
-      lastMeterReadingDate: unit.lastMeterReadingDate,
+      status: meterReadingSubmission.status,
+      unitId: meterReadingSubmission.unitId,
+      reading: meterReadingSubmission.reading,
+      readingDate: meterReadingSubmission.readingDate,
+      note: meterReadingSubmission.note,
+      rate: property.electricityRate,
+      propertyName: property.name,
     })
-    .from(unit)
-    .leftJoin(
-      tenant,
-      and(
-        eq(tenant.unitId, unit.id),
-        eq(tenant.landlordId, owner.id),
-        eq(tenant.isActive, true),
-      ),
-    )
-    .where(and(eq(unit.id, unitId), eq(unit.landlordId, owner.id)))
+    .from(meterReadingSubmission)
+    .innerJoin(unit, eq(meterReadingSubmission.unitId, unit.id))
+    .innerJoin(property, eq(unit.propertyId, property.id))
+    .where(and(eq(meterReadingSubmission.id, submissionId), eq(meterReadingSubmission.landlordId, owner.id)))
     .limit(1);
-
-  if (!ownedUnit) {
-    return fail("Unit not found or you no longer have access to it.", {
-      unitId: "Choose one of your units.",
-    });
-  }
-  if (ownedUnit.lastMeterReading === null || !ownedUnit.lastMeterReadingDate) {
-    return fail("Set an opening meter reading for this unit first.", {
-      unitId: "Edit the unit and add its opening reading and date.",
-    });
+  if (!submission || submission.status !== "pending") return fail("This reading was already approved or rejected.");
+  if (!submission.rate || submission.rate <= 0) {
+    return fail(`Set an electricity rate for ${submission.propertyName} first, or use Edit to enter one for this bill.`);
   }
 
-  const previousPeriod = ownedUnit.lastMeterReadingDate.toISOString().slice(0, 10);
-  if (billingPeriod <= previousPeriod) {
-    return fail("The reading date must be after the unit's previous reading date.", {
-      billingPeriod: `Choose a date after ${previousPeriod}.`,
-    });
-  }
+  const dueDate = parseIndiaDate(addDays(submission.readingDate, 7), 0)!;
+  const result = await insertElectricityBill(owner, {
+    unitId: submission.unitId,
+    billingPeriod: submission.readingDate,
+    currentReading: Number(submission.reading),
+    unitRate: submission.rate,
+    dueDate,
+    note: submission.note ? `Reading sent by tenant: ${submission.note}` : "Reading sent by tenant",
+    submissionId,
+  });
+  if (!result.ok) return fail(`${result.message} Use Edit to correct it.`);
 
-  const currentReading = Number(currentReadingInput);
-  if (currentReading < ownedUnit.lastMeterReading) {
-    return fail("The current reading cannot be lower than the previous reading.", {
-      currentReading: `Enter ${ownedUnit.lastMeterReading} or higher.`,
-    });
-  }
+  refresh();
+  return {
+    status: "success",
+    message: `Electricity bill ${result.billNumber} created.`,
+    bill: { ...result, shareUrl: await shareUrl("electricity", result.id) },
+  };
+}
 
-  const [duplicate] = await db
-    .select({ id: electricityBill.id })
-    .from(electricityBill)
-    .where(
-      and(
-        eq(electricityBill.unitId, unitId),
-        eq(electricityBill.billingPeriod, billingPeriod),
-      ),
-    )
-    .limit(1);
-  if (duplicate) {
-    return fail("This unit already has an electricity bill for that date.", {
-      billingPeriod: "Choose another date.",
-    });
-  }
-
-  const id = crypto.randomUUID();
-  const billNumber = `ELEC-${billingPeriod.replaceAll("-", "")}-${id.slice(0, 6).toUpperCase()}`;
-  const unitsConsumed = currentReading - ownedUnit.lastMeterReading;
-  const unitRate = Number(unitRateInput);
-  const amount = unitsConsumed * unitRate;
-  await db.batch([
-    db.insert(electricityBill).values({
-      id,
-      landlordId: owner.id,
-      unitId,
-      tenantId: ownedUnit.activeTenantId,
-      billNumber,
-      billingPeriod,
-      previousReading: ownedUnit.lastMeterReading.toFixed(3),
-      currentReading: currentReading.toFixed(3),
-      unitsConsumed: unitsConsumed.toFixed(3),
-      unitRate: unitRate.toFixed(4),
-      amount: amount.toFixed(2),
-      dueDate: dueDate!,
-      note: text("note", 1_000) || null,
-    }),
-    db
-      .update(unit)
-      .set({
-        lastMeterReading: currentReading,
-        lastMeterReadingDate: readingDate!,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(unit.id, unitId), eq(unit.landlordId, owner.id))),
-  ]);
-
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/profile");
-  return { status: "success", message: `Electricity bill ${billNumber} added.` };
+export async function rejectMeterReading(submissionId: string, note: string): Promise<ElectricityBillActionState> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return fail("Your session has expired. Please sign in again.");
+  const owner = await ensureLandlord(session.user);
+  const [updated] = await db
+    .update(meterReadingSubmission)
+    .set({ status: "rejected", reviewNote: note.trim().slice(0, 200) || null, reviewedAt: new Date() })
+    .where(and(
+      eq(meterReadingSubmission.id, submissionId),
+      eq(meterReadingSubmission.landlordId, owner.id),
+      eq(meterReadingSubmission.status, "pending"),
+    ))
+    .returning({ id: meterReadingSubmission.id });
+  if (!updated) return fail("This reading was already approved or rejected.");
+  refresh();
+  return { status: "success", message: "Reading sent back. Your tenant can enter it again." };
 }

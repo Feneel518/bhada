@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { db } from "@/db";
-import { paymentAllocation, paymentReceipt, tenant } from "@/db/schema";
+import { paymentAllocation, paymentClaim, paymentReceipt, tenant } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
 import { getRentalAccess, RENTAL_LOCK_MESSAGE } from "@/lib/plan-access";
@@ -130,7 +130,22 @@ export async function recordPayment(
   });
 
   if (!(await getRentalAccess(owner)).unitIds.includes(ownedTenant.unitId)) return fail(RENTAL_LOCK_MESSAGE);
-  const receiptId = crypto.randomUUID();
+
+  // Confirming a tenant's "I've paid" claim records it as a normal payment.
+  const claimId = text(formData.get("claimId"), 100);
+  if (claimId) {
+    const [claim] = await db
+      .select({ status: paymentClaim.status, tenantId: paymentClaim.tenantId })
+      .from(paymentClaim)
+      .where(and(eq(paymentClaim.id, claimId), eq(paymentClaim.landlordId, owner.id)))
+      .limit(1);
+    if (!claim || claim.status !== "pending") return fail("This payment was already confirmed or rejected.");
+    if (claim.tenantId !== tenantId) return fail("This claim belongs to a different tenant.", { tenantId: "Keep the tenant who sent the payment." });
+  }
+  // Reusing the claim id as the receipt id means two confirmations of the same
+  // claim (two tabs, double tap) collide on the primary key instead of
+  // recording the payment twice.
+  const receiptId = claimId || crypto.randomUUID();
   const receiptNumber = `RCPT-${paidAtInput.replaceAll("-", "")}-${receiptId.slice(0, 6).toUpperCase()}`;
   const totalPaise = allocations.reduce((sum, allocation) => sum + allocation.totalPaise, 0);
   const allocationRows = allocations.map((allocation) => ({
@@ -145,21 +160,31 @@ export async function recordPayment(
     totalAmount: allocation.totalAmount,
   }));
 
-  await db.batch([
-    db.insert(paymentReceipt).values({
-      id: receiptId,
-      landlordId: owner.id,
-      tenantId,
-      receiptNumber,
-      allocationMode,
-      amount: asMoney(totalPaise),
-      paidAt: paidAt!,
-      method,
-      reference: text(formData.get("reference"), 100) || null,
-      note: text(formData.get("note"), 1_000) || null,
-    }),
-    db.insert(paymentAllocation).values(allocationRows),
-  ]);
+  try {
+    await db.batch([
+      db.insert(paymentReceipt).values({
+        id: receiptId,
+        landlordId: owner.id,
+        tenantId,
+        receiptNumber,
+        allocationMode,
+        amount: asMoney(totalPaise),
+        paidAt: paidAt!,
+        method,
+        reference: text(formData.get("reference"), 100) || null,
+        note: text(formData.get("note"), 1_000) || null,
+      }),
+      db.insert(paymentAllocation).values(allocationRows),
+      ...(claimId
+        ? [db.update(paymentClaim)
+            .set({ status: "confirmed", reviewedAt: new Date(), paymentReceiptId: receiptId })
+            .where(and(eq(paymentClaim.id, claimId), eq(paymentClaim.landlordId, owner.id), eq(paymentClaim.status, "pending")))]
+        : []),
+    ]);
+  } catch (error) {
+    if (claimId) return fail("This payment was already confirmed.");
+    throw error;
+  }
 
   revalidatePath("/dashboard");
   return {

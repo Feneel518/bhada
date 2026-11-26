@@ -117,6 +117,79 @@ export async function sendDailySummaryEmail({
   });
 }
 
+export function emailConfigured() {
+  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+}
+
+export async function sendPaymentClaimEmail({
+  to,
+  tenantName,
+  place,
+  amount,
+  details,
+  dashboardUrl,
+}: {
+  to: string;
+  tenantName: string;
+  place: string;
+  amount: string;
+  details: string;
+  dashboardUrl: string;
+}) {
+  await getTransport().sendMail({
+    from: fromAddress(),
+    to,
+    subject: `${tenantName} says they paid ${amount}`,
+    text: `${tenantName} (${place}) says they paid ${amount}.\n${details}\n\nCheck your bank or UPI app, then confirm or reject it: ${dashboardUrl}`,
+    html: `
+      <div style="background:#f3f2ee;padding:32px 14px;font-family:Arial,sans-serif;color:#1d1d1b">
+        <div style="max-width:520px;margin:auto;background:#fff;border:1px solid #e4e3de;border-radius:16px;overflow:hidden">
+          <div style="padding:22px 28px;background:#111;color:#e4c77a;font-size:20px;font-weight:800">Bhadaa</div>
+          <div style="padding:28px">
+            <p style="font-size:13px;color:#7b7b74;margin:0">${escapeHtml(place)}</p>
+            <h1 style="font-size:22px;margin:6px 0 4px">${escapeHtml(tenantName)} says they paid ${escapeHtml(amount)}</h1>
+            <p style="font-size:14px;line-height:1.6;color:#4d4d48;margin:0">${escapeHtml(details)}</p>
+            <p style="font-size:14px;line-height:1.6;color:#4d4d48;margin:16px 0 0">Check your bank or UPI app. Nothing changes in your books until you confirm.</p>
+            <a href="${escapeHtml(dashboardUrl)}" style="display:inline-block;margin-top:22px;background:#e4c77a;color:#111;text-decoration:none;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:800">Confirm or reject</a>
+          </div>
+        </div>
+      </div>`,
+  });
+}
+
+export async function sendMeterReadingEmail({
+  to,
+  tenantName,
+  place,
+  details,
+  dashboardUrl,
+}: {
+  to: string;
+  tenantName: string;
+  place: string;
+  details: string;
+  dashboardUrl: string;
+}) {
+  await getTransport().sendMail({
+    from: fromAddress(),
+    to,
+    subject: `${tenantName} sent a meter reading`,
+    text: `${tenantName} (${place}) sent a meter reading.\n${details}\n\nApprove it to create the electricity bill: ${dashboardUrl}`,
+    html: `
+      <div style="background:#f3f2ee;padding:32px 14px;font-family:Arial,sans-serif;color:#1d1d1b">
+        <div style="max-width:520px;margin:auto;background:#fff;border:1px solid #e4e3de;border-radius:16px;overflow:hidden">
+          <div style="padding:22px 28px;background:#111;color:#e4c77a;font-size:20px;font-weight:800">Bhadaa</div>
+          <div style="padding:28px">
+            <p style="font-size:13px;color:#7b7b74;margin:0">${escapeHtml(place)}</p>
+            <h1 style="font-size:22px;margin:6px 0 4px">${escapeHtml(tenantName)} sent a meter reading</h1>
+            <p style="font-size:14px;line-height:1.6;color:#4d4d48;margin:0">${escapeHtml(details)}</p>
+            <a href="${escapeHtml(dashboardUrl)}" style="display:inline-block;margin-top:22px;background:#e4c77a;color:#111;text-decoration:none;padding:13px 20px;border-radius:10px;font-size:14px;font-weight:800">Approve and bill</a>
+          </div>
+        </div>
+      </div>`,
+  });
+}
+
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",

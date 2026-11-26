@@ -127,6 +127,20 @@
       "when": 1795683824946,
       "tag": "0017_plans_upi_and_summary",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795685413600,
+      "tag": "0018_tenant_portal",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795686944212,
+      "tag": "0019_tenant_meter_readings",
+      "breakpoints": true
     }
   ]
 }

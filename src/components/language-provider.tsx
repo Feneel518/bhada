@@ -214,6 +214,12 @@ const hi: Dictionary = {
   "UPI for tenant payments": "किरायेदारों के भुगतान के लिए UPI",
   "UPI ID": "UPI ID",
   "Morning rent summary email": "सुबह का किराया सारांश ईमेल",
+  Confirm: "पुष्टि करें",
+  "Not received": "नहीं मिला",
+  "Says paid": "भुगतान बताया",
+  "Send tenant their rent page": "किरायेदार को उनका किराया पेज भेजें",
+  "Reset link": "लिंक रीसेट करें",
+  "Confirm payment": "भुगतान की पुष्टि करें",
 };
 
 const gu: Dictionary = {
@@ -412,6 +418,12 @@ const gu: Dictionary = {
   "UPI for tenant payments": "ભાડુઆતની ચુકવણી માટે UPI",
   "UPI ID": "UPI ID",
   "Morning rent summary email": "સવારનો ભાડા સારાંશ ઇમેઇલ",
+  Confirm: "પુષ્ટિ કરો",
+  "Not received": "મળ્યું નથી",
+  "Says paid": "ચૂકવ્યાનું કહ્યું",
+  "Send tenant their rent page": "ભાડુઆતને તેમનું ભાડા પેજ મોકલો",
+  "Reset link": "લિંક રીસેટ કરો",
+  "Confirm payment": "ચુકવણીની પુષ્ટિ કરો",
 };
 
 const dictionaries: Record<Exclude<AppLanguage, "en">, Dictionary> = { hi, gu };
