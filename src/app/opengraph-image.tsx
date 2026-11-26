@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const alt =
-  "Bhada rent management software for independent landlords in India";
+  "Bhadaa rent management software for independent landlords in India";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -36,7 +36,7 @@ export default function OpenGraphImage() {
           >
             भ
           </div>
-          <div style={{ fontSize: 38, letterSpacing: -1 }}>Bhada</div>
+          <div style={{ fontSize: 38, letterSpacing: -1 }}>Bhadaa</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
           <div

@@ -27,7 +27,7 @@ import { PRIVATE_PAGE_METADATA } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Owner analytics",
-  description: "Private business analytics for Bhada.",
+  description: "Private business analytics for Bhadaa.",
   ...PRIVATE_PAGE_METADATA,
 };
 
@@ -221,7 +221,7 @@ export default async function OwnerPage() {
               SaaS command center
             </h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-[#777d8c]">
-              Revenue, growth, retention, and product adoption across Bhada.
+              Revenue, growth, retention, and product adoption across Bhadaa.
             </p>
           </div>
           <p className="text-[11px] text-[#999eaa]">Updated {lastUpdated}</p>
@@ -337,7 +337,7 @@ export default async function OwnerPage() {
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
               <h2 className="text-base font-semibold text-[#292e3d]">Product adoption</h2>
-              <p className="mt-1 text-xs text-[#9095a2]">How deeply customers are using Bhada</p>
+              <p className="mt-1 text-xs text-[#9095a2]">How deeply customers are using Bhadaa</p>
             </div>
             <p className="text-xs font-semibold text-[#168b72]">{formatPercent(analytics.adoption.activationRate)} activated</p>
           </div>
@@ -365,7 +365,7 @@ export default async function OwnerPage() {
           <div className="flex items-center justify-between border-b border-[#e9eaf0] px-5 py-5 sm:px-6">
             <div>
               <h2 className="text-sm font-semibold text-[#292e3d]">Newest accounts</h2>
-              <p className="mt-1 text-xs text-[#9095a2]">Latest users to join Bhada</p>
+              <p className="mt-1 text-xs text-[#9095a2]">Latest users to join Bhadaa</p>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#a0a4af]">Last 8</span>
           </div>

@@ -320,7 +320,7 @@ export async function createPdf(document: BillDocument, issuer: BillIssuer) {
   businessDetails.forEach((line, index) => pdf.text(line, 26, 252 + footerOffset + index * 5.5));
   if (!businessDetails.length) pdf.text("Computer-generated invoice", 26, 252 + footerOffset);
 
-  const businessName = issuer.businessName || "Bhada Property Management";
+  const businessName = issuer.businessName || "Bhadaa Property Management";
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(17);
   let businessNameLines = pdf.splitTextToSize(businessName, 82) as string[];
@@ -490,7 +490,7 @@ export function BillPaper({ document, issuer }: { document: BillDocument; issuer
           <span className="grid size-14 place-items-center bg-black sm:size-24">
             <BhadaMark className="size-[calc(100%-8px)] text-[#f7f7f3]" />
           </span>
-          <span className="text-lg sm:text-3xl">Bhada</span>
+          <span className="text-lg sm:text-3xl">Bhadaa</span>
         </div>
         <h2 className="min-w-0 text-[clamp(1.75rem,9vw,5.5rem)] font-normal leading-[0.9] tracking-[-0.04em] text-right">
           INVOICE
@@ -583,7 +583,7 @@ export function BillPaper({ document, issuer }: { document: BillDocument; issuer
             {!issuer.gstin && !issuer.pan && !issuer.phone && !issuer.email && <p className="mt-1">Computer-generated invoice</p>}
           </div>
           <div className="min-w-0 text-left sm:text-right">
-            <p className="break-words text-xl leading-tight sm:text-2xl">{issuer.businessName || "Bhada Property Management"}</p>
+            <p className="break-words text-xl leading-tight sm:text-2xl">{issuer.businessName || "Bhadaa Property Management"}</p>
             {issuerAddress && <p className="mt-2 break-words text-[10px] leading-4 sm:text-xs">{issuerAddress}</p>}
           </div>
         </div>

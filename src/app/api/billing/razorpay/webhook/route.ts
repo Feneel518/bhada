@@ -8,6 +8,7 @@ import {
   razorpayRequest,
   safeEqualHex,
   subscriptionPeriodEnd,
+  subscriptionInterval,
   subscriptionPlan,
   type RazorpaySubscription,
 } from "@/lib/razorpay";
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { planId } = razorpayConfig();
+    const { planIds } = razorpayConfig();
     let account: { id: string; updatedAt: Date } | undefined;
     const subscriptionId = subscription?.id ?? payment?.subscription_id;
 
@@ -77,15 +78,16 @@ export async function POST(request: Request) {
         .limit(1);
     }
 
-    if (account && subscription?.id && subscription.plan_id === planId) {
+    if (account && subscription?.id && planIds.includes(subscription.plan_id)) {
       // Webhooks can be duplicated or arrive out of order. Reconcile with the
       // provider's current state instead of restoring access from an old payload.
       const current = await razorpayRequest<RazorpaySubscription>(`/subscriptions/${subscription.id}`);
-      if (current.plan_id !== planId) throw new Error("Unexpected subscription plan.");
+      if (!planIds.includes(current.plan_id)) throw new Error("Unexpected subscription plan.");
       const updated = await db
         .update(landlord)
         .set({
-          plan: subscriptionPlan(current.status),
+          plan: subscriptionPlan(current.status, current.plan_id),
+          billingInterval: subscriptionInterval(current.plan_id),
           subscriptionStatus: current.status,
           subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(current),
           subscriptionCancelAtPeriodEnd:

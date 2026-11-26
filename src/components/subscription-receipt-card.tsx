@@ -52,7 +52,7 @@ export function SubscriptionBillingHistory({
         ...receipt,
         customerName: customer.name,
         customerEmail: customer.email,
-        description: "Bhada Portfolio plan - monthly subscription",
+        description: "Bhadaa Portfolio plan - monthly subscription",
       });
     } catch {
       toast.error("Could not download the receipt. Please try again.");

@@ -31,11 +31,11 @@ export async function sendAuthEmail({
   kind: EmailKind;
 }) {
   const verification = kind === "verification";
-  const subject = verification ? "Verify your Bhada email" : "Reset your Bhada password";
+  const subject = verification ? "Verify your Bhadaa email" : "Reset your Bhadaa password";
   const eyebrow = verification ? "Confirm your email" : "Password reset";
   const heading = verification ? "One click and you’re in." : "Let’s get you back in.";
   const copy = verification
-    ? "Verify your email address to activate your secure Bhada workspace."
+    ? "Verify your email address to activate your secure Bhadaa workspace."
     : "We received a request to reset your password. This secure link expires in one hour.";
   const action = verification ? "Verify email" : "Reset password";
   await getTransport().sendMail({
@@ -46,7 +46,7 @@ export async function sendAuthEmail({
     html: `
       <div style="background:#f5f6fa;padding:40px 16px;font-family:Arial,sans-serif;color:#252a38">
         <div style="max-width:560px;margin:auto;background:#fff;border:1px solid #e7e8ee;border-radius:20px;overflow:hidden">
-          <div style="padding:28px 32px;background:#282853;color:#fff;font-size:22px;font-weight:800">bhada</div>
+          <div style="padding:28px 32px;background:#282853;color:#fff;font-size:22px;font-weight:800">Bhadaa</div>
           <div style="padding:36px 32px">
             <div style="color:#5b5bd6;text-transform:uppercase;letter-spacing:.14em;font-size:11px;font-weight:800">${eyebrow}</div>
             <h1 style="font-size:28px;letter-spacing:-.03em;margin:12px 0 14px">${heading}</h1>

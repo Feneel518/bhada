@@ -20,7 +20,16 @@ import { FormSelect } from "@/components/ui/form-controls";
 import { SubscriptionBillingHistory } from "@/components/subscription-receipt-card";
 import { LanguageSwitcher } from "@/components/language-provider";
 import type { SubscriptionReceipt } from "@/lib/subscription-receipts";
-import type { SubscriptionView } from "@/lib/plans";
+import {
+  BILLING_CHOICES,
+  ESTATE_PLAN,
+  FREE_PLAN,
+  PORTFOLIO_PLAN,
+  PRICE_NOTE,
+  limitsForPlan,
+  type BillingChoice,
+  type SubscriptionView,
+} from "@/lib/plans";
 import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button";
 import { isValidUpiId } from "@/lib/upi";
 
@@ -151,6 +160,14 @@ export function ProfileForm({
     }
   }
 
+  const currentPlan = limitsForPlan(subscription.plan, subscription.active);
+  const currentPrice = subscription.plan === "estate"
+    ? `₹${ESTATE_PLAN.monthlyPrice} per month`
+    : subscription.billingInterval === "year"
+      ? `₹${PORTFOLIO_PLAN.yearlyPrice} per year`
+      : `₹${PORTFOLIO_PLAN.monthlyPrice} per month`;
+  const upgradeChoices: BillingChoice[] = subscription.choices?.length ? subscription.choices : ["portfolio_monthly"];
+
   const paidThrough = subscription.currentPeriodEnd
     ? new Intl.DateTimeFormat("en-IN", {
         day: "numeric",
@@ -256,16 +273,16 @@ export function ProfileForm({
                     Current plan
                   </p>
                   <h2 className="mt-1.5 font-display text-lg font-semibold tracking-[-0.025em] text-[#edede8]">
-                    {subscription.trialActive ? "Portfolio trial" : subscription.active ? "Portfolio plan" : "One Door plan"}
+                    {subscription.trialActive ? "Portfolio trial" : subscription.active ? `${currentPlan.name} plan` : "One Door plan"}
                   </h2>
                   <p className="mt-1 max-w-xl text-xs leading-5 text-white/40">
                     {subscription.trialActive
                       ? `Free trial until ${subscription.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }) : "your trial ends"}. No automatic charge. Afterward, extra rentals become read-only and CSV export is locked.`
                       : cancelAtPeriodEnd && subscription.active
-                      ? `Your subscription will not renew${paidThrough ? ` after ${paidThrough}` : ""}. Portfolio access stays available until then.`
+                      ? `Your subscription will not renew${paidThrough ? ` after ${paidThrough}` : ""}. ${currentPlan.name} access stays available until then.`
                       : subscription.active
-                        ? `₹49 per month${paidThrough ? ` · current period ends ${paidThrough}` : ""}.`
-                        : "Free plan · 1 property and 3 units."}
+                        ? `${currentPrice}${paidThrough ? ` · current period ends ${paidThrough}` : ""} · up to ${currentPlan.propertyLimit} properties and ${currentPlan.unitLimit} units.`
+                        : `Free plan · ${FREE_PLAN.propertyLimit} property and ${FREE_PLAN.unitLimit} units.`}
                   </p>
                 </div>
               </div>
@@ -281,13 +298,37 @@ export function ProfileForm({
                   {cancelPending ? "Scheduling..." : "Downgrade plan"}
                 </Button>
               )}
-              {(!subscription.active || subscription.trialActive) && <PortfolioCheckoutButton className="workspace-upgrade" />}
               {cancelAtPeriodEnd && subscription.active && (
                 <span className="shrink-0 border border-[#e4c77a]/25 bg-[#e4c77a]/[0.05] px-3 py-2 text-xs font-semibold text-[#e4c77a]">
                   Cancellation scheduled
                 </span>
               )}
             </div>
+            {(!subscription.active || subscription.trialActive) && (
+              <div className="grid gap-3 border-t border-white/10 p-5 sm:grid-cols-3 sm:p-6">
+                {upgradeChoices.map((choice) => {
+                  const option = BILLING_CHOICES[choice];
+                  const limits = option.plan === "estate" ? ESTATE_PLAN : PORTFOLIO_PLAN;
+                  return (
+                    <div key={choice} className="flex flex-col border border-white/10 bg-white/[0.02] p-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#e4c77a]">
+                        {limits.name}{option.interval === "year" ? " · yearly" : ""}
+                      </p>
+                      <p className="mt-2 font-display text-2xl text-[#edede8]">
+                        ₹{option.price}<span className="text-sm text-white/40">/{option.interval}</span>
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-white/40">
+                        {limits.propertyLimit} properties · {limits.unitLimit} units
+                        {option.interval === "year" ? ` · saves ₹${PORTFOLIO_PLAN.monthlyPrice * 12 - option.price}` : ""}
+                        {option.plan === "estate" ? " · for PGs and bigger buildings" : ""}
+                      </p>
+                      <PortfolioCheckoutButton className="workspace-upgrade mt-4" choice={choice} label={`Choose ${limits.name}${option.interval === "year" ? " yearly" : ""}`} />
+                    </div>
+                  );
+                })}
+                <p className="text-[11px] text-white/35 sm:col-span-3">{PRICE_NOTE}</p>
+              </div>
+            )}
             {cancellationMessage && (
               <p
                 aria-live="polite"
@@ -500,7 +541,7 @@ export function ProfileForm({
                   ]}
                 />
                 <p className="mt-2.5 max-w-2xl text-xs leading-5 text-white/35">
-                  On the first of each month, Bhada creates rent bills for the selected period.
+                  On the first of each month, Bhadaa creates rent bills for the selected period.
                   Adding a new tenant never creates a bill automatically.
                 </p>
               </Field>

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 export const helpCenterSections = [
   {
     title: "Getting started",
-    description: "Set up Bhada in the right order.",
+    description: "Set up Bhadaa in the right order.",
     icon: Home,
     articles: [
       {
@@ -52,7 +52,7 @@ export const helpCenterSections = [
       {
         question: "How are rent bills calculated?",
         answer:
-          "Bhada uses the tenant’s monthly rent and billing schedule. If enabled, GST is added and TDS is deducted using that tenant’s saved rates. Opening balances and earlier unpaid amounts remain visible in the tenant’s balance.",
+          "Bhadaa uses the tenant’s monthly rent and billing schedule. If enabled, GST is added and TDS is deducted using that tenant’s saved rates. Opening balances and earlier unpaid amounts remain visible in the tenant’s balance.",
       },
       {
         question: "Where can I review a tenant’s history?",
@@ -74,12 +74,12 @@ export const helpCenterSections = [
       {
         question: "What happens with partial or extra payments?",
         answer:
-          "A partial payment reduces the tenant’s balance while the remainder stays pending. When recorded payments exceed billed charges, Bhada shows the account as overpaid so the credit remains visible.",
+          "A partial payment reduces the tenant’s balance while the remainder stays pending. When recorded payments exceed billed charges, Bhadaa shows the account as overpaid so the credit remains visible.",
       },
       {
         question: "Can I download or share a bill?",
         answer:
-          "Yes. In Payments, open a rent or electricity bill to preview it, then choose Print, Download PDF, or Share. To print a tenant ledger, open the tenant’s financial profile and select Print ledger. If sharing is unavailable on the device, Bhada downloads the PDF instead.",
+          "Yes. In Payments, open a rent or electricity bill to preview it, then choose Print, Download PDF, or Share. To print a tenant ledger, open the tenant’s financial profile and select Print ledger. If sharing is unavailable on the device, Bhadaa downloads the PDF instead.",
       },
     ],
   },
@@ -91,7 +91,7 @@ export const helpCenterSections = [
       {
         question: "How do I create an electricity bill?",
         answer:
-          "Open Payments and select Add electricity bill. Choose the property and unit, the exact meter reading date, current reading, rate per unit, and due date. Bhada uses the previous dated reading to calculate consumption and the bill amount.",
+          "Open Payments and select Add electricity bill. Choose the property and unit, the exact meter reading date, current reading, rate per unit, and due date. Bhadaa uses the previous dated reading to calculate consumption and the bill amount.",
       },
       {
         question: "Why can’t I add another bill for the same date?",
@@ -118,7 +118,7 @@ export const helpCenterSections = [
       {
         question: "How do financial years work?",
         answer:
-          "Bhada groups billing and payment records into April–March financial years. Use the Financial year selector in Payments to load the period you want to review.",
+          "Bhadaa groups billing and payment records into April–March financial years. Use the Financial year selector in Payments to load the period you want to review.",
       },
     ],
   },

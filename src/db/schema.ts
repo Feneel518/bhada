@@ -31,6 +31,7 @@ export const landlord = pgTable("landlord", {
   razorpaySubscriptionId: text("razorpay_subscription_id").unique(),
   subscriptionCurrentPeriodEnd: timestamp("subscription_current_period_end"),
   subscriptionCancelAtPeriodEnd: boolean("subscription_cancel_at_period_end").default(false).notNull(),
+  billingInterval: text("billing_interval"),
   rentBillingPeriod: text("rent_billing_period").default("previous").notNull(),
   showOutstandingOnInvoice: boolean("show_outstanding_on_invoice").default(true).notNull(),
   upiId: text("upi_id"),

@@ -83,7 +83,7 @@ export async function getOwnerAnalytics(now = new Date()) {
       .from(tenant),
   ]);
 
-  // The owner also uses Bhada as a real landlord workspace, so the account
+  // The owner also uses Bhadaa as a real landlord workspace, so the account
   // belongs in product adoption and customer totals.
   const customers = accounts;
   const customerUserIds = new Set(customers.map((account) => account.userId));

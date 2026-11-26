@@ -20,7 +20,7 @@ import type { TenantRecord } from "@/lib/tenants";
 import type { TenantAnalytics } from "@/lib/tenant-analytics";
 import type { TenantLedgerRecord } from "@/lib/tenant-ledgers";
 import type { NotificationItem } from "@/lib/notifications";
-import { FREE_PLAN, PORTFOLIO_PLAN } from "@/lib/plans";
+import { limitsForPlan } from "@/lib/plans";
 import { NotificationCenter } from "@/components/notification-center";
 import { PortfolioCheckoutButton } from "@/components/portfolio-checkout-button";
 import type { SubscriptionReceipt } from "@/lib/subscription-receipts";
@@ -168,7 +168,7 @@ export function Dashboard({
     (total, property) => total + property.units.length,
     0,
   );
-  const limits = subscription.active ? PORTFOLIO_PLAN : FREE_PLAN;
+  const limits = limitsForPlan(subscription.plan, subscription.active);
   const writableProperties = properties.filter((item) => rentalAccess.propertyIds.includes(item.id))
     .map((item) => ({ ...item, units: item.units.filter((rental) => rentalAccess.unitIds.includes(rental.id)) }));
   const writableTenants = tenants.filter((item) => rentalAccess.unitIds.includes(item.unitId));
@@ -509,7 +509,7 @@ export function Dashboard({
           </p>
           {subscription.active ? (
             <p className="mt-3 text-[11px] font-semibold text-[#e4c77a]">
-              {subscription.trialActive ? "Free trial · no automatic charge" : subscription.cancelAtPeriodEnd ? "Downgrade scheduled" : "Portfolio billing is active"}
+              {subscription.trialActive ? "Free trial · no automatic charge" : subscription.cancelAtPeriodEnd ? "Downgrade scheduled" : `${limits.name} billing is active`}
             </p>
           ) : (
             <PortfolioCheckoutButton
@@ -554,7 +554,7 @@ export function Dashboard({
       </aside>
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent side="left" showCloseButton={false} className="workspace-navigation">
-          <SheetTitle className="sr-only">Bhada navigation</SheetTitle>
+          <SheetTitle className="sr-only">Bhadaa navigation</SheetTitle>
           <SheetDescription className="sr-only">Your rentals, plan and settings</SheetDescription>
           {navigationContent}
         </SheetContent>
@@ -572,7 +572,7 @@ export function Dashboard({
             <Menu className="size-5" />
           </Button>
           <div className="min-w-0 lg:hidden">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">Bhada</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">Bhadaa</p>
             <p className="truncate text-sm font-semibold text-[#edede8]">{active}</p>
           </div>
           <div

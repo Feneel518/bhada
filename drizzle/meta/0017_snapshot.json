@@ -1,5 +1,5 @@
 {
-  "id": "49bdce2e-a35f-4257-954f-f34a5fbf033b",
+  "id": "b82f4c27-dfa6-41f1-aace-318b36e23f69",
   "prevId": "7d5ea90a-c95d-4ad9-a63e-db8a8ee57d5a",
   "version": "7",
   "dialect": "postgresql",
@@ -425,6 +425,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "billing_interval": {
+          "name": "billing_interval",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "rent_billing_period": {
           "name": "rent_billing_period",

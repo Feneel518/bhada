@@ -41,11 +41,11 @@ export async function POST() {
   }
 
   try {
-    const { planId } = razorpayConfig();
+    const { planIds } = razorpayConfig();
     const current = await razorpayRequest<RazorpaySubscription>(
       `/subscriptions/${account.razorpaySubscriptionId}`,
     );
-    if (current.plan_id !== planId) {
+    if (!planIds.includes(current.plan_id)) {
       return Response.json({ message: "Unexpected subscription plan." }, { status: 400 });
     }
     if (!["authenticated", "active", "pending"].includes(current.status)) {
@@ -65,7 +65,7 @@ export async function POST() {
     const updated = await db
       .update(landlord)
       .set({
-        plan: subscriptionPlan(subscription.status),
+        plan: subscriptionPlan(subscription.status, subscription.plan_id),
         subscriptionStatus: subscription.status,
         subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription),
         subscriptionCancelAtPeriodEnd: true,
@@ -83,13 +83,13 @@ export async function POST() {
     const periodEnd = subscriptionPeriodEnd(subscription);
     return Response.json({
       message: periodEnd
-        ? `Portfolio will remain active until ${periodEnd.toLocaleDateString("en-IN", {
+        ? `Your plan will remain active until ${periodEnd.toLocaleDateString("en-IN", {
             day: "numeric",
             month: "short",
             year: "numeric",
             timeZone: "Asia/Kolkata",
           })}.`
-        : "Portfolio will remain active until the end of the current billing cycle.",
+        : "Your plan will remain active until the end of the current billing cycle.",
       currentPeriodEnd: periodEnd?.toISOString() ?? null,
     });
   } catch (error) {

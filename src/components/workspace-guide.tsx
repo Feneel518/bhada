@@ -13,7 +13,7 @@ import { startPortfolioTrial } from "@/app/dashboard/trial/actions";
 import { PORTFOLIO_PLAN, TRIAL_DAYS, type SubscriptionView } from "@/lib/plans";
 
 const steps = [
-  { title: "Your rentals. A little simpler.", description: "A refreshed Bhada, made for your phone. Your properties, tenants and payment history are right where you left them.", icon: Smartphone },
+  { title: "Your rentals. A little simpler.", description: "A refreshed Bhadaa, made for your phone. Your properties, tenants and payment history are right where you left them.", icon: Smartphone },
   { title: "Everything has a place", description: "Use the bottom tabs to move between your overview, properties, tenants and payments. More opens your settings and help.", icon: Building2 },
   { title: "Keep rent moving", description: "Record a payment from Overview. Open a tenant to see their balance, then preview, download or share their bills.", icon: CreditCard },
   { title: "Room for your next rental", description: "Portfolio gives you space for 5 properties and 25 units, plus CSV exports for your records.", icon: Download },
@@ -66,7 +66,7 @@ export function WorkspaceGuide({ userId, subscription, hasLockedRentals, onPlan,
         if (result.ok) { toast.success(result.message); close(); }
         else toast.error(result.message);
       } catch {
-        toast.error("Couldn't reach Bhada. Check your connection and try again.");
+        toast.error("Couldn't reach Bhadaa. Check your connection and try again.");
       }
     });
   }
@@ -100,7 +100,7 @@ export function WorkspaceGuide({ userId, subscription, hasLockedRentals, onPlan,
 
       <Dialog open={open} onOpenChange={(value) => { if (!value) close(); }}>
         <DialogContent className="workspace-tour">
-          <Badge variant="secondary">A fresh look for Bhada</Badge>
+          <Badge variant="secondary">A fresh look for Bhadaa</Badge>
           <div className="tour-illustration" aria-hidden="true"><Icon strokeWidth={1.25} /></div>
           <div aria-live="polite">
             <DialogTitle>{item.title}</DialogTitle>

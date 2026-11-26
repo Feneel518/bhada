@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-export const SITE_NAME = "Bhada";
-export const SITE_ALTERNATE_NAME = "Bhadaa";
+export const SITE_NAME = "Bhadaa";
+export const SITE_ALTERNATE_NAME = "Bhada";
 // Vercel currently redirects the apex domain to this host. Keep every canonical,
 // sitemap URL, and structured-data identifier on the final (200) URL.
 export const SITE_URL = "https://www.bhadaa.in";
@@ -20,8 +20,8 @@ export const SEO_KEYWORDS = [
   "landlord software India",
   "rental property management software India",
   "rent billing software",
-  "Bhada",
   "Bhadaa",
+  "Bhada",
   "Bhadaa rent tracker",
 ];
 

@@ -212,7 +212,7 @@ export function TenantDialog({
             <LeaseFieldGroup
               icon={<WalletCards className="size-4" />}
               title="3. Deposit & starting balance"
-              description="Record money already held or owed when adding this tenant to Bhada."
+              description="Record money already held or owed when adding this tenant to Bhadaa."
             >
               <div className="grid gap-3 sm:grid-cols-3">
                 <TenantInput

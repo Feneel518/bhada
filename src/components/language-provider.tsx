@@ -1,7 +1,6 @@
 "use client";
 
 import { Globe2 } from "lucide-react";
-import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Select,
@@ -92,7 +91,7 @@ const hi: Dictionary = {
   "Create your workspace": "अपना कार्यक्षेत्र बनाएँ",
   "Welcome back": "वापसी पर स्वागत है",
   "Start tracking rent": "किराये का हिसाब शुरू करें",
-  "Sign in to Bhada": "Bhada में साइन इन करें",
+  "Sign in to Bhadaa": "Bhadaa में साइन इन करें",
   "A clear portfolio is just a minute away.": "एक सुव्यवस्थित पोर्टफोलियो बस एक मिनट दूर है।",
   "Enter your details to continue to your portfolio.": "अपने पोर्टफोलियो में जाने के लिए जानकारी भरें।",
   "Continue with Google": "Google से जारी रखें",
@@ -104,7 +103,7 @@ const hi: Dictionary = {
   "At least 8 characters": "कम से कम 8 अक्षर",
   "Create account": "खाता बनाएँ",
   "Already have an account?": "पहले से खाता है?",
-  "New to Bhada?": "Bhada पर नए हैं?",
+  "New to Bhadaa?": "Bhadaa पर नए हैं?",
   "Create an account": "खाता बनाएँ",
   "Check your inbox": "अपना इनबॉक्स देखें",
   "Password reset": "पासवर्ड रीसेट",
@@ -192,6 +191,29 @@ const hi: Dictionary = {
   Deposit: "जमा राशि",
   "Opening balance": "प्रारंभिक शेष",
   Units: "यूनिट",
+  "Collect rent": "किराया वसूली",
+  "Who has paid, who needs a reminder.": "किसने किराया दिया, किसे याद दिलाना है।",
+  Remind: "याद दिलाएँ",
+  Reminded: "याद दिलाया",
+  "Mark paid": "भुगतान दर्ज करें",
+  "All clear": "कोई बकाया नहीं",
+  "Earlier balance": "पुराना बकाया",
+  "Add UPI": "UPI जोड़ें",
+  "Add your UPI ID so reminders include a Pay now link and QR code.": "अपनी UPI ID जोड़ें ताकि रिमाइंडर में भुगतान लिंक और QR कोड जाए।",
+  "Everyone has paid. Nice work.": "सबने भुगतान कर दिया। बढ़िया!",
+  "Hide paid tenants": "भुगतान कर चुके किरायेदार छिपाएँ",
+  "Import from Excel": "Excel से इम्पोर्ट करें",
+  "Remind on WhatsApp": "WhatsApp पर याद दिलाएँ",
+  "Send on WhatsApp": "WhatsApp पर भेजें",
+  "Send receipt": "रसीद भेजें",
+  Skip: "छोड़ें",
+  Done: "हो गया",
+  "Add a rental": "प्रॉपर्टी जोड़ें",
+  "Add your tenants to start collecting": "वसूली शुरू करने के लिए किरायेदार जोड़ें",
+  "Getting paid": "भुगतान पाना",
+  "UPI for tenant payments": "किरायेदारों के भुगतान के लिए UPI",
+  "UPI ID": "UPI ID",
+  "Morning rent summary email": "सुबह का किराया सारांश ईमेल",
 };
 
 const gu: Dictionary = {
@@ -267,7 +289,7 @@ const gu: Dictionary = {
   "Create your workspace": "તમારું કાર્યક્ષેત્ર બનાવો",
   "Welcome back": "ફરી સ્વાગત છે",
   "Start tracking rent": "ભાડાનો હિસાબ શરૂ કરો",
-  "Sign in to Bhada": "Bhadaમાં સાઇન ઇન કરો",
+  "Sign in to Bhadaa": "Bhadaaમાં સાઇન ઇન કરો",
   "A clear portfolio is just a minute away.": "સુવ્યવસ્થિત પોર્ટફોલિયો માત્ર એક મિનિટ દૂર છે।",
   "Enter your details to continue to your portfolio.": "પોર્ટફોલિયોમાં જવા તમારી વિગતો દાખલ કરો।",
   "Continue with Google": "Google સાથે આગળ વધો",
@@ -279,7 +301,7 @@ const gu: Dictionary = {
   "At least 8 characters": "ઓછામાં ઓછા 8 અક્ષર",
   "Create account": "ખાતું બનાવો",
   "Already have an account?": "પહેલેથી ખાતું છે?",
-  "New to Bhada?": "Bhada પર નવા છો?",
+  "New to Bhadaa?": "Bhadaa પર નવા છો?",
   "Create an account": "ખાતું બનાવો",
   "Check your inbox": "તમારું ઇનબોક્સ તપાસો",
   "Password reset": "પાસવર્ડ રીસેટ",
@@ -367,6 +389,29 @@ const gu: Dictionary = {
   Deposit: "ડિપોઝિટ",
   "Opening balance": "શરૂઆતની બાકી",
   Units: "યુનિટ",
+  "Collect rent": "ભાડાની વસૂલાત",
+  "Who has paid, who needs a reminder.": "કોણે ભાડું ભર્યું, કોને યાદ અપાવવું.",
+  Remind: "યાદ અપાવો",
+  Reminded: "યાદ અપાવ્યું",
+  "Mark paid": "ચૂકવણી નોંધો",
+  "All clear": "કંઈ બાકી નથી",
+  "Earlier balance": "જૂની બાકી",
+  "Add UPI": "UPI ઉમેરો",
+  "Add your UPI ID so reminders include a Pay now link and QR code.": "તમારી UPI ID ઉમેરો જેથી રિમાઇન્ડરમાં ચુકવણી લિંક અને QR કોડ જાય.",
+  "Everyone has paid. Nice work.": "બધાએ ચૂકવી દીધું. સરસ!",
+  "Hide paid tenants": "ચૂકવી દીધેલા ભાડુઆત છુપાવો",
+  "Import from Excel": "Excelમાંથી ઇમ્પોર્ટ કરો",
+  "Remind on WhatsApp": "WhatsApp પર યાદ અપાવો",
+  "Send on WhatsApp": "WhatsApp પર મોકલો",
+  "Send receipt": "રસીદ મોકલો",
+  Skip: "છોડો",
+  Done: "થઈ ગયું",
+  "Add a rental": "પ્રોપર્ટી ઉમેરો",
+  "Add your tenants to start collecting": "વસૂલાત શરૂ કરવા ભાડુઆત ઉમેરો",
+  "Getting paid": "ચુકવણી મેળવવી",
+  "UPI for tenant payments": "ભાડુઆતની ચુકવણી માટે UPI",
+  "UPI ID": "UPI ID",
+  "Morning rent summary email": "સવારનો ભાડા સારાંશ ઇમેઇલ",
 };
 
 const dictionaries: Record<Exclude<AppLanguage, "en">, Dictionary> = { hi, gu };
@@ -388,7 +433,6 @@ function translateValue(value: string, language: AppLanguage) {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const [language, setLanguageState] = useState<AppLanguage>("en");
   const textRecordsRef = useRef(new WeakMap<Text, { source: string; applied: string }>());
   const attributeRecordsRef = useRef(
@@ -478,7 +522,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   return (
     <LanguageContext.Provider value={value}>
       {children}
-      {pathname === "/" && <LanguageSwitcher floating />}
+      {/* Landing pages now have real /hi and /gu versions with their own language links. */}
     </LanguageContext.Provider>
   );
 }

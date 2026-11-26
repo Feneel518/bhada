@@ -1,5 +1,7 @@
 import "server-only";
 
+import { BILLING_CHOICES, type BillingChoice, type PaidPlan } from "@/lib/plans";
+
 const API_BASE = "https://api.razorpay.com/v1";
 
 export type RazorpaySubscription = {
@@ -21,16 +23,42 @@ export type RazorpayPayment = {
   created_at: number;
 };
 
+// One Razorpay plan per billing choice. Only the Portfolio monthly plan is
+// required; the others appear at checkout once their plan IDs are set.
+const planEnv: Record<BillingChoice, string> = {
+  portfolio_monthly: "RAZORPAY_PORTFOLIO_PLAN_ID",
+  portfolio_yearly: "RAZORPAY_PORTFOLIO_YEARLY_PLAN_ID",
+  estate_monthly: "RAZORPAY_ESTATE_PLAN_ID",
+};
+
+export function razorpayPlanIds() {
+  return Object.fromEntries(
+    (Object.keys(planEnv) as BillingChoice[])
+      .map((choice) => [choice, process.env[planEnv[choice]]?.trim()])
+      .filter(([, id]) => Boolean(id)),
+  ) as Partial<Record<BillingChoice, string>>;
+}
+
+export function availableBillingChoices() {
+  return Object.keys(razorpayPlanIds()) as BillingChoice[];
+}
+
 export function razorpayConfig() {
   const keyId = process.env.RAZORPAY_KEY_ID?.trim();
   const keySecret = process.env.RAZORPAY_KEY_SECRET?.trim();
-  const planId = process.env.RAZORPAY_PORTFOLIO_PLAN_ID?.trim();
+  const planIdsByChoice = razorpayPlanIds();
+  const planId = planIdsByChoice.portfolio_monthly;
 
   if (!keyId || !keySecret || !planId) {
     throw new Error("Razorpay billing is not configured.");
   }
 
-  return { keyId, keySecret, planId };
+  return { keyId, keySecret, planId, planIds: Object.values(planIdsByChoice), planIdsByChoice };
+}
+
+export function choiceForPlanId(planId: string): BillingChoice | null {
+  const entry = Object.entries(razorpayPlanIds()).find(([, id]) => id === planId);
+  return entry ? (entry[0] as BillingChoice) : null;
 }
 
 function basicAuth(keyId: string, keySecret: string) {
@@ -92,8 +120,13 @@ export function subscriptionPeriodEnd(subscription: RazorpaySubscription) {
     : null;
 }
 
-export function subscriptionPlan(status: string) {
-  return ["authenticated", "active", "pending"].includes(status)
-    ? "portfolio"
-    : "one_door";
+export function subscriptionPlan(status: string, planId?: string): PaidPlan | "one_door" {
+  if (!["authenticated", "active", "pending"].includes(status)) return "one_door";
+  const choice = planId ? choiceForPlanId(planId) : null;
+  return choice ? BILLING_CHOICES[choice].plan : "portfolio";
+}
+
+export function subscriptionInterval(planId: string) {
+  const choice = choiceForPlanId(planId);
+  return choice ? BILLING_CHOICES[choice].interval : null;
 }

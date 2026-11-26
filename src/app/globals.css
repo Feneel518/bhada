@@ -113,7 +113,7 @@ button {
   color: #33338b;
 }
 
-/* Sonner notifications, tuned to feel like the rest of the Bhada workspace. */
+/* Sonner notifications, tuned to feel like the rest of the Bhadaa workspace. */
 [data-sonner-toaster].bhada-toaster {
   --width: min(372px, calc(100vw - 2rem));
   font-family: var(--font-body), sans-serif;

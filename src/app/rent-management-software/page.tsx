@@ -20,7 +20,7 @@ import { SITE_NAME, SITE_URL } from "@/lib/seo";
 
 const title = "Rent Management Software for Indian Landlords";
 const description =
-  "Manage properties, tenants, rent bills, GST, TDS, submeter electricity, payments, reminders, and PDF bills with Bhada—built for independent landlords in India.";
+  "Manage properties, tenants, rent bills, GST, TDS, submeter electricity, payments, reminders, and PDF bills with Bhadaa—built for independent landlords in India.";
 const pageUrl = `${SITE_URL}/rent-management-software`;
 
 export const metadata: Metadata = {
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Bhada rent management software for independent landlords in India",
+        alt: "Bhadaa rent management software for independent landlords in India",
       },
     ],
   },
@@ -163,7 +163,7 @@ export default function RentManagementSoftwarePage() {
 
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-[1296px] items-center justify-between px-5 py-5 sm:px-10 lg:px-0">
-          <Link href="/" aria-label="Bhada home">
+          <Link href="/" aria-label="Bhadaa home">
             <BhadaLogo
               className="gap-3"
               markClassName="size-8 text-[#EDEDE8]"
@@ -206,7 +206,7 @@ export default function RentManagementSoftwarePage() {
               </div>
               <div>
                 <p className="text-base leading-7 text-white/60">
-                  Bhada brings properties, tenants, rent billing, submeter electricity, payments, reminders, and PDF bills into one focused landlord workspace.
+                  Bhadaa brings properties, tenants, rent billing, submeter electricity, payments, reminders, and PDF bills into one focused landlord workspace.
                 </p>
                 <Link
                   href="/sign-in"
@@ -235,7 +235,7 @@ export default function RentManagementSoftwarePage() {
                   Rent administration becomes difficult less because any one task is complicated and more because the information is spread out. Tenant terms sit in one file, meter readings in another, payment screenshots in chat, and outstanding amounts in someone&apos;s memory.
                 </p>
                 <p>
-                  Good rental property management software gives those records a shared structure. A tenant belongs to a unit, a bill belongs to a billing period, and a payment changes the balance you see. Bhada is designed around that practical monthly cycle for landlords managing their own portfolio.
+                  Good rental property management software gives those records a shared structure. A tenant belongs to a unit, a bill belongs to a billing period, and a payment changes the balance you see. Bhadaa is designed around that practical monthly cycle for landlords managing their own portfolio.
                 </p>
                 <p>
                   It is deliberately focused: organise the portfolio, calculate recurring charges, see what is outstanding, and create a record you can share. You do not need an enterprise property-management system just to know who has paid this month.
@@ -296,7 +296,7 @@ export default function RentManagementSoftwarePage() {
               <Calculator className="size-7 text-[#E4C77A]" />
               <h2 className="mt-6 font-display text-2xl sm:text-3xl">Rent, GST, TDS, and electricity on one bill</h2>
               <p className="mt-5 text-sm leading-7 text-white/55">
-                When rent is only one part of the amount due, a simple paid/unpaid checkbox is not enough. Bhada can keep base rent, submeter electricity, GST, TDS deductions, and other bill amounts visible as separate line items while presenting one final balance.
+                When rent is only one part of the amount due, a simple paid/unpaid checkbox is not enough. Bhadaa can keep base rent, submeter electricity, GST, TDS deductions, and other bill amounts visible as separate line items while presenting one final balance.
               </p>
               <p className="mt-4 text-sm leading-7 text-white/55">
                 Tax treatment varies by agreement and circumstance. The software applies the rates you configure; confirm the correct GST and TDS setup with your tax adviser.
@@ -306,7 +306,7 @@ export default function RentManagementSoftwarePage() {
               <BellRing className="size-7 text-[#E4C77A]" />
               <h2 className="mt-6 font-display text-2xl sm:text-3xl">Balances that remain understandable</h2>
               <p className="mt-5 text-sm leading-7 text-white/55">
-                Real payments do not always match a bill exactly. A tenant may pay part now, settle several bills together, or pay more than the current amount. Bhada records allocations and carries the remaining balance or credit forward, so the dashboard and billing history tell the same story.
+                Real payments do not always match a bill exactly. A tenant may pay part now, settle several bills together, or pay more than the current amount. Bhadaa records allocations and carries the remaining balance or credit forward, so the dashboard and billing history tell the same story.
               </p>
               <p className="mt-4 text-sm leading-7 text-white/55">
                 In-app reminders also surface due rent, overdue balances, lease expiries, and rent escalations that need attention.
@@ -318,10 +318,10 @@ export default function RentManagementSoftwarePage() {
         <section className="border-b border-white/10 px-5 py-16 sm:px-10 sm:py-24 lg:px-[72px]">
           <div className="mx-auto grid max-w-[1120px] gap-12 lg:grid-cols-2 lg:gap-20">
             <div>
-              <p className="text-xs font-semibold tracking-[1.8px] text-[#E4C77A] uppercase">Is Bhada a good fit?</p>
+              <p className="text-xs font-semibold tracking-[1.8px] text-[#E4C77A] uppercase">Is Bhadaa a good fit?</p>
               <h2 className="mt-5 font-display text-3xl leading-tight sm:text-4xl">Made for owners who manage rentals directly.</h2>
               <p className="mt-5 text-sm leading-7 text-white/50">
-                Bhada is a practical fit for independent landlords with a small or growing portfolio who want control without the overhead of a large property-management suite.
+                Bhadaa is a practical fit for independent landlords with a small or growing portfolio who want control without the overhead of a large property-management suite.
               </p>
             </div>
             <ul className="space-y-4">
@@ -355,7 +355,7 @@ export default function RentManagementSoftwarePage() {
 
       <footer className="border-t border-white/10 px-5 py-10 sm:px-10 lg:px-[72px]">
         <div className="mx-auto flex max-w-[1120px] flex-col justify-between gap-5 text-xs text-white/40 sm:flex-row sm:items-center">
-          <Link href="/" className="text-white/65 transition hover:text-white">Bhada</Link>
+          <Link href="/" className="text-white/65 transition hover:text-white">Bhadaa</Link>
           <div className="flex flex-col gap-2 text-right sm:flex-row sm:gap-5">
             <Link href="/rent-tracking" className="transition hover:text-white">Rent tracking software</Link>
             <p>Rent management software for independent landlords in India.</p>

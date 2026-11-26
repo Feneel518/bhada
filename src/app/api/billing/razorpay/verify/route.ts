@@ -4,14 +4,16 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { landlord, saasBillingEvent } from "@/db/schema";
-import { hasPaidPortfolioAccess } from "@/lib/plans";
+import { BILLING_CHOICES, hasPaidPortfolioAccess } from "@/lib/plans";
 import {
   hmacHex,
   razorpayConfig,
   razorpayRequest,
   safeEqualHex,
   subscriptionPeriodEnd,
+  subscriptionInterval,
   subscriptionPlan,
+  choiceForPlanId,
   type RazorpayPayment,
   type RazorpaySubscription,
 } from "@/lib/razorpay";
@@ -63,7 +65,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { keySecret, planId } = razorpayConfig();
+    const { keySecret, planIds } = razorpayConfig();
     const expected = await hmacHex(keySecret, `${paymentId}|${subscriptionId}`);
     if (!safeEqualHex(expected, signature)) {
       return Response.json({ message: "Payment verification failed." }, { status: 400 });
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
       razorpayRequest<RazorpaySubscription>(`/subscriptions/${subscriptionId}`),
       razorpayRequest<RazorpayPayment>(`/payments/${paymentId}`),
     ]);
-    if (subscription.plan_id !== planId) {
+    if (!planIds.includes(subscription.plan_id)) {
       return Response.json({ message: "Unexpected subscription plan." }, { status: 400 });
     }
     if (
@@ -87,7 +89,8 @@ export async function POST(request: Request) {
       db
         .update(landlord)
         .set({
-          plan: subscriptionPlan(subscription.status),
+          plan: subscriptionPlan(subscription.status, subscription.plan_id),
+          billingInterval: subscriptionInterval(subscription.plan_id),
           subscriptionStatus: subscription.status,
           subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription),
           subscriptionCancelAtPeriodEnd: Boolean(subscription.has_scheduled_changes),
@@ -111,17 +114,19 @@ export async function POST(request: Request) {
     ]);
 
     if (!updated.length) return Response.json({ message: "Your billing status changed. Refresh your dashboard to see the latest plan." }, { status: 409 });
-    const active = hasPaidPortfolioAccess({ plan: subscriptionPlan(subscription.status),
+    const choice = choiceForPlanId(subscription.plan_id) ?? "portfolio_monthly";
+    const planName = BILLING_CHOICES[choice].plan === "estate" ? "Estate" : "Portfolio";
+    const active = hasPaidPortfolioAccess({ plan: subscriptionPlan(subscription.status, subscription.plan_id),
       subscriptionStatus: subscription.status, subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription) });
 
     revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath("/owner");
     return Response.json({
-      message: active ? "Portfolio is now active." : "Payment received. Portfolio will unlock when Razorpay confirms an active billing period.",
+      message: active ? `${planName} is now active.` : `Payment received. ${planName} will unlock when Razorpay confirms an active billing period.`,
       active,
       receipt: {
-        receiptNumber: `BHADA-${payment.id.slice(4).toUpperCase()}`,
+        receiptNumber: `BHADAA-${payment.id.slice(4).toUpperCase()}`,
         paymentId: payment.id,
         subscriptionId,
         amountPaise: Math.max(0, Math.round(payment.amount)),
@@ -130,7 +135,7 @@ export async function POST(request: Request) {
         paidAt: new Date(payment.created_at * 1_000).toISOString(),
         customerName: session.user.name,
         customerEmail: session.user.email,
-        description: "Bhada Portfolio plan - monthly subscription",
+        description: `Bhadaa ${BILLING_CHOICES[choice].label}`,
       },
     });
   } catch (error) {

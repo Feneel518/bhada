@@ -50,7 +50,7 @@ export async function downloadSubscriptionReceiptPdf(data: SubscriptionReceiptPd
   pdf.text("BILLED TO:", 26, 66);
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(9.5);
-  pdf.text(data.customerName || "Bhada customer", 26, 74);
+  pdf.text(data.customerName || "Bhadaa customer", 26, 74);
   if (data.customerEmail) pdf.text(data.customerEmail, 26, 80, { maxWidth: 78 });
 
   pdf.setFontSize(10);
@@ -77,7 +77,7 @@ export async function downloadSubscriptionReceiptPdf(data: SubscriptionReceiptPd
 
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(8.5);
-  pdf.text(data.description || "Bhada Portfolio plan — monthly subscription", columns.item, tableTop + 23, {
+  pdf.text(data.description || "Bhadaa Portfolio plan — monthly subscription", columns.item, tableTop + 23, {
     maxWidth: 84,
   });
   pdf.text("1", columns.quantity, tableTop + 23, { align: "center" });
@@ -121,11 +121,11 @@ export async function downloadSubscriptionReceiptPdf(data: SubscriptionReceiptPd
   pdf.setFontSize(8.5);
   pdf.text(`Razorpay payment ID: ${data.paymentId}`, 26, 252);
   if (data.subscriptionId) pdf.text(`Subscription ID: ${data.subscriptionId}`, 26, 258);
-  pdf.text("This invoice confirms payment for your Bhada subscription.", 26, data.subscriptionId ? 264 : 258);
+  pdf.text("This invoice confirms payment for your Bhadaa subscription.", 26, data.subscriptionId ? 264 : 258);
 
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(19);
-  pdf.text("bhada", 185, 253, { align: "right" });
+  pdf.text("Bhadaa", 185, 253, { align: "right" });
   pdf.setFont(pdfFont, "normal");
   pdf.setFontSize(8);
   pdf.setTextColor(...MUTED);

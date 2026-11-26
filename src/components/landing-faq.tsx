@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { landingFaqs } from "@/lib/landing-content";
-
-export function LandingFaq() {
+export function LandingFaq({ faqs }: { faqs: { question: string; answer: string }[] }) {
   const [open, setOpen] = useState(0);
 
   return (
     <div className="border-b border-white/10">
-      {landingFaqs.map((faq, index) => {
+      {faqs.map((faq, index) => {
         const isOpen = open === index;
         const answerId = `faq-answer-${index}`;
         return (

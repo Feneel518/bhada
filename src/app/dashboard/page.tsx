@@ -17,6 +17,7 @@ import { hasPortfolioAccess, hasTrialAccess, isTrialEligible } from "@/lib/plans
 import { getPlanAccount, getRentalAccess } from "@/lib/plan-access";
 import { getSubscriptionReceipts } from "@/lib/subscription-receipts";
 import { buildShareLinks } from "@/lib/share-links";
+import { availableBillingChoices } from "@/lib/razorpay";
 
 const dashboardSections = new Set([
   "Overview",
@@ -94,6 +95,9 @@ export default async function DashboardPage({
       subscriptionReceipts={subscriptionReceipts}
       subscription={{
         active: Boolean(profile && hasPortfolioAccess(profile)),
+        plan: profile && hasPortfolioAccess(profile) ? (profile.plan === "estate" ? "estate" : "portfolio") : "one_door",
+        billingInterval: profile?.billingInterval === "year" ? "year" : profile?.billingInterval === "month" ? "month" : null,
+        choices: availableBillingChoices(),
         status: profile?.subscriptionStatus ?? "none",
         currentPeriodEnd: profile?.subscriptionCurrentPeriodEnd?.toISOString() ?? null,
         cancelAtPeriodEnd: profile?.subscriptionCancelAtPeriodEnd ?? false,

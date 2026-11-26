@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { landlord } from "@/db/schema";
 import { ensureLandlord } from "@/lib/landlords";
-import { hasPaidPortfolioAccess } from "@/lib/plans";
+import { BILLING_CHOICES, hasPaidPortfolioAccess, isBillingChoice } from "@/lib/plans";
 import {
   razorpayConfig,
   razorpayRequest,
@@ -13,16 +13,21 @@ import {
   type RazorpaySubscription,
 } from "@/lib/razorpay";
 
-export async function POST() {
+export async function POST(request: Request) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return Response.json({ message: "Please sign in to upgrade." }, { status: 401 });
   }
 
+  const body = await request.json().catch(() => null) as { choice?: unknown } | null;
+  const choice = isBillingChoice(body?.choice) ? body.choice : "portfolio_monthly";
+
   try {
     const owner = await ensureLandlord(session.user);
     if (hasPaidPortfolioAccess(owner)) {
-      return Response.json({ message: "Portfolio is already active." }, { status: 409 });
+      return Response.json({
+        message: "You're already on a paid plan. To switch, downgrade in Settings and choose the new plan when this period ends, or email us and we'll switch you now.",
+      }, { status: 409 });
     }
 
     const [account] = await db
@@ -35,7 +40,11 @@ export async function POST() {
       .from(landlord)
       .where(eq(landlord.id, owner.id))
       .limit(1);
-    const { keyId, planId } = razorpayConfig();
+    const { keyId, planIdsByChoice } = razorpayConfig();
+    const planId = planIdsByChoice[choice];
+    if (!planId) {
+      return Response.json({ message: "This plan isn't available yet. Please choose another." }, { status: 400 });
+    }
 
     let subscription: RazorpaySubscription | null = null;
     if (
@@ -44,16 +53,18 @@ export async function POST() {
       subscription = await razorpayRequest<RazorpaySubscription>(
         `/subscriptions/${account.razorpaySubscriptionId}`,
       );
-      if (subscription.plan_id !== planId) throw new Error("Unexpected subscription plan.");
+      const knownPlans = Object.values(planIdsByChoice);
+      if (!knownPlans.includes(subscription.plan_id)) throw new Error("Unexpected subscription plan.");
       if (["active", "pending", "halted", "paused"].includes(subscription.status)) {
         await db.update(landlord).set({
-          plan: subscriptionPlan(subscription.status), subscriptionStatus: subscription.status,
+          plan: subscriptionPlan(subscription.status, subscription.plan_id), subscriptionStatus: subscription.status,
           subscriptionCurrentPeriodEnd: subscriptionPeriodEnd(subscription),
           subscriptionCancelAtPeriodEnd: Boolean(subscription.has_scheduled_changes), updatedAt: new Date(),
         }).where(eq(landlord.id, owner.id));
         return Response.json({ message: "You already have a subscription. Refresh your plan settings or resolve the existing payment before starting another." }, { status: 409 });
       }
-      if (!["created", "authenticated"].includes(subscription.status)) subscription = null;
+      // An unpaid checkout for a different plan is simply left to expire.
+      if (!["created", "authenticated"].includes(subscription.status) || subscription.plan_id !== planId) subscription = null;
     }
 
     if (!subscription) {
@@ -61,12 +72,14 @@ export async function POST() {
         method: "POST",
         body: JSON.stringify({
           plan_id: planId,
-          total_count: 120,
+          // Razorpay needs a finite cycle count: ten years either way.
+          total_count: BILLING_CHOICES[choice].interval === "year" ? 10 : 120,
           quantity: 1,
           customer_notify: true,
           notes: {
             landlord_id: owner.id,
             user_id: session.user.id,
+            choice,
           },
         }),
       });
@@ -78,6 +91,7 @@ export async function POST() {
           subscriptionStatus: subscription.status,
           subscriptionCancelAtPeriodEnd: false,
           subscriptionCurrentPeriodEnd: null,
+          billingInterval: BILLING_CHOICES[choice].interval,
           plan: "one_door",
           updatedAt: new Date(),
         })
@@ -87,6 +101,7 @@ export async function POST() {
     return Response.json({
       keyId,
       subscriptionId: subscription.id,
+      description: BILLING_CHOICES[choice].label,
       name: account?.businessName || session.user.name,
       email: session.user.email,
       contact: account?.phone || undefined,

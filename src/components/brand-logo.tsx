@@ -69,7 +69,7 @@ export function BhadaLogo({
           wordmarkClassName,
         )}
       >
-        Bhada
+        Bhadaa
       </span>
     </span>
   );

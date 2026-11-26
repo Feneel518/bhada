@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
         <>
           <p className="text-sm font-semibold text-[#5b5bd6]">Password reset</p>
           <h1 className="mt-2 font-display text-3xl tracking-[-0.045em]">Let&apos;s get you back in.</h1>
-          <p className="mt-3 text-sm leading-6 text-[#747b8b]">Enter the email connected to your Bhada account.</p>
+          <p className="mt-3 text-sm leading-6 text-[#747b8b]">Enter the email connected to your Bhadaa account.</p>
           <form onSubmit={submit} className="mt-7 space-y-4">
             <label className="block">
               <span className="mb-2 block text-xs font-bold text-[#4d5362]">Email address</span>

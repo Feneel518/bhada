@@ -1,4 +1,4 @@
-# Bhada
+# Bhadaa
 
 A polished rent-management workspace built with Next.js 16, Tailwind CSS,
 Better Auth, Drizzle ORM, Neon Postgres, Google OAuth, and Nodemailer.
@@ -23,7 +23,7 @@ Add every variable from `.env.example` to the Vercel project. Set
 Bearer token when invoking the daily rent-billing route.
 
 The cron in `vercel.json` runs every day at 18:35 UTC (00:05 IST). Apply
-the due-day schema update to an existing Bhada database before deploying:
+the due-day schema update to an existing Bhadaa database before deploying:
 
 ```bash
 npm run db:add-rent-due-day
@@ -42,7 +42,7 @@ For production, add the same path on the production origin. Then set
 
 ## Transactional email
 
-Bhada sends verification and password-reset messages through Nodemailer. Set:
+Bhadaa sends verification and password-reset messages through Nodemailer. Set:
 
 ```env
 SMTP_HOST="smtp.example.com"
@@ -50,7 +50,7 @@ SMTP_PORT="587"
 SMTP_SECURE="false"
 SMTP_USER="..."
 SMTP_PASS="..."
-EMAIL_FROM="Bhada <hello@example.com>"
+EMAIL_FROM="Bhadaa <hello@example.com>"
 ```
 
 Use `SMTP_SECURE=true` for implicit TLS (commonly port 465). Password reset
