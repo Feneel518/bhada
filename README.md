@@ -80,11 +80,13 @@ Cloudflare. Both need `CRON_SECRET`.
 
 ## Database migration for this release
 
-```bash
-npx drizzle-kit migrate   # 0017: UPI ID, summary email, billing interval
-                          # 0018: tenant private links + payment claims
-                          # 0019: property electricity rate + tenant meter readings
-```
+`npm run build` runs `scripts/migrate.mjs` first, so every Vercel deploy brings
+the database up to date before the new code goes live. It applies 0017–0019
+(UPI ID, summary email, billing interval, tenant links, payment claims,
+electricity rate, meter readings) with statements that are safe to repeat, and
+records them for `drizzle-kit migrate` if that table exists. If the migration
+fails, or a production build has no `DATABASE_URL`, the build stops and the
+current version stays live. Run it by hand with `npm run db:migrate`.
 
 ## Tenant page
 

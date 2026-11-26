@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "node --test scripts/*.test.mjs",
@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:add-rent-due-day": "node scripts/add-rent-due-day.mjs",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.25",
