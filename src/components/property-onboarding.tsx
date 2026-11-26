@@ -8,14 +8,16 @@ import { saveTenant } from "@/app/dashboard/tenants/actions";
 import type { PropertyRecord } from "@/lib/properties";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { expandUnitNumbers } from "@/lib/rental-import";
 
 const inputClass = "mt-1.5 h-11 w-full border border-white/15 bg-[#222220] px-3 text-sm text-[#edede8] outline-none focus:border-[#e4c77a]";
 const idle = { status: "idle" as const, message: "" };
 
-export function PropertyOnboarding({ properties, initialPropertyId = "", onClose }: {
+export function PropertyOnboarding({ properties, initialPropertyId = "", onClose, onImport }: {
   properties: PropertyRecord[];
   initialPropertyId?: string;
   onClose: () => void;
+  onImport?: () => void;
 }) {
   const [step, setStep] = useState(initialPropertyId ? 1 : 0);
   const [propertyId, setPropertyId] = useState(initialPropertyId);
@@ -32,6 +34,7 @@ export function PropertyOnboarding({ properties, initialPropertyId = "", onClose
   const [securityDeposit, setSecurityDeposit] = useState("");
   const [openingBalance, setOpeningBalance] = useState("");
   const [hasTenant, setHasTenant] = useState(true);
+  const [bulkAdded, setBulkAdded] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [pending, startTransition] = useTransition();
@@ -55,6 +58,20 @@ export function PropertyOnboarding({ properties, initialPropertyId = "", onClose
           setPropertyId(result.id); goTo(1);
         } else if (step === 1) {
           if (unitId) { goTo(2); return; }
+          const many = expandUnitNumbers(unitNumber);
+          if (many.length > 1) {
+            // A range like 101-110: add every unit, then hand off to import or Edit tenant.
+            const added: string[] = [];
+            for (const number of many) {
+              const data = new FormData(); data.set("propertyId", propertyId); data.set("unitNumber", number); data.set("status", "vacant");
+              const result = await saveUnit(idle, data);
+              if (result.status === "error") { setMessage(`${added.length} of ${many.length} added. Unit ${number}: ${result.errors?.unitNumber ?? result.message}`); break; }
+              added.push(number);
+            }
+            setBulkAdded(added);
+            if (added.length === many.length) goTo(3);
+            return;
+          }
           const data = new FormData(); data.set("propertyId", propertyId); data.set("unitNumber", unitNumber); data.set("status", "vacant");
           const result = await saveUnit(idle, data);
           if (result.status === "error") { setMessage(result.message); setErrors(result.errors ?? {}); return; }
@@ -79,13 +96,17 @@ export function PropertyOnboarding({ properties, initialPropertyId = "", onClose
 
   return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
     <DialogContent className="max-w-[560px]" onEscapeKeyDown={(event) => { if (pending) event.preventDefault(); }} onPointerDownOutside={(event) => event.preventDefault()}>
-      <DialogTitle>{step === 3 ? "You're ready to track rent" : "Set up your rental"}</DialogTitle>
+      <DialogTitle>{step === 3 ? (bulkAdded.length ? `${bulkAdded.length} units added` : "You're ready to track rent") : "Set up your rental"}</DialogTitle>
       <DialogDescription>{step === 3 ? "Your rental is saved. Add more details whenever you need them." : "Just the essentials. Each completed step is saved so you can finish later."}</DialogDescription>
       <ol aria-label="Setup progress" className="my-5 grid grid-cols-3 gap-2">
         {["Property", "Unit", "Tenant"].map((label, index) => <li key={label} aria-current={step === index ? "step" : undefined} className={`border-b-2 pb-2 text-xs ${index <= step ? "border-[#e4c77a] text-[#e4c77a]" : "border-white/10 text-white/35"}`}>{index < step ? "✓" : index + 1} {label}</li>)}
       </ol>
       {step > 0 && <p className="mb-5 text-sm text-white/60">{propertyLabel}{step > 1 ? ` · Unit ${unitLabel}` : ""}</p>}
-      {step === 3 ? <div className="space-y-5">
+      {step === 3 && bulkAdded.length > 0 ? <div className="space-y-5">
+        <p className="flex items-center gap-2 text-sm text-[#9bc4ab]"><Check className="size-5" />Units {bulkAdded[0]} to {bulkAdded.at(-1)} are saved as vacant in {propertyLabel}.</p>
+        <p className="text-xs leading-5 text-white/45">Add tenants from Properties, or paste them all at once from Excel.</p>
+        <div className="flex flex-wrap gap-2"><Button onClick={onClose}>View dashboard</Button>{onImport && <Button variant="outline" onClick={() => { onClose(); onImport(); }}>Import tenants from Excel</Button>}</div>
+      </div> : step === 3 ? <div className="space-y-5">
         <p className="flex items-center gap-2 text-sm text-[#9bc4ab]"><Check className="size-5" />{hasTenant ? `${tenantName} is assigned to Unit ${unitLabel}.` : `Unit ${unitLabel} is saved as vacant.`}</p>
         {hasTenant && <p className="text-xs leading-5 text-white/45">Automatic rent billing begins next month. Any earlier unpaid rent can be entered as an opening balance in Edit tenant.</p>}
         <div className="flex flex-wrap gap-2"><Button onClick={onClose}>View dashboard</Button><Button variant="outline" onClick={() => {
@@ -102,13 +123,14 @@ export function PropertyOnboarding({ properties, initialPropertyId = "", onClose
               {field("Property name", "name", <input autoFocus required maxLength={200} className={inputClass} value={propertyName} onChange={(event) => setPropertyName(event.target.value)} placeholder="e.g. Green Park Apartments" />)}
               <details className="text-sm text-white/50"><summary className="cursor-pointer">Add an address (optional)</summary><div className="mt-3">{field("Address", "address", <input className={inputClass} value={address} onChange={(event) => setAddress(event.target.value)} autoComplete="street-address" placeholder="Street, city and postal code" />)}</div></details>
             </>}
+            {onImport && <p className="text-xs text-white/45">Have many rooms or tenants? <button type="button" className="font-semibold text-[#e4c77a] underline underline-offset-2" onClick={() => { onClose(); onImport(); }}>Import from Excel instead</button></p>}
           </>}
           {step === 1 && <>
             {availableUnits.length > 0 && field("Unit", "unitId", <select className={inputClass} value={unitId} onChange={(event) => setUnitId(event.target.value)}>
               <option value="">Add a new unit</option>{availableUnits.map((item) => <option key={item.id} value={item.id}>Unit {item.unitNumber}</option>)}
             </select>)}
-            {!unitId && field("Unit / room number", "unitNumber", <input autoFocus required maxLength={100} className={inputClass} value={unitNumber} onChange={(event) => setUnitNumber(event.target.value)} placeholder="e.g. 101, Shop A or Whole property" />)}
-            <p className="text-xs leading-5 text-white/40">Renting out the entire property? Use “Whole property” as the unit name. Floor, area and meter readings can be added later.</p>
+            {!unitId && field("Unit / room number", "unitNumber", <input autoFocus required maxLength={100} className={inputClass} value={unitNumber} onChange={(event) => setUnitNumber(event.target.value)} placeholder="e.g. 101, Shop A, or 101-110 for many" />)}
+            <p className="text-xs leading-5 text-white/40">{!unitId && expandUnitNumbers(unitNumber).length > 1 ? `Adds ${expandUnitNumbers(unitNumber).length} units at once.` : "Adding many rooms? Type a range like 101-110. Renting out the whole property? Use “Whole property”."}</p>
             {unitId && <p className="text-xs text-[#9bc4ab]">This unit is already saved. Continue to assign a tenant.</p>}
           </>}
           {step === 2 && <>

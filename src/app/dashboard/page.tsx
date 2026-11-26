@@ -16,6 +16,10 @@ import { getNotifications } from "@/lib/notifications";
 import { hasPortfolioAccess, hasTrialAccess, isTrialEligible } from "@/lib/plans";
 import { getPlanAccount, getRentalAccess } from "@/lib/plan-access";
 import { getSubscriptionReceipts } from "@/lib/subscription-receipts";
+import { appOrigin, buildShareLinks } from "@/lib/share-links";
+import { getPendingClaims } from "@/lib/tenant-portal";
+import { getPendingMeterReadings } from "@/lib/meter-readings";
+import { availableBillingChoices } from "@/lib/razorpay";
 
 const dashboardSections = new Set([
   "Overview",
@@ -47,7 +51,7 @@ export default async function DashboardPage({
   const financialYearStart = resolveFinancialYearStart(params.fy, now);
   // Finish bill generation before any other query reads balances or analytics.
   const overviewRentBilling = await getRentBilling(session.user.id, now);
-  const [profile, properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, tenantLedgers, incomeOverview, subscriptionReceipts] = await Promise.all([
+  const [profile, properties, tenants, payments, rentBilling, electricityBills, financialYearOptions, tenantAnalytics, tenantLedgers, incomeOverview, subscriptionReceipts, claims, meterReadings] = await Promise.all([
     getPlanAccount(session.user.id),
     getProperties(session.user.id),
     getTenants(session.user.id),
@@ -61,6 +65,8 @@ export default async function DashboardPage({
     getTenantLedgers(session.user.id, financialYearStart),
     getIncomeOverview(session.user.id, now),
     getSubscriptionReceipts(session.user.id),
+    getPendingClaims(session.user.id),
+    getPendingMeterReadings(session.user.id),
   ]);
   const notifications = await getNotifications(
     session.user.id,
@@ -68,6 +74,12 @@ export default async function DashboardPage({
     now,
   );
   const rentalAccess = profile ? await getRentalAccess(profile) : { propertyIds: [], unitIds: [], hasLockedRentals: false };
+  const shareLinks = await buildShareLinks([
+    ...[...new Set([...overviewRentBilling.bills, ...rentBilling.bills].map((bill) => bill.id))]
+      .map((id) => ({ kind: "rent" as const, id })),
+    ...electricityBills.map((bill) => ({ kind: "electricity" as const, id: bill.id })),
+    ...payments.map((payment) => ({ kind: "receipt" as const, id: payment.id })),
+  ]);
 
   return (
     <Dashboard
@@ -87,6 +99,9 @@ export default async function DashboardPage({
       subscriptionReceipts={subscriptionReceipts}
       subscription={{
         active: Boolean(profile && hasPortfolioAccess(profile)),
+        plan: profile && hasPortfolioAccess(profile) ? (profile.plan === "estate" ? "estate" : "portfolio") : "one_door",
+        billingInterval: profile?.billingInterval === "year" ? "year" : profile?.billingInterval === "month" ? "month" : null,
+        choices: availableBillingChoices(),
         status: profile?.subscriptionStatus ?? "none",
         currentPeriodEnd: profile?.subscriptionCurrentPeriodEnd?.toISOString() ?? null,
         cancelAtPeriodEnd: profile?.subscriptionCancelAtPeriodEnd ?? false,
@@ -95,6 +110,11 @@ export default async function DashboardPage({
         trialEndsAt: profile?.trialEndsAt?.toISOString() ?? null,
       }}
       rentalAccess={rentalAccess}
+      shareLinks={shareLinks}
+      claims={claims}
+      meterReadings={meterReadings}
+      appUrl={appOrigin()}
+      today={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now)}
       profile={{
         businessName: profile?.businessName ?? session.user.name,
         rentBillingPeriod: profile?.rentBillingPeriod === "current" ? "current" : "previous",
@@ -106,6 +126,8 @@ export default async function DashboardPage({
         city: profile?.city ?? "",
         state: profile?.state ?? "",
         pincode: profile?.pincode ?? "",
+        upiId: profile?.upiId ?? "",
+        dailySummaryEmail: profile?.dailySummaryEmail ?? true,
       }}
       issuer={{
         businessName: profile?.businessName ?? session.user.name,
@@ -118,6 +140,7 @@ export default async function DashboardPage({
         state: profile?.state ?? "",
         pincode: profile?.pincode ?? "",
         showOutstandingOnInvoice: profile?.showOutstandingOnInvoice ?? true,
+        upiId: profile?.upiId ?? "",
       }}
       user={{
         id: session.user.id,

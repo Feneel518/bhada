@@ -14,7 +14,7 @@ export type PropertyActionState = {
   status: "idle" | "success" | "error";
   message: string;
   id?: string;
-  errors?: Partial<Record<"name" | "address" | "city" | "state" | "postalCode", string>>;
+  errors?: Partial<Record<"name" | "address" | "city" | "state" | "postalCode" | "electricityRate", string>>;
 };
 
 const initialError = (message: string): PropertyActionState => ({
@@ -44,9 +44,16 @@ export async function saveProperty(
   const city = value("city");
   const state = value("state");
   const postalCode = value("postalCode");
+  // Only the full property form sends the rate; quick setup and import leave it alone.
+  const hasRate = formData.has("electricityRate");
+  const rateInput = value("electricityRate");
+  const electricityRate = rateInput ? Number(rateInput) : null;
   const errors: PropertyActionState["errors"] = {};
 
   if (!name) errors.name = "Property name is required.";
+  if (hasRate && rateInput && (!/^\d+(\.\d{1,4})?$/.test(rateInput) || electricityRate! <= 0 || electricityRate! > 1000)) {
+    errors.electricityRate = "Enter a rate like 8 or 8.50.";
+  }
   if (Object.keys(errors).length > 0) {
     return {
       status: "error",
@@ -61,6 +68,7 @@ export async function saveProperty(
     city: city || null,
     state: state || null,
     postalCode: postalCode || null,
+    ...(hasRate ? { electricityRate } : {}),
     updatedAt: new Date(),
   };
   const owner = await ensureLandlord(session.user);
@@ -98,7 +106,8 @@ export async function saveProperty(
         id: sql<string>`${savedId}`.as("id"), landlordId: landlord.id,
         name: sql<string>`${values.name}`.as("name"), address: sql<string>`${values.address}`.as("address"),
         city: sql<string>`${values.city}`.as("city"), state: sql<string>`${values.state}`.as("state"),
-        postalCode: sql<string>`${values.postalCode}`.as("postalCode"), createdAt: sql<Date>`now()`.as("createdAt"), updatedAt: sql<Date>`now()`.as("updatedAt"),
+        postalCode: sql<string>`${values.postalCode}`.as("postalCode"),
+        electricityRate: sql<number>`${hasRate ? electricityRate : null}::real`.as("electricityRate"), createdAt: sql<Date>`now()`.as("createdAt"), updatedAt: sql<Date>`now()`.as("updatedAt"),
       }).from(landlord).where(and(eq(landlord.id, owner.id),
         sql`(select count(*) from property where landlord_id = ${owner.id}) < ${limits.propertyLimit}`)))
         .returning({ id: property.id }),

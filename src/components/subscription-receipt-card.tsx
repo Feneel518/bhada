@@ -1,5 +1,6 @@
 "use client";
 
+import { describeSubscriptionPayment } from "@/lib/plans";
 import { useMemo, useState } from "react";
 import { CheckCircle2, Download, LoaderCircle, ReceiptText, Search } from "lucide-react";
 import { toast } from "sonner";
@@ -52,7 +53,7 @@ export function SubscriptionBillingHistory({
         ...receipt,
         customerName: customer.name,
         customerEmail: customer.email,
-        description: "Bhada Portfolio plan - monthly subscription",
+        description: describeSubscriptionPayment(receipt.amountPaise),
       });
     } catch {
       toast.error("Could not download the receipt. Please try again.");

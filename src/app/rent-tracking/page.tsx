@@ -21,7 +21,7 @@ import {
 
 const title = "Rent Tracking Software for Landlords in India";
 const description =
-  "Track rent payments, monthly dues, overdue balances, tenant history, and rental income with Bhada—the simple rent tracker for landlords in India.";
+  "Track rent payments, monthly dues, overdue balances, tenant history, and rental income with Bhadaa—the simple rent tracker for landlords in India.";
 const pageUrl = `${SITE_URL}/rent-tracking`;
 
 export const metadata: Metadata = {
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Bhada rent tracking software for landlords in India",
+        alt: "Bhadaa rent tracking software for landlords in India",
       },
     ],
   },
@@ -158,7 +158,7 @@ export default function RentTrackingPage() {
 
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-[1296px] items-center justify-between px-5 py-5 sm:px-10 lg:px-0">
-          <Link href="/" aria-label="Bhada home">
+          <Link href="/" aria-label="Bhadaa home">
             <BhadaLogo
               className="gap-3"
               markClassName="size-8 text-[#EDEDE8]"
@@ -198,7 +198,7 @@ export default function RentTrackingPage() {
               </div>
               <div>
                 <p className="text-base leading-7 text-white/60">
-                  Bhada keeps rent payments, overdue balances, tenant history, and monthly bills together—so you can track every rental unit without rebuilding a spreadsheet.
+                  Bhadaa keeps rent payments, overdue balances, tenant history, and monthly bills together—so you can track every rental unit without rebuilding a spreadsheet.
                 </p>
                 <Link
                   href="/sign-in"
@@ -207,7 +207,7 @@ export default function RentTrackingPage() {
                   Start tracking rent free
                   <ArrowRight className="size-4 transition group-hover:translate-x-0.5" />
                 </Link>
-                <p className="mt-4 text-xs text-white/40">Bhada is available at Bhadaa.in. Start with one property.</p>
+                <p className="mt-4 text-xs text-white/40">Bhadaa is available at Bhadaa.in. Start with one property.</p>
               </div>
             </div>
           </div>
@@ -243,13 +243,13 @@ export default function RentTrackingPage() {
             </div>
             <div className="space-y-5 text-[15px] leading-7 text-white/60">
               <p>
-                A useful rent payment tracker needs context. A payment belongs to a tenant, a tenant belongs to a unit, and the amount due may include more than base rent. Bhada keeps those records linked so the portfolio total and the tenant history stay consistent.
+                A useful rent payment tracker needs context. A payment belongs to a tenant, a tenant belongs to a unit, and the amount due may include more than base rent. Bhadaa keeps those records linked so the portfolio total and the tenant history stay consistent.
               </p>
               <p>
                 Record full, partial, or advance payments. Any unpaid amount remains outstanding, while extra payment can carry forward as credit. This makes it easier to answer who paid rent, how much remains due, and which month a payment settled.
               </p>
               <p>
-                Need more than tracking? Bhada also includes property and tenant records, rent billing, GST and TDS settings, submeter electricity charges, reminders, and shareable PDF bills in its broader <Link href="/rent-management-software" className="text-[#E4C77A] underline decoration-[#E4C77A]/35 underline-offset-4 hover:decoration-[#E4C77A]">rent management software</Link>.
+                Need more than tracking? Bhadaa also includes property and tenant records, rent billing, GST and TDS settings, submeter electricity charges, reminders, and shareable PDF bills in its broader <Link href="/rent-management-software" className="text-[#E4C77A] underline decoration-[#E4C77A]/35 underline-offset-4 hover:decoration-[#E4C77A]">rent management software</Link>.
               </p>
             </div>
           </div>
@@ -275,7 +275,7 @@ export default function RentTrackingPage() {
 
       <footer className="border-t border-white/10 px-5 py-10 sm:px-10 lg:px-[72px]">
         <div className="mx-auto flex max-w-[1120px] flex-col justify-between gap-5 text-xs text-white/40 sm:flex-row sm:items-center">
-          <Link href="/" className="text-white/65 transition hover:text-white">Bhada</Link>
+          <Link href="/" className="text-white/65 transition hover:text-white">Bhadaa</Link>
           <p>Rent tracking and management software for independent landlords in India.</p>
         </div>
       </footer>

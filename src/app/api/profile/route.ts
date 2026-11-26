@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { db } from "@/db";
 import { landlord } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { isValidUpiId, normaliseUpiId } from "@/lib/upi";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
@@ -22,6 +23,8 @@ export async function PUT(request: Request) {
   const rentBillingPeriod = value("rentBillingPeriod");
   const showOutstandingOnInvoice = formData.get("showOutstandingOnInvoice") === "on";
   const pan = value("pan").toUpperCase();
+  const upiId = normaliseUpiId(value("upiId"));
+  const dailySummaryEmail = formData.get("dailySummaryEmail") === "on";
 
   if (!businessName) {
     return Response.json(
@@ -36,6 +39,17 @@ export async function PUT(request: Request) {
         status: "error",
         message: "Please correct the PAN before saving.",
         panError: "Enter a valid PAN, for example ABCDE1234F.",
+      },
+      { status: 400 },
+    );
+  }
+
+  if (upiId && !isValidUpiId(upiId)) {
+    return Response.json(
+      {
+        status: "error",
+        message: "Please correct the UPI ID before saving.",
+        upiError: "Enter a UPI ID like yourname@okhdfcbank.",
       },
       { status: 400 },
     );
@@ -59,6 +73,8 @@ export async function PUT(request: Request) {
     city: optional("city"),
     state: optional("state"),
     pincode: optional("pincode"),
+    upiId: upiId || null,
+    dailySummaryEmail,
     updatedAt: new Date(),
   };
 

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/migrate.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "node --test scripts/*.test.mjs",
@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:add-rent-due-day": "node scripts/add-rent-due-day.mjs",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.6.25",
@@ -36,6 +37,7 @@
     "lucide-react": "^1.27.0",
     "next": "16.2.12",
     "nodemailer": "^9.0.3",
+    "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-day-picker": "^9.11.1",
     "react-dom": "19.2.4",
@@ -49,6 +51,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",

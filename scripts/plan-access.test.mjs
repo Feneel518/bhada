@@ -48,3 +48,16 @@ test("every caller receives free limits after expiry and paid limits during a tr
   assert.deepEqual(planLimits({ ...paid, subscriptionCurrentPeriodEnd: past }), FREE_PLAN);
   assert.deepEqual(planLimits({ plan: "one_door", subscriptionStatus: "none", trialStartedAt: new Date(Date.now() - 1000), trialEndsAt: new Date(Date.now() + 60000) }), PORTFOLIO_PLAN);
 });
+
+test("Estate is a paid plan with its own limits", async () => {
+  const { ESTATE_PLAN, BILLING_CHOICES, isBillingChoice } = await import("../src/lib/plans.ts");
+  // planLimits reads the real clock, so use a period end far in the future.
+  const estate = { plan: "estate", subscriptionStatus: "active", subscriptionCurrentPeriodEnd: new Date("2999-01-01") };
+  assert.equal(hasPaidPortfolioAccess(estate, now), true);
+  assert.deepEqual(planLimits(estate), ESTATE_PLAN);
+  assert.deepEqual(planLimits({ ...estate, subscriptionCurrentPeriodEnd: past }), FREE_PLAN);
+  assert.deepEqual(planLimits({ ...estate, plan: "portfolio" }), PORTFOLIO_PLAN);
+  assert.equal(BILLING_CHOICES.portfolio_yearly.price, 499);
+  assert.ok(isBillingChoice("estate_monthly"));
+  assert.ok(!isBillingChoice("gold"));
+});

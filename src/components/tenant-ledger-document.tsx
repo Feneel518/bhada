@@ -57,7 +57,7 @@ export async function createLedgerPdf(
     pdf.setTextColor(...muted);
     pdf.setFont(pdfFont, "normal");
     pdf.setFontSize(7.5);
-    pdf.text(`${issuer.businessName || "Bhada Property Management"} · ${financialYearLabel}`, 26, 286);
+    pdf.text(`${issuer.businessName || "Bhadaa Property Management"} · ${financialYearLabel}`, 26, 286);
     pdf.text(`Page ${pageNumber}`, 185, 286, { align: "right" });
   };
 
@@ -300,7 +300,7 @@ export function TenantLedgerDialog({
             <header className="grid grid-cols-2 items-start gap-6">
               <div className="flex w-fit flex-col items-center gap-2">
                 <span className="grid size-20 place-items-center bg-black sm:size-24"><BhadaMark className="size-[calc(100%-8px)] text-[#f7f7f3]" /></span>
-                <span className="text-2xl sm:text-3xl">Bhada</span>
+                <span className="text-2xl sm:text-3xl">Bhadaa</span>
               </div>
               <h2 className="text-right text-[clamp(2.2rem,7vw,4.7rem)] font-normal leading-[0.92] tracking-[-0.045em]">TENANT<br />LEDGER</h2>
             </header>
@@ -341,7 +341,7 @@ export function TenantLedgerDialog({
             </div>
 
             <footer className="mt-20 border-t border-black pt-5 text-[10px] text-black/55 sm:text-xs">
-              <div className="flex flex-col justify-between gap-2 sm:flex-row"><span>{issuer.businessName || "Bhada Property Management"}</span><span>Generated with bhada</span></div>
+              <div className="flex flex-col justify-between gap-2 sm:flex-row"><span>{issuer.businessName || "Bhadaa Property Management"}</span><span>Generated with bhada</span></div>
             </footer>
           </article>
         </div>

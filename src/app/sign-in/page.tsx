@@ -117,7 +117,7 @@ function SignInContent() {
             <ArrowLeft className="size-4" /> Back to home
           </Link>
           <p className="text-sm font-semibold text-[#5b5bd6]">{isSignUp ? "Create your workspace" : "Welcome back"}</p>
-          <h2 className="mt-2 font-display text-3xl tracking-[-0.045em]">{isSignUp ? "Start tracking rent" : "Sign in to Bhada"}</h2>
+          <h2 className="mt-2 font-display text-3xl tracking-[-0.045em]">{isSignUp ? "Start tracking rent" : "Sign in to Bhadaa"}</h2>
           <p className="mt-2 text-sm text-[#7f8696]">{isSignUp ? "A clear portfolio is just a minute away." : "Enter your details to continue to your portfolio."}</p>
 
           {notice && <p className="mt-5 rounded-xl bg-emerald-50 px-3.5 py-3 text-xs font-semibold text-emerald-700">{notice}</p>}
@@ -149,7 +149,7 @@ function SignInContent() {
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-[#7f8696]">
-            {isSignUp ? "Already have an account?" : "New to Bhada?"}{" "}
+            {isSignUp ? "Already have an account?" : "New to Bhadaa?"}{" "}
             <button onClick={() => { setIsSignUp(!isSignUp); setError(""); setNotice(""); }} className="font-bold text-[#5555c7] hover:underline">
               {isSignUp ? "Sign in" : "Create an account"}
             </button>

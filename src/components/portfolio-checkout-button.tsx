@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { downloadSubscriptionReceiptPdf } from "@/lib/subscription-receipt-pdf";
 import { cn } from "@/lib/utils";
+import { BILLING_CHOICES, type BillingChoice } from "@/lib/plans";
 
 type CheckoutResponse = {
   razorpay_payment_id: string;
@@ -48,10 +49,15 @@ declare global {
 export function PortfolioCheckoutButton({
   className,
   active = false,
+  choice = "portfolio_monthly",
+  label,
 }: {
   className?: string;
   active?: boolean;
+  choice?: BillingChoice;
+  label?: string;
 }) {
+  const planName = BILLING_CHOICES[choice].plan === "estate" ? "Estate" : "Portfolio";
   const [scriptReady, setScriptReady] = useState(false);
   const [pending, setPending] = useState(false);
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null);
@@ -89,6 +95,8 @@ export function PortfolioCheckoutButton({
     try {
       const response = await fetch("/api/billing/razorpay/subscription", {
         method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ choice }),
       });
       const data = await response.json() as {
         message?: string;
@@ -97,6 +105,7 @@ export function PortfolioCheckoutButton({
         name?: string;
         email?: string;
         contact?: string;
+        description?: string;
       };
       if (!response.ok || !data.keyId || !data.subscriptionId) {
         throw new Error(data.message || "Unable to start checkout.");
@@ -105,8 +114,8 @@ export function PortfolioCheckoutButton({
       const checkout = new Razorpay({
         key: data.keyId,
         subscription_id: data.subscriptionId,
-        name: "Bhada",
-        description: "Portfolio plan · ₹49/month",
+        name: "Bhadaa",
+        description: data.description || BILLING_CHOICES[choice].label,
         prefill: {
           name: data.name,
           email: data.email,
@@ -131,7 +140,7 @@ export function PortfolioCheckoutButton({
               return;
             }
 
-            toast.success(result.active ? "Portfolio activated" : "Payment received", { description: result.message });
+            toast.success(result.active ? `${planName} activated` : "Payment received", { description: result.message });
             setPending(false);
             setReceipt(result.receipt);
           } catch {
@@ -173,7 +182,7 @@ export function PortfolioCheckoutButton({
         className={cn(className, pending && "cursor-wait opacity-70")}
       >
         {pending && <LoaderCircle className="size-4 animate-spin" />}
-        {active ? "Open Portfolio dashboard" : pending ? "Opening secure checkout…" : "Upgrade to Portfolio"}
+        {active ? "Open dashboard" : pending ? "Opening secure checkout…" : label ?? `Upgrade to ${planName}`}
       </button>
 
       <Dialog
@@ -191,7 +200,7 @@ export function PortfolioCheckoutButton({
                 </span>
                 <DialogTitle className="mt-4 text-2xl text-[#222630]">Payment received</DialogTitle>
                 <DialogDescription className="text-[#777b84]">
-                  Your Portfolio plan is active. Here is your receipt.
+                  Your {planName} plan is active. Here is your receipt.
                 </DialogDescription>
               </div>
 
@@ -212,7 +221,7 @@ export function PortfolioCheckoutButton({
                   </div>
 
                   <dl className="mt-4 grid gap-3 text-xs">
-                    <ReceiptRow label="Plan" value="Portfolio · Monthly" />
+                    <ReceiptRow label="Plan" value={BILLING_CHOICES[choice].label} />
                     <ReceiptRow
                       label="Paid on"
                       value={new Intl.DateTimeFormat("en-IN", {

@@ -144,7 +144,8 @@ test("an old activation webhook cannot restore a currently cancelled subscriptio
     ...base(), "@/db": { db },
     "@/lib/razorpay": {
       hmacHex: async () => "0".repeat(64), safeEqualHex: () => true,
-      razorpayConfig: () => ({ planId: "plan_test" }),
+      razorpayConfig: () => ({ planId: "plan_test", planIds: ["plan_test"] }),
+      subscriptionInterval: () => "month",
       razorpayRequest: async () => { providerReads++; return { id: "sub_test", plan_id: "plan_test", status: "cancelled", current_end: null }; },
       subscriptionPlan: (status) => status === "active" ? "portfolio" : "one_door",
       subscriptionPeriodEnd: () => null,

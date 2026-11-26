@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Bhada — Rent Management Software",
-    short_name: "Bhada",
+    name: "Bhadaa — Rent Management Software",
+    short_name: "Bhadaa",
     description:
       "Rent, billing, electricity, tenant, and payment management for independent landlords in India.",
     start_url: "/",

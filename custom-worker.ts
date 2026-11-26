@@ -8,6 +8,7 @@ type WorkerEnv = {
 
 type ScheduledController = {
   scheduledTime: number;
+  cron: string;
 };
 
 type WorkerContext = {
@@ -27,8 +28,10 @@ const worker = {
       throw new Error("CRON_SECRET is not configured.");
     }
 
+    // "40 2 * * *" is the 08:10 IST landlord summary; every other trigger bills rent.
+    const path = event.cron === "40 2 * * *" ? "/api/cron/daily-summary" : "/api/cron/rent-bills";
     const response = await handler.fetch(
-      new Request("https://internal.bhada/api/cron/rent-bills", {
+      new Request(`https://internal.bhada${path}`, {
         method: "POST",
         headers: {
           authorization: `Bearer ${env.CRON_SECRET}`,
@@ -40,7 +43,7 @@ const worker = {
     );
 
     if (!response.ok) {
-      throw new Error(`Monthly rent billing failed with status ${response.status}.`);
+      throw new Error(`Scheduled job ${path} failed with status ${response.status}.`);
     }
   },
 };

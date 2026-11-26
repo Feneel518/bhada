@@ -8,7 +8,7 @@ const baseURL = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?
 const hasGoogle = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
 export const auth = betterAuth({
-  appName: "Bhada",
+  appName: "Bhadaa",
   baseURL,
   // A transient secret keeps demo builds healthy without shipping a known fallback.
   // Production authentication requires BETTER_AUTH_SECRET for stable sessions.

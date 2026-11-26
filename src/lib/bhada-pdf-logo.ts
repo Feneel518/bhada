@@ -28,7 +28,7 @@ function rasterizedLogo() {
       context.drawImage(image, 0, 0, 256, 256);
       resolve(canvas.toDataURL("image/png"));
     };
-    image.onerror = () => reject(new Error("Could not render the Bhada logo."));
+    image.onerror = () => reject(new Error("Could not render the Bhadaa logo."));
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(LOGO_SVG)}`;
   });
 
@@ -78,5 +78,5 @@ export async function drawBhadaPdfLogo(pdf: jsPDF, fontName = "helvetica") {
   pdf.setTextColor(18, 18, 16);
   pdf.setFont(fontName, "normal");
   pdf.setFontSize(13);
-  pdf.text("Bhada", 37, 52, { align: "center" });
+  pdf.text("Bhadaa", 37, 52, { align: "center" });
 }

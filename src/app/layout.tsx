@@ -19,8 +19,8 @@ const displayFont = Gotu({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Bhada — Rent Management Software for Landlords",
-    template: "%s | Bhada",
+    default: "Bhadaa — Rent Management Software for Landlords",
+    template: "%s | Bhadaa",
   },
   description: SITE_DESCRIPTION,
   keywords: SEO_KEYWORDS,
@@ -34,12 +34,12 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "/",
     siteName: SITE_NAME,
-    title: "Bhada — Rent Management Software for Landlords",
+    title: "Bhadaa — Rent Management Software for Landlords",
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Bhada — Rent Management Software for Landlords",
+    title: "Bhadaa — Rent Management Software for Landlords",
     description: SITE_DESCRIPTION,
   },
   robots: {

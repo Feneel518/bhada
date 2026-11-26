@@ -113,7 +113,7 @@ button {
   color: #33338b;
 }
 
-/* Sonner notifications, tuned to feel like the rest of the Bhada workspace. */
+/* Sonner notifications, tuned to feel like the rest of the Bhadaa workspace. */
 [data-sonner-toaster].bhada-toaster {
   --width: min(372px, calc(100vw - 2rem));
   font-family: var(--font-body), sans-serif;
@@ -282,35 +282,35 @@ button {
   transform-origin: top right;
 }
 
-[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="default"] {
+[data-bhada-dialog="dark"] :is(button, a)[data-slot="button"][data-variant="default"] {
   border-color: #e4c77a;
   background: #e4c77a;
   color: #111111;
   box-shadow: 0 8px 24px rgba(228, 199, 122, 0.09);
 }
 
-[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="default"]:hover {
+[data-bhada-dialog="dark"] :is(button, a)[data-slot="button"][data-variant="default"]:hover {
   border-color: #f0da9d;
   background: #f0da9d;
 }
 
-[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="outline"] {
+[data-bhada-dialog="dark"] :is(button, a)[data-slot="button"][data-variant="outline"] {
   border-color: rgba(228, 199, 122, 0.42);
   background: rgba(228, 199, 122, 0.045);
   color: #e4c77a;
   box-shadow: none;
 }
 
-[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="outline"]:hover {
+[data-bhada-dialog="dark"] :is(button, a)[data-slot="button"][data-variant="outline"]:hover {
   border-color: #e4c77a;
   background: rgba(228, 199, 122, 0.1);
 }
 
-[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="ghost"] {
+[data-bhada-dialog="dark"] :is(button, a)[data-slot="button"][data-variant="ghost"] {
   color: rgba(237, 237, 232, 0.55);
 }
 
-[data-bhada-dialog="dark"] button[data-slot="button"][data-variant="ghost"]:hover {
+[data-bhada-dialog="dark"] :is(button, a)[data-slot="button"][data-variant="ghost"]:hover {
   background: rgba(255, 255, 255, 0.055);
   color: #e4c77a;
 }
@@ -438,4 +438,13 @@ button {
 }
 @media (prefers-reduced-motion: reduce) {
   .bhada-dialog-content, .bhada-dialog-overlay, [data-slot="sheet-content"], [data-slot="sheet-overlay"] { animation: none !important; transition: none !important; }
+}
+
+/* Public bill and receipt pages: paper on a quiet background, print-ready. */
+body:has(.share-shell) .bhada-language-switcher { display: none; }
+@media print {
+  body:has(.share-shell) { background: #fff !important; }
+  .share-shell { padding: 0 !important; background: #fff !important; }
+  .share-no-print { display: none !important; }
+  .share-shell article { box-shadow: none !important; }
 }
