@@ -541,7 +541,7 @@ export function ProfileForm({
                     Morning rent summary email
                   </span>
                   <span className="mt-1 block max-w-2xl text-xs leading-5 text-white/35">
-                    On days when rent is due or overdue, get a short email listing who to remind. Nothing is sent on quiet days.
+                    On days rent falls due, and on Mondays while rent is overdue, get a short email listing who to remind. Quiet days send nothing.
                   </span>
                 </span>
               </label>

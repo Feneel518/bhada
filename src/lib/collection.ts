@@ -79,3 +79,15 @@ export function collectionCounts(rows: CollectionRow[]) {
     { overdue: 0, due: 0, paid: 0 } as Record<CollectionStatus, number>,
   );
 }
+
+/**
+ * Morning email rule: write on days rent falls due or first turns late, and
+ * once a week (Monday) while anything stays overdue. Quiet days send nothing.
+ */
+export function summaryToSend(rows: CollectionRow[], today: string, weekday: number) {
+  const dueToday = rows.filter((row) => row.status === "due" && row.dueDate === today);
+  const overdue = rows.filter((row) => row.status === "overdue");
+  const newlyOverdue = overdue.filter((row) => row.daysOverdue === 1);
+  const send = dueToday.length > 0 || newlyOverdue.length > 0 || (overdue.length > 0 && weekday === 1);
+  return send ? { dueToday, overdue, lines: [...overdue, ...dueToday].slice(0, 12) } : null;
+}

@@ -110,3 +110,17 @@ test("CSV without a header uses the template order", () => {
   assert.equal(row.dueDay, 10);
   assert.equal(row.openingBalance, 500);
 });
+
+import { summaryToSend } from "../src/lib/collection.ts";
+
+test("morning summary only goes out when there is something to act on", () => {
+  const rows = (dueDate, pending) => buildCollection({
+    tenants: [tenant("a")], rentBills: [rent("a", dueDate, pending)], electricityBills: [], analytics: [], today: "2026-11-26",
+  });
+  assert.equal(summaryToSend(rows("2026-11-26", 1000), "2026-11-26", 4)?.dueToday.length, 1, "due today");
+  assert.equal(summaryToSend(rows("2026-11-25", 1000), "2026-11-26", 4)?.overdue.length, 1, "became late yesterday");
+  assert.equal(summaryToSend(rows("2026-11-20", 1000), "2026-11-26", 4), null, "still late, mid-week: quiet");
+  assert.ok(summaryToSend(rows("2026-11-20", 1000), "2026-11-26", 1), "still late, Monday: weekly nudge");
+  assert.equal(summaryToSend(rows("2026-11-30", 1000), "2026-11-26", 1), null, "due later: quiet");
+  assert.equal(summaryToSend(rows("2026-11-26", 0), "2026-11-26", 4), null, "paid: quiet");
+});
