@@ -3,6 +3,7 @@ import { CheckCircle2, Clock3, FileText, MessageCircle, ReceiptText, XCircle } f
 import { BhadaMark } from "@/components/brand-logo";
 import { UpiPayCard } from "@/components/upi-pay-card";
 import { ClaimForm } from "@/components/tenant-portal/claim-form";
+import { MeterReadingForm } from "@/components/tenant-portal/meter-reading-form";
 import { formatBillingMonth, formatElectricityReadingDate } from "@/lib/financial-year";
 import { shareKey } from "@/lib/share-keys";
 import type { TenantPortal } from "@/lib/tenant-portal";
@@ -40,6 +41,13 @@ export function TenantPortalView({ portal }: { portal: TenantPortal }) {
   const payLink = landlord.upiId && stillToPay > 0.005
     ? upiPayLink({ upiId: landlord.upiId, payeeName: landlord.businessName, amount: stillToPay, note: `Rent ${tenant.propertyName} ${tenant.unitNumber}` })
     : null;
+  // Readings newer than the last approved one: what's waiting, or what was sent back.
+  const meterNotices = [];
+  for (const item of portal.meter.submissions) {
+    if (item.status === "approved") break;
+    meterNotices.push(item);
+    if (meterNotices.length === 2) break;
+  }
   const bills = [
     ...portal.rentBills.map((bill) => ({ kind: "rent" as const, id: bill.id, label: `Rent · ${formatBillingMonth(bill.billingPeriod)}`, bill })),
     ...portal.electricityBills.map((bill) => ({ kind: "electricity" as const, id: bill.id, label: `Electricity · ${formatElectricityReadingDate(bill.billingPeriod)}`, bill })),
@@ -114,6 +122,40 @@ export function TenantPortalView({ portal }: { portal: TenantPortal }) {
                 </li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {portal.meter.lastReading !== null && (
+          <section aria-label="Electricity meter" className="bg-[#f7f7f3] p-5">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-black/55">Electricity meter</h2>
+            <p className="mt-2 text-sm">
+              Last reading <strong className="tabular-nums">{portal.meter.lastReading.toLocaleString("en-IN", { maximumFractionDigits: 3 })}</strong>
+              {portal.meter.lastReadingDate ? ` on ${shortDate(portal.meter.lastReadingDate)}` : ""}
+              {portal.meter.rate ? ` · ${formatCurrency(portal.meter.rate)} per unit` : ""}
+            </p>
+            {meterNotices.map((item) => (
+              <p
+                key={item.id}
+                className={item.status === "pending"
+                  ? "mt-3 flex items-start gap-2 border border-[#c9a74a]/50 bg-[#fbf4df] p-3 text-sm text-[#6b5414]"
+                  : "mt-3 flex items-start gap-2 border border-[#b3402a]/30 bg-[#fbecea] p-3 text-sm text-[#7a2a1c]"}
+              >
+                {item.status === "pending" ? <Clock3 className="mt-0.5 size-4 shrink-0" /> : <XCircle className="mt-0.5 size-4 shrink-0" />}
+                {item.status === "pending"
+                  ? `You sent ${item.reading} on ${shortDate(item.readingDate)}. Waiting for ${landlord.businessName} to approve.`
+                  : `${landlord.businessName} sent back your reading of ${item.reading}${item.reviewNote ? `: “${item.reviewNote}”.` : "."} Please enter it again.`}
+              </p>
+            ))}
+            {tenant.isActive && !portal.meter.submissions.some((item) => item.status === "pending") && (
+              <div className="mt-4">
+                <MeterReadingForm
+                  token={portal.token}
+                  lastReading={portal.meter.lastReading}
+                  rate={portal.meter.rate}
+                  landlordName={landlord.businessName}
+                />
+              </div>
+            )}
           </section>
         )}
 

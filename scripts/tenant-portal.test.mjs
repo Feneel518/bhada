@@ -77,3 +77,56 @@ test("an unknown payment method falls back to UPI", async () => {
   await submitPaymentClaim({}, form({ method: "crypto" }));
   assert.equal(inserted[0].method, "upi");
 });
+
+function setupMeter({ found = { ...renter, unitId: "u1" }, meter = { lastReading: 250, lastReadingDate: new Date("2026-10-01T06:30:00Z") }, pending = 0 } = {}) {
+  const inserted = [];
+  let selects = 0;
+  const db = {
+    select: () => ({
+      from: () => ({
+        where: () => {
+          selects += 1;
+          // First select: the unit's meter. Second: pending readings count.
+          if (selects === 1) return { limit: async () => (meter ? [meter] : []) };
+          return Promise.resolve([{ pending }]);
+        },
+      }),
+    }),
+    insert: () => ({ values: async (value) => { inserted.push(value); } }),
+  };
+  const { submitMeterReading } = load(resolve("src/app/t/actions.ts"), {
+    "drizzle-orm": { and: () => ({}), count: () => ({}), eq: () => ({}) },
+    "next/cache": { revalidatePath() {} },
+    "@/db": { db },
+    "@/db/schema": { paymentClaim: {}, meterReadingSubmission: {}, unit: {} },
+    "@/lib/email": { emailConfigured: () => false },
+    "@/lib/share-links": { appOrigin: () => "https://bhadaa.in" },
+    "@/lib/tenant-portal": { CLAIM_METHODS: [], MAX_PENDING_CLAIMS: 3, findTenantByPortalToken: async () => found },
+    "@/lib/utils": { formatCurrency: (value) => `₹${value}` },
+  });
+  return { submitMeterReading, inserted };
+}
+
+function meterForm(values) {
+  const data = new FormData();
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+  for (const [key, value] of Object.entries({ token: "a".repeat(32), reading: "362.5", readingDate: today, ...values })) data.set(key, value);
+  return data;
+}
+
+test("a tenant's meter reading is saved as pending for the landlord to approve", async () => {
+  const { submitMeterReading, inserted } = setupMeter();
+  const result = await submitMeterReading({}, meterForm({}));
+  assert.equal(result.status, "success");
+  assert.equal(inserted[0].reading, "362.500");
+  assert.equal(inserted[0].unitId, "u1");
+});
+
+test("meter readings below the last one, dated too early, or without a meter are refused", async () => {
+  assert.ok((await setupMeter().submitMeterReading({}, meterForm({ reading: "200" }))).errors.reading);
+  assert.ok((await setupMeter().submitMeterReading({}, meterForm({ readingDate: "2026-09-01" }))).errors.readingDate);
+  assert.equal((await setupMeter({ meter: null }).submitMeterReading({}, meterForm({}))).status, "error");
+  const waiting = setupMeter({ pending: 1 });
+  assert.match((await waiting.submitMeterReading({}, meterForm({}))).message, /still waiting/);
+  assert.equal(waiting.inserted.length, 0);
+});

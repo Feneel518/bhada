@@ -140,6 +140,8 @@ export const property = pgTable(
     city: text("city"),
     state: text("state"),
     postalCode: text("postal_code"),
+    // ₹ per electricity unit (kWh) for submeter bills in this property.
+    electricityRate: real("electricity_rate"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -322,6 +324,30 @@ export const paymentReceipt = pgTable(
     index("payment_receipt_landlord_id_idx").on(table.landlordId),
     index("payment_receipt_tenant_id_idx").on(table.tenantId),
     index("payment_receipt_paid_at_idx").on(table.paidAt),
+  ],
+);
+
+// A meter reading entered by the tenant. It becomes an electricity bill only
+// when the landlord approves it.
+export const meterReadingSubmission = pgTable(
+  "meter_reading_submission",
+  {
+    id: text("id").primaryKey(),
+    landlordId: text("landlord_id").notNull().references(() => landlord.id, { onDelete: "cascade" }),
+    unitId: text("unit_id").notNull().references(() => unit.id, { onDelete: "cascade" }),
+    tenantId: text("tenant_id").notNull().references(() => tenant.id, { onDelete: "cascade" }),
+    reading: numeric("reading", { precision: 14, scale: 3 }).notNull(),
+    readingDate: text("reading_date").notNull(),
+    note: text("note"),
+    status: text("status").default("pending").notNull(),
+    reviewNote: text("review_note"),
+    reviewedAt: timestamp("reviewed_at"),
+    electricityBillId: text("electricity_bill_id").references(() => electricityBill.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("meter_reading_landlord_status_idx").on(table.landlordId, table.status),
+    index("meter_reading_unit_id_idx").on(table.unitId),
   ],
 );
 

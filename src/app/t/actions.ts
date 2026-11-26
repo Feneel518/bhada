@@ -3,8 +3,8 @@
 import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { paymentClaim } from "@/db/schema";
-import { emailConfigured, sendPaymentClaimEmail } from "@/lib/email";
+import { meterReadingSubmission, paymentClaim, unit } from "@/db/schema";
+import { emailConfigured, sendMeterReadingEmail, sendPaymentClaimEmail } from "@/lib/email";
 import { appOrigin } from "@/lib/share-links";
 import { CLAIM_METHODS, findTenantByPortalToken, MAX_PENDING_CLAIMS, type ClaimMethod } from "@/lib/tenant-portal";
 import { formatCurrency } from "@/lib/utils";
@@ -90,4 +90,72 @@ export async function submitPaymentClaim(_previous: ClaimState, formData: FormDa
   revalidatePath(`/t/${token}`);
   revalidatePath("/dashboard");
   return { status: "success", message: `Sent to ${renter.businessName}. You'll see it here once they confirm.` };
+}
+
+export type MeterState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  errors?: Partial<Record<"reading" | "readingDate", string>>;
+};
+
+export async function submitMeterReading(_previous: MeterState, formData: FormData): Promise<MeterState> {
+  const token = text(formData.get("token"), 64);
+  const renter = await findTenantByPortalToken(token);
+  if (!renter) return { status: "error", message: "This link is no longer active. Ask your landlord for a new one." };
+  if (!renter.isActive) return { status: "error", message: "This tenancy has ended, so readings can't be added here." };
+
+  const readingRaw = text(formData.get("reading"), 20).replace(/[,\s]/g, "");
+  const readingDate = text(formData.get("readingDate"), 10);
+  const note = text(formData.get("note"), 200);
+  const [meter] = await db
+    .select({ lastReading: unit.lastMeterReading, lastReadingDate: unit.lastMeterReadingDate })
+    .from(unit)
+    .where(eq(unit.id, renter.unitId))
+    .limit(1);
+  if (!meter || meter.lastReading === null || !meter.lastReadingDate) {
+    return { status: "error", message: `${renter.businessName} hasn't set up the meter for your unit yet.` };
+  }
+
+  const errors: MeterState["errors"] = {};
+  const reading = Number(readingRaw);
+  if (!/^\d+(\.\d{1,3})?$/.test(readingRaw)) errors.reading = "Enter the number shown on your meter.";
+  else if (reading < meter.lastReading) errors.reading = `The last reading was ${meter.lastReading}. Enter a number at least that high.`;
+  else if (reading - meter.lastReading > 100_000) errors.reading = "That's far higher than the last reading. Please check it.";
+  const lastDate = meter.lastReadingDate.toISOString().slice(0, 10);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(readingDate) || readingDate > today) errors.readingDate = "Choose the date you read the meter.";
+  else if (readingDate <= lastDate) errors.readingDate = `Choose a date after the last reading (${lastDate}).`;
+  if (Object.keys(errors).length) return { status: "error", message: "Please check the highlighted fields.", errors };
+
+  const [{ pending }] = await db
+    .select({ pending: count() })
+    .from(meterReadingSubmission)
+    .where(and(eq(meterReadingSubmission.unitId, renter.unitId), eq(meterReadingSubmission.status, "pending")));
+  if (pending > 0) {
+    return { status: "error", message: `Your last reading is still waiting for ${renter.businessName} to approve.` };
+  }
+
+  await db.insert(meterReadingSubmission).values({
+    id: crypto.randomUUID(),
+    landlordId: renter.landlordId,
+    unitId: renter.unitId,
+    tenantId: renter.id,
+    reading: reading.toFixed(3),
+    readingDate,
+    note: note || null,
+  });
+
+  if (emailConfigured()) {
+    await sendMeterReadingEmail({
+      to: renter.landlordEmail,
+      tenantName: renter.name,
+      place: `${renter.propertyName} · Unit ${renter.unitNumber}`,
+      details: `Reading ${reading} on ${readingDate} (last: ${meter.lastReading} on ${lastDate}, ${(reading - meter.lastReading).toFixed(1)} units)`,
+      dashboardUrl: `${appOrigin()}/dashboard`,
+    }).catch((error: unknown) => console.error("Meter reading email failed", error));
+  }
+
+  revalidatePath(`/t/${token}`);
+  revalidatePath("/dashboard");
+  return { status: "success", message: `Sent to ${renter.businessName}. Your electricity bill appears here once they approve it.` };
 }

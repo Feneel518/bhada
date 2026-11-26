@@ -32,6 +32,8 @@ export type PropertyRecord = {
   city: string;
   state: string;
   postalCode: string;
+  /** ₹ per electricity unit, or null when not set. */
+  electricityRate: number | null;
   units: UnitRecord[];
 };
 
@@ -44,6 +46,7 @@ export async function getProperties(userId: string): Promise<PropertyRecord[]> {
       city: property.city,
       state: property.state,
       postalCode: property.postalCode,
+      electricityRate: property.electricityRate,
     })
     .from(property)
     .innerJoin(landlord, eq(property.landlordId, landlord.id))

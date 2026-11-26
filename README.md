@@ -83,6 +83,7 @@ Cloudflare. Both need `CRON_SECRET`.
 ```bash
 npx drizzle-kit migrate   # 0017: UPI ID, summary email, billing interval
                           # 0018: tenant private links + payment claims
+                          # 0019: property electricity rate + tenant meter readings
 ```
 
 ## Tenant page
@@ -93,6 +94,11 @@ Tenants see their balance, bills and receipts, pay by UPI, and tap "I've paid"
 with amount, date, method and UTR. That creates a pending claim; nothing changes
 in the books until the landlord confirms it on Overview, which records a normal
 payment receipt. Landlords get an email for each claim when SMTP is configured.
+
+Tenants can also enter their electricity meter reading (once the unit has an
+opening reading). It waits on Overview; Approve creates the bill with the
+property's electricity rate (set in Edit property), due 7 days after the
+reading. Edit opens the bill form prefilled; Not right sends it back with a note.
 
 ## Razorpay Portfolio billing
 
