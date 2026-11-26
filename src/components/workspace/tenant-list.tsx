@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { ArrowUpRight, MessageCircle, Eye, LoaderCircle, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { ArrowUpRight, MessageCircle, Smartphone, Eye, LoaderCircle, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deleteTenant } from "@/app/dashboard/tenants/actions";
@@ -15,9 +15,11 @@ export function TenantList({
   onEdit,
   onView,
   remindHref,
+  portalInviteHref,
 }: {
   tenants: TenantRecord[];
   remindHref?: (tenant: TenantRecord) => string | null;
+  portalInviteHref?: (tenant: TenantRecord) => string;
   onAdd: () => void;
   onEdit: (tenant: TenantRecord) => void;
   onView: (tenant: TenantRecord) => void;
@@ -38,7 +40,7 @@ export function TenantList({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {tenants.map((item) => (
-        <TenantCard key={item.id} tenant={item} onEdit={onEdit} onView={onView} remindHref={remindHref?.(item) ?? null} />
+        <TenantCard key={item.id} tenant={item} onEdit={onEdit} onView={onView} remindHref={remindHref?.(item) ?? null} portalInviteHref={portalInviteHref?.(item) ?? null} />
       ))}
     </div>
   );
@@ -49,9 +51,11 @@ export function TenantCard({
   onEdit,
   onView,
   remindHref = null,
+  portalInviteHref = null,
 }: {
   tenant: TenantRecord;
   remindHref?: string | null;
+  portalInviteHref?: string | null;
   onEdit: (tenant: TenantRecord) => void;
   onView: (tenant: TenantRecord) => void;
 }) {
@@ -115,6 +119,17 @@ export function TenantCard({
           className="mt-5 flex h-11 w-full items-center justify-center gap-2 border border-[#e4c77a]/40 bg-[#e4c77a]/[0.06] text-xs font-semibold text-[#e4c77a] hover:bg-[#e4c77a]/[0.12]"
         >
           <MessageCircle className="size-4" /> Remind on WhatsApp
+        </a>
+      )}
+      {portalInviteHref && item.isActive && (
+        <a
+          href={portalInviteHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Their own page to see bills, pay by UPI and tell you when they've paid"
+          className="mt-2 flex h-11 w-full items-center justify-center gap-2 border border-white/10 text-xs font-semibold text-white/60 hover:border-[#e4c77a]/40 hover:text-[#e4c77a]"
+        >
+          <Smartphone className="size-4" /> Send tenant their rent page
         </a>
       )}
       <button

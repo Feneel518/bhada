@@ -35,6 +35,7 @@ export function RecordPaymentDialog({
   initialTenantId = "",
   initialAmount,
   landlordName,
+  claim,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +43,8 @@ export function RecordPaymentDialog({
   initialTenantId?: string;
   initialAmount?: number;
   landlordName: string;
+  /** Confirming a tenant's "I've paid": fills the form and links the receipt to the claim. */
+  claim?: { id: string; paidOn: string; method: "upi" | "bank_transfer" | "cash" | "check"; reference: string; note: string };
 }) {
   const [state, formAction, pending] = useActionState(recordPayment, initialPaymentState);
   const { language } = useLanguage();
@@ -107,12 +110,15 @@ export function RecordPaymentDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-[780px] overflow-y-auto">
-        <DialogTitle>Record a payment</DialogTitle>
+        <DialogTitle>{claim ? "Confirm tenant’s payment" : "Record a payment"}</DialogTitle>
         <DialogDescription>
-          Record a lump-sum receipt or allocate it bill by bill, including GST where applicable.
+          {claim
+            ? "Check the details against your bank or UPI app. Adjust the amount if you received something different."
+            : "Record a lump-sum receipt or allocate it bill by bill, including GST where applicable."}
         </DialogDescription>
         <form action={formAction} className="mt-6 space-y-5">
           <input type="hidden" name="allocationMode" value={mode} />
+          {claim && <input type="hidden" name="claimId" value={claim.id} />}
           <input
             type="hidden"
             name="allocations"
@@ -248,7 +254,7 @@ export function RecordPaymentDialog({
             <Field label="Payment date">
               <DatePickerInput
                 name="paidAt"
-                defaultValue={new Date().toISOString().slice(0, 10)}
+                defaultValue={claim?.paidOn ?? new Date().toISOString().slice(0, 10)}
                 className={inputClass}
                 invalid={Boolean(state.errors?.paidAt)}
                 required
@@ -259,7 +265,7 @@ export function RecordPaymentDialog({
               <FormSelect
                 className={inputClass}
                 name="method"
-                defaultValue="bank_transfer"
+                defaultValue={claim?.method === "cash" || claim?.method === "check" ? claim.method : "bank_transfer"}
                 options={[
                   { value: "bank_transfer", label: "Bank transfer / UPI" },
                   { value: "cash", label: "Cash" },
@@ -269,10 +275,10 @@ export function RecordPaymentDialog({
               />
             </Field>
             <Field label="Transaction reference">
-              <input className={inputClass} name="reference" placeholder="UTR, cheque no., etc." />
+              <input className={inputClass} name="reference" defaultValue={claim?.reference} placeholder="UTR, cheque no., etc." />
             </Field>
             <Field label="Note">
-              <input className={inputClass} name="note" placeholder="Optional note" />
+              <input className={inputClass} name="note" defaultValue={claim?.note} placeholder="Optional note" />
             </Field>
           </div>
 
@@ -288,7 +294,7 @@ export function RecordPaymentDialog({
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>Cancel</Button>
             <Button type="submit" disabled={pending || !tenants.length || total <= 0}>
               {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
-              {pending ? "Saving..." : "Save payment"}
+              {pending ? "Saving..." : claim ? "Confirm payment" : "Save payment"}
             </Button>
           </div>
           {!tenants.length && <p className="text-right text-xs text-[#c65c4d]">Add a tenant before recording a payment.</p>}

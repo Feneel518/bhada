@@ -38,6 +38,7 @@ export function SectionView({
   onViewRentBill,
   onViewElectricityBill,
   remindHref,
+  portalInviteHref,
   onImport,
 }: {
   section: string;
@@ -63,6 +64,7 @@ export function SectionView({
   onViewRentBill: (bill: RentBillingSummary["bills"][number]) => void;
   onViewElectricityBill: (bill: ElectricityBillRecord) => void;
   remindHref?: (tenant: TenantRecord) => string | null;
+  portalInviteHref?: (tenant: TenantRecord) => string;
   onImport?: () => void;
 }) {
   const descriptions: Record<string, string> = {
@@ -155,6 +157,7 @@ export function SectionView({
             onAdd={onAddTenant}
             onEdit={onEditTenant}
             remindHref={remindHref}
+            portalInviteHref={portalInviteHref}
             onView={onViewTenant}
           />
         ) : (

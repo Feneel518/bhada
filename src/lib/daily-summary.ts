@@ -7,7 +7,8 @@ import { buildCollection, summaryToSend } from "@/lib/collection";
 import { sendDailySummaryEmail } from "@/lib/email";
 import { getElectricityBills } from "@/lib/electricity-billing";
 import { getRentBilling } from "@/lib/rent-billing";
-import { appOrigin, shareUrl } from "@/lib/share-links";
+import { appOrigin } from "@/lib/share-links";
+import { portalUrl } from "@/lib/tenant-portal";
 import { getTenantAnalytics } from "@/lib/tenant-analytics";
 import { getTenants } from "@/lib/tenants";
 import { formatCurrency } from "@/lib/utils";
@@ -73,7 +74,7 @@ export async function sendDailySummaries(now = new Date()) {
       if (!summary) continue;
 
       const lines = await Promise.all(summary.lines.map(async (row) => {
-        const billUrl = row.bill ? await shareUrl(row.bill.kind, row.bill.record.id) : undefined;
+        const billUrl = portalUrl(row.tenant.portalToken);
         return {
           tenant: row.tenant.name,
           place: `${row.tenant.propertyName} · Unit ${row.tenant.unitNumber}`,

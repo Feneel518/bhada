@@ -26,11 +26,18 @@ function markReminded(tenantId: string, today: string) {
   } catch { /* Storage can be unavailable; reminders still work. */ }
 }
 
-export function reminderLinkFor(
-  row: CollectionRow,
-  { landlordName, upiId, shareLinks, language }: { landlordName: string; upiId: string; shareLinks: ShareLinks; language: MessageLanguage },
-) {
-  const billUrl = row.bill ? shareLinks[shareKey(row.bill.kind, row.bill.record.id)] : undefined;
+export type ReminderOptions = {
+  landlordName: string;
+  upiId: string;
+  shareLinks: ShareLinks;
+  language: MessageLanguage;
+  /** The tenant's private page: all dues, UPI pay and "I've paid" in one place. */
+  portalUrlFor?: (tenant: CollectionRow["tenant"]) => string;
+};
+
+export function reminderLinkFor(row: CollectionRow, { landlordName, upiId, shareLinks, language, portalUrlFor }: ReminderOptions) {
+  const billUrl = portalUrlFor?.(row.tenant)
+    ?? (row.bill ? shareLinks[shareKey(row.bill.kind, row.bill.record.id)] : undefined);
   return whatsappLink(row.tenant.phone, reminderMessage({
     tenantName: row.tenant.name,
     landlordName,
@@ -64,20 +71,24 @@ export function CollectionList({
   landlordName,
   upiId,
   shareLinks,
+  portalUrlFor,
   onMarkPaid,
   onAddRental,
   onImport,
   onAddUpi,
+  claimedTenantIds = [],
 }: {
   rows: CollectionRow[];
   today: string;
   landlordName: string;
   upiId: string;
   shareLinks: ShareLinks;
+  portalUrlFor?: ReminderOptions["portalUrlFor"];
   onMarkPaid: (row: CollectionRow) => void;
   onAddRental: () => void;
   onImport: () => void;
   onAddUpi: () => void;
+  claimedTenantIds?: string[];
 }) {
   const { language } = useLanguage();
   const [reminded, setReminded] = useState<Record<string, string>>({});
@@ -88,7 +99,7 @@ export function CollectionList({
   const unpaidRows = rows.filter((row) => row.status !== "paid");
   const paidRows = rows.filter((row) => row.status === "paid");
   const visibleRows = showPaid ? rows : unpaidRows;
-  const linkOptions = { landlordName, upiId, shareLinks, language };
+  const linkOptions = { landlordName, upiId, shareLinks, language, portalUrlFor };
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setReminded(readReminded()));
@@ -163,6 +174,11 @@ export function CollectionList({
                   <span className={cn("mt-1 inline-flex border px-2 py-0.5 text-[10px] font-bold", statusChip[row.status])}>
                     {dueLabel(row)}
                   </span>
+                  {claimedTenantIds.includes(row.tenant.id) && (
+                    <span className="ml-1 mt-1 inline-flex border border-[#9aa9c4]/40 bg-[#9aa9c4]/10 px-2 py-0.5 text-[10px] font-bold text-[#b8c5dd]">
+                      Says paid
+                    </span>
+                  )}
                 </div>
               </div>
               {row.status !== "paid" && (
