@@ -17,14 +17,28 @@ export const initialElectricityBillState: ElectricityBillActionState = {
   message: "",
 };
 
+function plusDays(date: string, days: number) {
+  const value = new Date(`${date}T12:00:00Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+export type MeterSubmissionPrefill = { id: string; unitId: string; readingDate: string; reading: number; note: string };
+
 export function ElectricityBillDialog({
   open,
   onOpenChange,
   properties,
+  submission,
+  sendHref,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   properties: PropertyRecord[];
+  /** Editing a reading the tenant sent: the bill approves it. */
+  submission?: MeterSubmissionPrefill;
+  /** WhatsApp link to send the new bill to its tenant, if there is one. */
+  sendHref?: (bill: NonNullable<ElectricityBillActionState["bill"]>) => string | null;
 }) {
   const [state, formAction, pending] = useActionState(
     createElectricityBill,
@@ -34,9 +48,13 @@ export function ElectricityBillDialog({
     property.units.map((unit) => ({ property, unit })),
   );
   const today = new Date().toISOString().slice(0, 10);
-  const [selectedUnitId, setSelectedUnitId] = useState("");
-  const [currentReading, setCurrentReading] = useState("");
-  const [unitRate, setUnitRate] = useState("");
+  const rateFor = (unitId: string) => {
+    const rate = units.find(({ unit }) => unit.id === unitId)?.property.electricityRate;
+    return rate ? String(rate) : "";
+  };
+  const [selectedUnitId, setSelectedUnitId] = useState(submission?.unitId ?? "");
+  const [currentReading, setCurrentReading] = useState(submission ? String(submission.reading) : "");
+  const [unitRate, setUnitRate] = useState(submission ? rateFor(submission.unitId) : "");
   const selectedUnit = units.find(({ unit }) => unit.id === selectedUnitId)?.unit;
   const previousReading = selectedUnit?.lastMeterReading ?? null;
   const unitsConsumed =
@@ -48,18 +66,26 @@ export function ElectricityBillDialog({
 
   useEffect(() => {
     if (state.status !== "success") return;
-    toast.success("Electricity bill added", { description: state.message });
+    const href = state.bill && sendHref ? sendHref(state.bill) : null;
+    toast.success("Electricity bill added", {
+      description: href ? "It's on your tenant's page. Send it on WhatsApp too?" : state.message,
+      duration: href ? 12_000 : undefined,
+      action: href ? { label: "Send to tenant", onClick: () => window.open(href, "_blank", "noopener,noreferrer") } : undefined,
+    });
     onOpenChange(false);
-  }, [onOpenChange, state]);
+  }, [onOpenChange, sendHref, state]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[560px]">
-        <DialogTitle>Add electricity bill</DialogTitle>
+        <DialogTitle>{submission ? "Check tenant’s meter reading" : "Add electricity bill"}</DialogTitle>
         <DialogDescription>
-          Enter the meter reading for a specific day. Consumption and amount are calculated from the previous reading.
+          {submission
+            ? "Correct anything that looks wrong, then create the bill. The tenant sees it on their page."
+            : "Enter the meter reading for a specific day. Consumption and amount are calculated from the previous reading."}
         </DialogDescription>
         <form action={formAction} className="mt-6 space-y-4">
+          {submission && <input type="hidden" name="submissionId" value={submission.id} />}
           <Field label="Property and unit">
             <FormSelect
               required
@@ -69,6 +95,9 @@ export function ElectricityBillDialog({
               onValueChange={(value) => {
                 setSelectedUnitId(value);
                 setCurrentReading("");
+                // The property's saved rate fills in, so most bills need only the reading.
+                const rate = rateFor(value);
+                if (rate) setUnitRate(rate);
               }}
               invalid={Boolean(state.errors?.unitId)}
               placeholder="Select a unit"
@@ -87,7 +116,7 @@ export function ElectricityBillDialog({
             <Field label="Meter reading date">
               <DatePickerInput
                 name="billingPeriod"
-                defaultValue={today}
+                defaultValue={submission?.readingDate ?? today}
                 className={inputClass}
                 invalid={Boolean(state.errors?.billingPeriod)}
                 required
@@ -133,7 +162,7 @@ export function ElectricityBillDialog({
             <Field label="Due date">
               <DatePickerInput
                 name="dueDate"
-                defaultValue={today}
+                defaultValue={plusDays(submission?.readingDate ?? today, 7)}
                 className={inputClass}
                 invalid={Boolean(state.errors?.dueDate)}
                 required
@@ -141,7 +170,7 @@ export function ElectricityBillDialog({
               {state.errors?.dueDate && <FieldError message={state.errors.dueDate} />}
             </Field>
             <Field label="Note">
-              <input className={inputClass} name="note" placeholder="Meter bill reference, optional" />
+              <input className={inputClass} name="note" defaultValue={submission?.note ? `Reading sent by tenant: ${submission.note}` : submission ? "Reading sent by tenant" : undefined} placeholder="Meter bill reference, optional" />
             </Field>
           </div>
 

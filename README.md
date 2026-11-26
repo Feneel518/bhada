@@ -80,10 +80,13 @@ Cloudflare. Both need `CRON_SECRET`.
 
 ## Database migration for this release
 
-```bash
-npx drizzle-kit migrate   # 0017: UPI ID, summary email, billing interval
-                          # 0018: tenant private links + payment claims
-```
+`npm run build` runs `scripts/migrate.mjs` first, so every Vercel deploy brings
+the database up to date before the new code goes live. It applies 0017–0019
+(UPI ID, summary email, billing interval, tenant links, payment claims,
+electricity rate, meter readings) with statements that are safe to repeat, and
+records them for `drizzle-kit migrate` if that table exists. If the migration
+fails, or a production build has no `DATABASE_URL`, the build stops and the
+current version stays live. Run it by hand with `npm run db:migrate`.
 
 ## Tenant page
 
@@ -93,6 +96,11 @@ Tenants see their balance, bills and receipts, pay by UPI, and tap "I've paid"
 with amount, date, method and UTR. That creates a pending claim; nothing changes
 in the books until the landlord confirms it on Overview, which records a normal
 payment receipt. Landlords get an email for each claim when SMTP is configured.
+
+Tenants can also enter their electricity meter reading (once the unit has an
+opening reading). It waits on Overview; Approve creates the bill with the
+property's electricity rate (set in Edit property), due 7 days after the
+reading. Edit opens the bill form prefilled; Not right sends it back with a note.
 
 ## Razorpay Portfolio billing
 

@@ -8,6 +8,7 @@ import { getPayments } from "@/lib/payments";
 import { getRentBilling, type RentBillRecord } from "@/lib/rent-billing";
 import { appOrigin, buildShareLinks, type ShareLinks } from "@/lib/share-links";
 import { getTenantAnalytics } from "@/lib/tenant-analytics";
+import { getTenantMeter, type TenantMeter } from "@/lib/meter-readings";
 
 export const PORTAL_TOKEN_PATTERN = /^[0-9a-f]{32}$/;
 export const CLAIM_METHODS = ["upi", "bank_transfer", "cash", "check"] as const;
@@ -42,6 +43,7 @@ export type TenantPortal = {
   electricityBills: ElectricityBillRecord[];
   payments: { id: string; receiptNumber: string; amount: number; date: string }[];
   claims: PortalClaim[];
+  meter: TenantMeter;
   shareLinks: ShareLinks;
 };
 
@@ -50,6 +52,7 @@ export async function findTenantByPortalToken(token: string) {
   const [row] = await db
     .select({
       id: tenant.id,
+      unitId: tenant.unitId,
       name: tenant.name,
       phone: tenant.phone,
       isActive: tenant.isActive,
@@ -79,7 +82,7 @@ export async function getTenantPortal(token: string, now = new Date()): Promise<
   if (!row) return null;
 
   const recent = new Date(now.getTime() - 45 * 86_400_000);
-  const [billing, electricity, payments, analytics, claims] = await Promise.all([
+  const [billing, electricity, payments, analytics, claims, meter] = await Promise.all([
     getRentBilling(row.userId, now),
     getElectricityBills(row.userId, now),
     getPayments(row.userId),
@@ -94,6 +97,7 @@ export async function getTenantPortal(token: string, now = new Date()): Promise<
       ))
       .orderBy(desc(paymentClaim.createdAt))
       .limit(12),
+    getTenantMeter(row.id, row.unitId, now),
   ]);
 
   const rentBills = billing.bills.filter((bill) => bill.tenantId === row.id);
@@ -133,6 +137,7 @@ export async function getTenantPortal(token: string, now = new Date()): Promise<
       reviewNote: claim.reviewNote ?? "",
       createdAt: claim.createdAt.toISOString(),
     })),
+    meter,
     shareLinks,
   };
 }

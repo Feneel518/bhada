@@ -42,6 +42,10 @@ import { TenantDialog } from "@/components/workspace/tenant-dialog";
 import { CollectionList } from "@/components/workspace/collection-list";
 import { ImportDialog } from "@/components/workspace/import-dialog";
 import { ClaimsPanel } from "@/components/workspace/claims-panel";
+import { MeterReadingsPanel } from "@/components/workspace/meter-readings-panel";
+import type { MeterSubmissionPrefill } from "@/components/workspace/electricity-bill-dialog";
+import type { PendingMeterReading } from "@/lib/meter-readings";
+import type { ElectricityBillActionState } from "@/app/dashboard/electricity/actions";
 import type { LandlordClaim } from "@/lib/tenant-portal";
 import { buildCollection, type CollectionRow } from "@/lib/collection";
 import { shareKey, type ShareLinks } from "@/lib/share-keys";
@@ -119,6 +123,7 @@ export function Dashboard({
   shareLinks,
   today,
   claims = [],
+  meterReadings = [],
   appUrl,
 }: {
   user: DashboardUser;
@@ -143,6 +148,7 @@ export function Dashboard({
   shareLinks: ShareLinks;
   today: string;
   claims?: LandlordClaim[];
+  meterReadings?: PendingMeterReading[];
   appUrl: string;
 }) {
   const [active, setActive] = useState<DashboardSection>(initialSection);
@@ -152,6 +158,7 @@ export function Dashboard({
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentPrefill, setPaymentPrefill] = useState<{ tenantId: string; amount: number; claim?: LandlordClaim } | null>(null);
   const [electricityBillOpen, setElectricityBillOpen] = useState(false);
+  const [meterSubmission, setMeterSubmission] = useState<MeterSubmissionPrefill | undefined>(undefined);
   const [propertyOpen, setPropertyOpen] = useState(false);
   const [onboarding, setOnboarding] = useState<{ propertyId?: string } | null>(null);
   const [editingProperty, setEditingProperty] = useState<PropertyRecord | null>(null);
@@ -216,6 +223,25 @@ export function Dashboard({
       url,
       language,
     }));
+  }
+
+  function electricitySendHref(bill: NonNullable<ElectricityBillActionState["bill"]>) {
+    const renter = bill.tenantId ? tenants.find((item) => item.id === bill.tenantId) : undefined;
+    if (!renter) return null;
+    return whatsappLink(renter.phone, billShareMessage({
+      tenantName: renter.name,
+      landlordName,
+      label: `electricity bill (${formatCurrency(bill.amount)})`,
+      url: bill.shareUrl,
+      language,
+    }));
+  }
+
+  function openElectricityBill(submission?: PendingMeterReading) {
+    setMeterSubmission(submission
+      ? { id: submission.id, unitId: submission.unitId, readingDate: submission.readingDate, reading: submission.reading, note: submission.note }
+      : undefined);
+    setElectricityBillOpen(true);
   }
 
   function confirmClaim(claim: LandlordClaim) {
@@ -726,6 +752,7 @@ export function Dashboard({
               collection={(
                 <>
                 <ClaimsPanel claims={claims} onConfirm={confirmClaim} />
+                <MeterReadingsPanel readings={meterReadings} onEdit={openElectricityBill} sendHref={electricitySendHref} />
                 <CollectionList
                   rows={collection}
                   today={today}
@@ -772,7 +799,7 @@ export function Dashboard({
               onAddUnit={(property) => openUnit(property)}
               onEditUnit={(property, unit) => openUnit(property, unit)}
               onRecordPayment={() => openPayment()}
-              onAddElectricityBill={() => setElectricityBillOpen(true)}
+              onAddElectricityBill={() => openElectricityBill()}
               onAddTenant={() => openTenant()}
               onEditTenant={openTenant}
               onViewTenant={setProfileTenant}
@@ -836,6 +863,8 @@ export function Dashboard({
           open
           onOpenChange={setElectricityBillOpen}
           properties={writableProperties}
+          submission={meterSubmission}
+          sendHref={electricitySendHref}
         />
       )}
       {propertyOpen && (

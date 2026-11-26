@@ -10,7 +10,7 @@ const tenants: Props["tenants"] = ["Aarav Mehta", "Priya Shah"].map((name, i) =>
   gstEnabled: false, gstRate: 0, gstTaxablePercent: 100, tdsEnabled: false, tdsRate: 0, securityDeposit: 30000,
   lockInMonths: null, noticePeriodMonths: null, rentEscalationPct: null, rentEscalationMonths: null, nextEscalationDate: "", leaseDocUrl: "", isActive: true, openingBalance: 0, creditBalance: 0, portalToken: `demo${i}`,
 }));
-const properties: Props["properties"] = [{ id: "property-1", name: "Shanti Residency", address: "Satellite Road", city: "Ahmedabad", state: "Gujarat", postalCode: "380015", units: tenants.map((tenant, i) => ({ id: tenant.unitId, propertyId: "property-1", unitNumber: tenant.unitNumber, floor: "1", areaSqft: 800, status: "occupied", openingMeterReading: 100, openingMeterReadingDate: "2026-01-01", lastMeterReading: 250 + i * 50, lastMeterReadingDate: "2026-10-01", tenant })) }];
+const properties: Props["properties"] = [{ id: "property-1", name: "Shanti Residency", address: "Satellite Road", city: "Ahmedabad", state: "Gujarat", postalCode: "380015", electricityRate: 8.5, units: tenants.map((tenant, i) => ({ id: tenant.unitId, propertyId: "property-1", unitNumber: tenant.unitNumber, floor: "1", areaSqft: 800, status: "occupied", openingMeterReading: 100, openingMeterReadingDate: "2026-01-01", lastMeterReading: 250 + i * 50, lastMeterReadingDate: "2026-10-01", tenant })) }];
 const rentBilling: Props["rentBilling"] = { financialYearLabel: "FY 2026-27", periodLabel: "October 2026", billedThisMonth: 30000, paidThisMonth: 15000, pendingThisMonth: 15000, pendingTotal: 15000, openingBalancePending: 0, overdueTotal: 15000, overdueCount: 1, collectionRate: 50, bills: [{ id: "bill-1", tenantId: tenants[1].id, tenantName: tenants[1].name, billNumber: "RENT-202610-101", billingPeriod: "2026-09", issueDate: "2026-10-01", dueDate: "2026-10-05", baseAmount: 15000, gstRate: 0, gstAmount: 0, tdsRate: 0, tdsAmount: 0, amount: 15000, paid: 0, pending: 15000, status: "Overdue" }] };
 
 export default async function WorkspacePreview({ searchParams }: { searchParams: Promise<{ state?: string }> }) {
@@ -30,6 +30,7 @@ export default async function WorkspacePreview({ searchParams }: { searchParams:
     shareLinks={{ "rent:bill-1": "http://localhost:3014/s/demo" }}
     today="2026-10-26"
     appUrl="http://localhost:3014"
+    meterReadings={state === "claim" ? [{ id: "m1", unitId: "unit-0", tenantId: tenants[0].id, tenantName: tenants[0].name, propertyName: "Shanti Residency", unitNumber: "101", previousReading: 250, previousDate: "2026-10-01", reading: 362.5, readingDate: "2026-10-25", rate: 8.5, note: "" }] : []}
     claims={state === "claim" ? [{ id: "claim-1", tenantId: tenants[1].id, tenantName: tenants[1].name, propertyName: "Shanti Residency", unitNumber: "102", amount: 15000, paidOn: "2026-10-25", method: "upi", reference: "430912345678", note: "October rent", createdAt: "2026-10-25T10:00:00Z" }] : []}
     rentalAccess={{ propertyIds: expired ? [] : ["property-1"], unitIds: expired ? [] : ["unit-0", "unit-1"], hasLockedRentals: expired }}
   />;
