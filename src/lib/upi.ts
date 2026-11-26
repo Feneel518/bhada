@@ -22,12 +22,13 @@ export function upiPayLink({
   amount?: number;
   note?: string;
 }) {
-  const params = new URLSearchParams({ pa: normaliseUpiId(upiId), pn: payeeName.slice(0, 50), cu: "INR" });
-  if (amount && amount > 0) params.set("am", amount.toFixed(2));
+  // The UPI ID is kept unencoded ("@" as is): it only contains safe characters
+  // and a few older UPI apps fail to decode "%40".
+  const parts = [`pa=${normaliseUpiId(upiId)}`, `pn=${encodeURIComponent(payeeName.slice(0, 50))}`, "cu=INR"];
+  if (amount && amount > 0) parts.push(`am=${amount.toFixed(2)}`);
   // Transaction notes longer than ~50 characters are rejected by some apps.
-  if (note) params.set("tn", note.slice(0, 50));
-  // URLSearchParams encodes spaces as "+", which several UPI apps show literally.
-  return `upi://pay?${params.toString().replace(/\+/g, "%20")}`;
+  if (note) parts.push(`tn=${encodeURIComponent(note.slice(0, 50))}`);
+  return `upi://pay?${parts.join("&")}`;
 }
 
 export async function upiQrDataUrl(link: string) {

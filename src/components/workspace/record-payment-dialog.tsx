@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { recordPayment, type PaymentActionState } from "@/app/dashboard/payments/actions";
 import type { TenantRecord } from "@/lib/tenants";
 import { cn, formatCurrency } from "@/lib/utils";
+import { useLanguage } from "@/components/language-provider";
+import { receiptMessage, whatsappLink } from "@/lib/whatsapp";
 import { Field, FieldError, inputClass } from "@/components/workspace/shared";
 
 type AllocationDraft = {
@@ -30,22 +32,57 @@ export function RecordPaymentDialog({
   open,
   onOpenChange,
   tenants,
+  initialTenantId = "",
+  initialAmount,
+  landlordName,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenants: TenantRecord[];
+  initialTenantId?: string;
+  initialAmount?: number;
+  landlordName: string;
 }) {
   const [state, formAction, pending] = useActionState(recordPayment, initialPaymentState);
+  const { language } = useLanguage();
   const [mode, setMode] = useState<"lump_sum" | "bill_wise">("lump_sum");
   const [allocations, setAllocations] = useState<AllocationDraft[]>([
-    { ...emptyAllocation(), chargeType: "rent", description: "Monthly rent" },
+    {
+      ...emptyAllocation(),
+      chargeType: "rent",
+      description: "Monthly rent",
+      amount: initialAmount && initialAmount > 0 ? String(Math.round(initialAmount * 100) / 100) : "",
+    },
   ]);
 
   useEffect(() => {
     if (state.status !== "success") return;
-    toast.success("Payment recorded", { description: state.message });
+    const receipt = state.receipt;
+    const renter = receipt ? tenants.find((item) => item.id === receipt.tenantId) : undefined;
+    toast.success("Payment recorded", {
+      description: receipt && renter ? "Send the tenant their rent receipt on WhatsApp." : state.message,
+      duration: receipt && renter ? 12_000 : undefined,
+      action: receipt && renter
+        ? {
+            label: "Send receipt",
+            onClick: () => {
+              window.open(
+                whatsappLink(renter.phone, receiptMessage({
+                  tenantName: renter.name,
+                  landlordName,
+                  amount: receipt.amount,
+                  receiptUrl: receipt.shareUrl,
+                  language,
+                })),
+                "_blank",
+                "noopener,noreferrer",
+              );
+            },
+          }
+        : undefined,
+    });
     onOpenChange(false);
-  }, [onOpenChange, state]);
+  }, [landlordName, language, onOpenChange, state, tenants]);
 
   function changeMode(nextMode: "lump_sum" | "bill_wise") {
     setMode(nextMode);
@@ -92,7 +129,7 @@ export function RecordPaymentDialog({
               required
               className={inputClass}
               name="tenantId"
-              defaultValue=""
+              defaultValue={initialTenantId}
               invalid={Boolean(state.errors?.tenantId)}
               placeholder="Select a tenant"
               options={tenants.map((item) => ({

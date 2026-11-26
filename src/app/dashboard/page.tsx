@@ -16,6 +16,7 @@ import { getNotifications } from "@/lib/notifications";
 import { hasPortfolioAccess, hasTrialAccess, isTrialEligible } from "@/lib/plans";
 import { getPlanAccount, getRentalAccess } from "@/lib/plan-access";
 import { getSubscriptionReceipts } from "@/lib/subscription-receipts";
+import { buildShareLinks } from "@/lib/share-links";
 
 const dashboardSections = new Set([
   "Overview",
@@ -68,6 +69,12 @@ export default async function DashboardPage({
     now,
   );
   const rentalAccess = profile ? await getRentalAccess(profile) : { propertyIds: [], unitIds: [], hasLockedRentals: false };
+  const shareLinks = await buildShareLinks([
+    ...[...new Set([...overviewRentBilling.bills, ...rentBilling.bills].map((bill) => bill.id))]
+      .map((id) => ({ kind: "rent" as const, id })),
+    ...electricityBills.map((bill) => ({ kind: "electricity" as const, id: bill.id })),
+    ...payments.map((payment) => ({ kind: "receipt" as const, id: payment.id })),
+  ]);
 
   return (
     <Dashboard
@@ -95,6 +102,8 @@ export default async function DashboardPage({
         trialEndsAt: profile?.trialEndsAt?.toISOString() ?? null,
       }}
       rentalAccess={rentalAccess}
+      shareLinks={shareLinks}
+      today={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(now)}
       profile={{
         businessName: profile?.businessName ?? session.user.name,
         rentBillingPeriod: profile?.rentBillingPeriod === "current" ? "current" : "previous",

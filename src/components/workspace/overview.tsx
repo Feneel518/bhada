@@ -30,6 +30,7 @@ export function Overview({
   onViewPayments,
   onViewProperties,
   firstName,
+  collection,
 }: {
   period: string;
   setPeriod: (value: string) => void;
@@ -43,6 +44,7 @@ export function Overview({
   onViewPayments: () => void;
   onViewProperties: () => void;
   firstName: string;
+  collection: React.ReactNode;
 }) {
   const todayLabel = new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -69,13 +71,15 @@ export function Overview({
           <h1 className="font-display text-[27px] leading-tight tracking-[-0.045em] text-[#222836] sm:text-[34px]">
             {greeting}, {firstName}
           </h1>
-          <p className="mt-1.5 text-[13px] text-[#747b8b] sm:text-sm">A clear view of your rent, all in one place.</p>
+          <p className="mt-1.5 text-[13px] text-[#747b8b] sm:text-sm">Who has paid, who needs a reminder.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex">
           <Button variant="outline" onClick={onAddProperty}><Plus data-icon="inline-start" />Set up rental</Button>
           <Button onClick={onRecordPayment}><Plus data-icon="inline-start" />Record payment</Button>
         </div>
       </div>
+
+      {collection}
 
       <section className={styles.rentSummary} aria-label="This month's rent summary">
         <div className={styles.collectionHeadline}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { ArrowUpRight, Eye, LoaderCircle, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { ArrowUpRight, MessageCircle, Eye, LoaderCircle, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deleteTenant } from "@/app/dashboard/tenants/actions";
@@ -14,8 +14,10 @@ export function TenantList({
   onAdd,
   onEdit,
   onView,
+  remindHref,
 }: {
   tenants: TenantRecord[];
+  remindHref?: (tenant: TenantRecord) => string | null;
   onAdd: () => void;
   onEdit: (tenant: TenantRecord) => void;
   onView: (tenant: TenantRecord) => void;
@@ -36,7 +38,7 @@ export function TenantList({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {tenants.map((item) => (
-        <TenantCard key={item.id} tenant={item} onEdit={onEdit} onView={onView} />
+        <TenantCard key={item.id} tenant={item} onEdit={onEdit} onView={onView} remindHref={remindHref?.(item) ?? null} />
       ))}
     </div>
   );
@@ -46,8 +48,10 @@ export function TenantCard({
   tenant: item,
   onEdit,
   onView,
+  remindHref = null,
 }: {
   tenant: TenantRecord;
+  remindHref?: string | null;
   onEdit: (tenant: TenantRecord) => void;
   onView: (tenant: TenantRecord) => void;
 }) {
@@ -103,6 +107,16 @@ export function TenantCard({
         <p><span className="font-bold text-white/60">Opening balance:</span> {formatCurrency(item.openingBalance)}</p>
         <p><span className="font-bold text-white/60">Deposit:</span> {item.securityDeposit === null ? "—" : formatInr(item.securityDeposit)}</p>
       </div>
+      {remindHref && (
+        <a
+          href={remindHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 flex h-11 w-full items-center justify-center gap-2 border border-[#e4c77a]/40 bg-[#e4c77a]/[0.06] text-xs font-semibold text-[#e4c77a] hover:bg-[#e4c77a]/[0.12]"
+        >
+          <MessageCircle className="size-4" /> Remind on WhatsApp
+        </a>
+      )}
       <button
         type="button"
         onClick={() => onView(item)}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { saveUnit, type UnitActionState } from "@/app/dashboard/units/actions";
 import type { PropertyRecord, UnitRecord } from "@/lib/properties";
 import { Field, FieldError, formatMeterReading, inputClass } from "@/components/workspace/shared";
+import { expandUnitNumbers } from "@/lib/rental-import";
 
 export const initialUnitState: UnitActionState = {
   status: "idle",
@@ -28,6 +29,40 @@ export function UnitDialog({
 }) {
   const [state, formAction, pending] = useActionState(saveUnit, initialUnitState);
   const editing = Boolean(unit);
+  const [unitInput, setUnitInput] = useState(unit?.unitNumber ?? "");
+  const [bulkPending, setBulkPending] = useState(false);
+  const bulkUnits = editing ? [] : expandUnitNumbers(unitInput);
+  const isBulk = bulkUnits.length > 1;
+
+  // "101-110" or "1, 2, 3" adds each unit with the same details, one request
+  // at a time so plan limits and duplicate checks still apply per unit.
+  async function addMany(event: React.FormEvent<HTMLFormElement>) {
+    if (!isBulk) return;
+    event.preventDefault();
+    const template = new FormData(event.currentTarget);
+    setBulkPending(true);
+    let added = 0;
+    const problems: string[] = [];
+    for (const unitNumber of bulkUnits) {
+      const data = new FormData();
+      template.forEach((value, key) => data.set(key, value));
+      data.set("unitNumber", unitNumber);
+      try {
+        const result = await saveUnit(initialUnitState, data);
+        if (result.status === "success") added += 1;
+        else {
+          problems.push(`${unitNumber}: ${result.errors?.unitNumber ?? result.message}`);
+          if (/limit|includes up to|read-only/i.test(result.message)) break;
+        }
+      } catch {
+        problems.push(`${unitNumber}: couldn’t save`);
+      }
+    }
+    setBulkPending(false);
+    if (added) toast.success(`${added} unit${added === 1 ? "" : "s"} added to ${property.name}`);
+    if (problems.length) toast.error(`${problems.length} not added`, { description: problems.slice(0, 4).join(" · ") });
+    if (added && !problems.length) onOpenChange(false);
+  }
 
   useEffect(() => {
     if (state.status !== "success") return;
@@ -44,7 +79,7 @@ export function UnitDialog({
         <DialogDescription>
           {property.name} · Track availability, area, floor, and meter readings.
         </DialogDescription>
-        <form action={formAction} className="mt-6 space-y-4">
+        <form action={formAction} onSubmit={addMany} className="mt-6 space-y-4">
           <input type="hidden" name="id" value={unit?.id ?? ""} />
           <input type="hidden" name="propertyId" value={property.id} />
           <div className="grid gap-3 sm:grid-cols-2">
@@ -53,11 +88,17 @@ export function UnitDialog({
                 required
                 className={inputClass}
                 name="unitNumber"
-                defaultValue={unit?.unitNumber}
+                value={unitInput}
+                onChange={(event) => setUnitInput(event.target.value)}
                 aria-invalid={Boolean(state.errors?.unitNumber)}
-                placeholder="e.g. 2A"
+                placeholder={editing ? "e.g. 2A" : "e.g. 2A, or 101-110 for many"}
               />
               {state.errors?.unitNumber && <FieldError message={state.errors.unitNumber} />}
+              {!state.errors?.unitNumber && !editing && (
+                <p className="mt-1.5 text-[10px] leading-4 text-white/35">
+                  {isBulk ? `Adds ${bulkUnits.length} units: ${bulkUnits.slice(0, 4).join(", ")}${bulkUnits.length > 4 ? "…" : ""}` : "Adding many? Type 101-110 or 1, 2, 3."}
+                </p>
+              )}
             </Field>
             <Field label="Status">
               <FormSelect
@@ -143,9 +184,9 @@ export function UnitDialog({
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>Cancel</Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
-              {pending ? "Saving..." : editing ? "Save changes" : "Add unit"}
+            <Button type="submit" disabled={pending || bulkPending}>
+              {pending || bulkPending ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
+              {pending || bulkPending ? "Saving..." : editing ? "Save changes" : isBulk ? `Add ${bulkUnits.length} units` : "Add unit"}
             </Button>
           </div>
         </form>

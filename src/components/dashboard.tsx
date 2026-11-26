@@ -39,6 +39,13 @@ import { RecordPaymentDialog } from "@/components/workspace/record-payment-dialo
 import { PropertyDialog } from "@/components/workspace/property-dialog";
 import { UnitDialog } from "@/components/workspace/unit-dialog";
 import { TenantDialog } from "@/components/workspace/tenant-dialog";
+import { CollectionList } from "@/components/workspace/collection-list";
+import { ImportDialog } from "@/components/workspace/import-dialog";
+import { buildCollection, type CollectionRow } from "@/lib/collection";
+import { shareKey, type ShareLinks } from "@/lib/share-keys";
+import { reminderLinkFor } from "@/components/workspace/collection-list";
+import { useLanguage } from "@/components/language-provider";
+import { billShareMessage, whatsappLink } from "@/lib/whatsapp";
 
 const BillDocumentDialog = dynamic(
   () => import("@/components/bill-document").then((module) => module.BillDocumentDialog),
@@ -107,6 +114,8 @@ export function Dashboard({
   subscriptionReceipts,
   subscription,
   rentalAccess,
+  shareLinks,
+  today,
 }: {
   user: DashboardUser;
   initialSection?: DashboardSection;
@@ -127,11 +136,15 @@ export function Dashboard({
   subscriptionReceipts: SubscriptionReceipt[];
   subscription: SubscriptionView;
   rentalAccess: { propertyIds: string[]; unitIds: string[]; hasLockedRentals: boolean };
+  shareLinks: ShareLinks;
+  today: string;
 }) {
   const [active, setActive] = useState<DashboardSection>(initialSection);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showPlan, setShowPlan] = useState(false);
+  const [profileSection, setProfileSection] = useState<"plan" | "payouts" | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [paymentPrefill, setPaymentPrefill] = useState<{ tenantId: string; amount: number } | null>(null);
   const [electricityBillOpen, setElectricityBillOpen] = useState(false);
   const [propertyOpen, setPropertyOpen] = useState(false);
   const [onboarding, setOnboarding] = useState<{ propertyId?: string } | null>(null);
@@ -163,6 +176,49 @@ export function Dashboard({
     tenantId
       ? tenantAnalytics.find((item) => item.tenantId === tenantId)?.totalPending ?? 0
       : 0;
+
+  const collection = useMemo(
+    () => buildCollection({
+      tenants,
+      rentBills: overviewRentBilling.bills,
+      electricityBills,
+      analytics: tenantAnalytics,
+      today,
+    }),
+    [electricityBills, overviewRentBilling.bills, tenantAnalytics, tenants, today],
+  );
+  const landlordName = profile?.businessName || issuer.businessName || user.name;
+  const { language } = useLanguage();
+  const reminderOptions = { landlordName, upiId: issuer.upiId ?? "", shareLinks, language };
+  function remindHref(renter: TenantRecord) {
+    const row = collection.find((item) => item.tenant.id === renter.id);
+    return row && row.status !== "paid" ? reminderLinkFor(row, reminderOptions) : null;
+  }
+  function billWhatsappHref(document: BillDocument) {
+    const url = shareLinks[shareKey(document.kind, document.bill.id)];
+    if (!url) return null;
+    const renter = tenants.find((item) => item.id === document.bill.tenantId);
+    const row = collection.find((item) => item.tenant.id === document.bill.tenantId);
+    if (document.bill.pending > 0.005 && row) {
+      return reminderLinkFor({ ...row, outstanding: document.bill.pending, dueDate: document.bill.dueDate, bill: document.kind === "rent" ? { kind: "rent", record: document.bill } : { kind: "electricity", record: document.bill } }, reminderOptions);
+    }
+    return whatsappLink(renter?.phone, billShareMessage({
+      tenantName: renter?.name ?? document.bill.tenantName,
+      landlordName,
+      label: document.kind === "rent" ? `rent bill ${document.bill.billNumber}` : `electricity bill ${document.bill.billNumber}`,
+      url,
+      language,
+    }));
+  }
+
+  function openPayment(row?: CollectionRow) {
+    if (row && !rentalAccess.unitIds.includes(row.tenant.unitId)) {
+      toast.error("This tenant's rental is read-only on your current plan.");
+      return;
+    }
+    setPaymentPrefill(row ? { tenantId: row.tenant.id, amount: row.outstanding } : null);
+    setPaymentOpen(true);
+  }
 
   const visiblePayments = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
@@ -625,7 +681,7 @@ export function Dashboard({
 
         <div className="mx-auto w-full max-w-[1440px] px-4 pt-4 sm:px-7 lg:px-9">
           <WorkspaceGuide userId={user.id} subscription={subscription} hasLockedRentals={rentalAccess.hasLockedRentals} showOffer={active === "Overview"}
-            onPlan={() => { setShowPlan(true); navigateToSection("Profile"); }} />
+            onPlan={() => { setProfileSection("plan"); navigateToSection("Profile"); }} />
         </div>
 
         <div
@@ -646,19 +702,32 @@ export function Dashboard({
               totalProperties={properties.length}
               incomeOverview={incomeOverview}
               onAddProperty={() => openProperty()}
-              onRecordPayment={() => setPaymentOpen(true)}
+              onRecordPayment={() => openPayment()}
               onViewPayments={() => navigateToSection("Payments")}
               onViewProperties={() => navigateToSection("Properties")}
               firstName={firstName}
+              collection={(
+                <CollectionList
+                  rows={collection}
+                  today={today}
+                  landlordName={landlordName}
+                  upiId={issuer.upiId ?? ""}
+                  shareLinks={shareLinks}
+                  onMarkPaid={openPayment}
+                  onAddRental={() => openProperty()}
+                  onImport={() => setImportOpen(true)}
+                  onAddUpi={() => { setProfileSection("payouts"); navigateToSection("Profile"); }}
+                />
+              )}
             />
           ) : active === "Profile" && profile ? (
             <ProfileForm
-              key={focusedSubscriptionReceiptId ?? (showPlan ? "plan" : "profile")}
+              key={focusedSubscriptionReceiptId ?? profileSection ?? "profile"}
               email={user.email}
               initialValues={profile}
               subscription={subscription}
               receipts={subscriptionReceipts}
-              initialSection={focusedSubscriptionReceiptId ? "receipts" : showPlan ? "plan" : "business"}
+              initialSection={focusedSubscriptionReceiptId ? "receipts" : profileSection ?? "business"}
               focusedReceiptId={focusedSubscriptionReceiptId ?? undefined}
             />
           ) : active === "Help center" ? (
@@ -680,7 +749,7 @@ export function Dashboard({
               onEditProperty={openProperty}
               onAddUnit={(property) => openUnit(property)}
               onEditUnit={(property, unit) => openUnit(property, unit)}
-              onRecordPayment={() => setPaymentOpen(true)}
+              onRecordPayment={() => openPayment()}
               onAddElectricityBill={() => setElectricityBillOpen(true)}
               onAddTenant={() => openTenant()}
               onEditTenant={openTenant}
@@ -691,6 +760,8 @@ export function Dashboard({
                 tenant: tenants.find((item) => item.id === bill.tenantId) ?? null,
                 accountOutstanding: outstandingFor(bill.tenantId),
               })}
+              remindHref={remindHref}
+              onImport={() => setImportOpen(true)}
               onViewElectricityBill={(bill) => setBillDocument({
                 kind: "electricity",
                 bill,
@@ -726,6 +797,9 @@ export function Dashboard({
           open
           onOpenChange={setPaymentOpen}
           tenants={writableTenants}
+          initialTenantId={paymentPrefill?.tenantId}
+          initialAmount={paymentPrefill?.amount}
+          landlordName={landlordName}
         />
       )}
       {electricityBillOpen && (
@@ -742,7 +816,8 @@ export function Dashboard({
           onOpenChange={setPropertyOpen}
         />
       )}
-      {onboarding && <PropertyOnboarding properties={writableProperties} initialPropertyId={onboarding.propertyId} onClose={() => setOnboarding(null)} />}
+      {onboarding && <PropertyOnboarding properties={writableProperties} initialPropertyId={onboarding.propertyId} onClose={() => setOnboarding(null)} onImport={() => setImportOpen(true)} />}
+      {importOpen && <ImportDialog properties={writableProperties} onClose={() => setImportOpen(false)} />}
       {unitEditor && (
         <UnitDialog
           property={unitEditor.property}
@@ -768,6 +843,7 @@ export function Dashboard({
         <BillDocumentDialog
           document={billDocument}
           issuer={issuer}
+          whatsappHref={billWhatsappHref(billDocument)}
           onClose={() => setBillDocument(null)}
         />
       )}

@@ -8,6 +8,7 @@ import { paymentAllocation, paymentReceipt, tenant } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { ensureLandlord } from "@/lib/landlords";
 import { getRentalAccess, RENTAL_LOCK_MESSAGE } from "@/lib/plan-access";
+import { shareUrl } from "@/lib/share-links";
 
 type PaymentField = "tenantId" | "paidAt" | "allocations";
 
@@ -15,6 +16,7 @@ export type PaymentActionState = {
   status: "idle" | "success" | "error";
   message: string;
   errors?: Partial<Record<PaymentField, string>>;
+  receipt?: { id: string; number: string; tenantId: string; amount: number; shareUrl: string };
 };
 
 type RawAllocation = {
@@ -160,5 +162,15 @@ export async function recordPayment(
   ]);
 
   revalidatePath("/dashboard");
-  return { status: "success", message: `Payment recorded as ${receiptNumber}.` };
+  return {
+    status: "success",
+    message: `Payment recorded as ${receiptNumber}.`,
+    receipt: {
+      id: receiptId,
+      number: receiptNumber,
+      tenantId,
+      amount: totalPaise / 100,
+      shareUrl: await shareUrl("receipt", receiptId),
+    },
+  };
 }

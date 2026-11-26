@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Download, Plus } from "lucide-react";
+import { Building2, Download, Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormSelect } from "@/components/ui/form-controls";
 import type { PaymentRecord } from "@/lib/payments";
@@ -37,6 +37,8 @@ export function SectionView({
   onViewTenant,
   onViewRentBill,
   onViewElectricityBill,
+  remindHref,
+  onImport,
 }: {
   section: string;
   payments: PaymentRecord[];
@@ -60,6 +62,8 @@ export function SectionView({
   onViewTenant: (tenant: TenantRecord) => void;
   onViewRentBill: (bill: RentBillingSummary["bills"][number]) => void;
   onViewElectricityBill: (bill: ElectricityBillRecord) => void;
+  remindHref?: (tenant: TenantRecord) => string | null;
+  onImport?: () => void;
 }) {
   const descriptions: Record<string, string> = {
     Properties: "Manage buildings, units, and occupancy.",
@@ -102,6 +106,11 @@ export function SectionView({
           >
             <Download className="size-4" /> Export CSV
           </Button>
+          {(section === "Properties" || section === "Tenants") && onImport && (
+            <Button variant="outline" onClick={onImport}>
+              <Upload className="size-4" /> Import from Excel
+            </Button>
+          )}
           {section === "Payments" && (
             <Button variant="outline" onClick={onAddElectricityBill}>
               <Plus className="size-4" /> Add electricity bill
@@ -145,6 +154,7 @@ export function SectionView({
             tenants={tenants}
             onAdd={onAddTenant}
             onEdit={onEditTenant}
+            remindHref={remindHref}
             onView={onViewTenant}
           />
         ) : (

@@ -351,7 +351,7 @@
   color: #e4c77a !important;
 }
 
-.shell :global(button[data-slot="button"][data-variant="default"]) {
+.shell :global(:is(button, a)[data-slot="button"][data-variant="default"]) {
   border: 1px solid #e4c77a !important;
   border-radius: 10px !important;
   background: #e4c77a !important;
@@ -359,12 +359,12 @@
   box-shadow: 0 8px 24px rgba(228, 199, 122, 0.09) !important;
 }
 
-.shell :global(button[data-slot="button"][data-variant="default"]:hover) {
+.shell :global(:is(button, a)[data-slot="button"][data-variant="default"]:hover) {
   border-color: #f0da9d !important;
   background: #f0da9d !important;
 }
 
-.shell :global(button[data-slot="button"][data-variant="outline"]) {
+.shell :global(:is(button, a)[data-slot="button"][data-variant="outline"]) {
   border-color: rgba(228, 199, 122, 0.45) !important;
   border-radius: 10px !important;
   background: rgba(228, 199, 122, 0.045) !important;
@@ -372,17 +372,17 @@
   box-shadow: none !important;
 }
 
-.shell :global(button[data-slot="button"][data-variant="outline"]:hover) {
+.shell :global(:is(button, a)[data-slot="button"][data-variant="outline"]:hover) {
   border-color: #e4c77a !important;
   background: rgba(228, 199, 122, 0.11) !important;
   color: #f0da9d !important;
 }
 
-.shell :global(button[data-slot="button"][data-variant="ghost"]) {
+.shell :global(:is(button, a)[data-slot="button"][data-variant="ghost"]) {
   color: rgba(237, 237, 232, 0.55) !important;
 }
 
-.shell :global(button[data-slot="button"][data-variant="ghost"]:hover) {
+.shell :global(:is(button, a)[data-slot="button"][data-variant="ghost"]:hover) {
   background: rgba(255, 255, 255, 0.055) !important;
   color: #e4c77a !important;
 }

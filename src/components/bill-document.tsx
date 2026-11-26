@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, LoaderCircle, Printer, Share2 } from "lucide-react";
+import { Download, LoaderCircle, MessageCircle, Printer, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { BhadaMark } from "@/components/brand-logo";
@@ -126,11 +126,11 @@ export function upiLinkFor(document: BillDocument, issuer: BillIssuer) {
   });
 }
 
-function filenameFor(document: BillDocument) {
+export function filenameFor(document: BillDocument) {
   return `${document.kind === "rent" ? "Rent" : "Electricity"}-Invoice-${document.bill.billNumber.replace(/[^a-z0-9-]/gi, "-")}.pdf`;
 }
 
-async function createPdf(document: BillDocument, issuer: BillIssuer) {
+export async function createPdf(document: BillDocument, issuer: BillIssuer) {
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const pdfFont = await loadGotuPdfFont(pdf);
@@ -346,7 +346,7 @@ async function createPdf(document: BillDocument, issuer: BillIssuer) {
   return pdf.output("blob");
 }
 
-function downloadBlob(blob: Blob, filename: string) {
+export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const anchor = window.document.createElement("a");
   anchor.href = url;
@@ -361,24 +361,17 @@ export function BillDocumentDialog({
   document,
   issuer,
   onClose,
+  whatsappHref = null,
 }: {
   document: BillDocument | null;
   issuer: BillIssuer;
   onClose: () => void;
+  whatsappHref?: string | null;
 }) {
   const [working, setWorking] = useState<"download" | "share" | "print" | null>(null);
   if (!document) return null;
 
   const bill = document.bill;
-  const tenant = document.tenant;
-  const rows = invoiceRows(document);
-  const upiLink = upiLinkFor(document, issuer);
-  const issuerAddress = [issuer.address, issuer.city, issuer.state, issuer.pincode].filter(Boolean).join(", ");
-  const propertyLine = tenant
-    ? `${tenant.propertyName} · Unit ${tenant.unitNumber}`
-    : document.kind === "electricity"
-      ? `${document.bill.propertyName} · Unit ${document.bill.unitNumber}`
-      : "";
 
   async function download() {
     if (!document) return;
@@ -450,6 +443,13 @@ export function BillDocumentDialog({
             <DialogDescription className="mt-1">Preview, print, download, or share this invoice as a PDF.</DialogDescription>
           </div>
           <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:w-auto sm:shrink-0">
+            {whatsappHref && (
+              <Button asChild className="col-span-3 min-w-0 px-2 sm:col-auto sm:px-4">
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="size-4" /> WhatsApp
+                </a>
+              </Button>
+            )}
             <Button className="min-w-0 px-2 sm:px-4" variant="outline" onClick={print} disabled={working !== null}>
               {working === "print" ? <LoaderCircle className="size-4 animate-spin" /> : <Printer className="size-4" />} Print
             </Button>
@@ -464,114 +464,131 @@ export function BillDocumentDialog({
         </div>
 
         <div className="bg-[#dddcd6] p-2 sm:p-7">
-          <article className="font-display mx-auto min-h-[540px] w-full max-w-[720px] overflow-hidden bg-[#f7f7f3] px-4 py-7 text-[#121210] shadow-[0_14px_45px_rgba(35,40,55,.12)] sm:min-h-[900px] sm:px-14 sm:py-14">
-            <header className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:grid-cols-2 sm:gap-8">
-              <div className="flex w-fit flex-col items-center gap-2.5">
-                <span className="grid size-14 place-items-center bg-black sm:size-24">
-                  <BhadaMark className="size-[calc(100%-8px)] text-[#f7f7f3]" />
-                </span>
-                <span className="text-lg sm:text-3xl">Bhada</span>
-              </div>
-              <h2 className="min-w-0 text-[clamp(1.75rem,9vw,5.5rem)] font-normal leading-[0.9] tracking-[-0.04em] text-right">
-                INVOICE
-              </h2>
-            </header>
-
-            <section className="mt-8 grid grid-cols-2 gap-4 sm:mt-9 sm:gap-8">
-              <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-sm">
-                <p className="font-bold">BILLED TO:</p>
-                <p className="mt-1">{tenant?.name || bill.tenantName}</p>
-                {tenant?.phone && <p>{tenant.phone}</p>}
-                {propertyLine && <p>{propertyLine}</p>}
-                {tenant?.email && <p>{tenant.email}</p>}
-              </div>
-              <div className="min-w-0 break-words text-right text-[11px] leading-[1.65] sm:text-sm">
-                <p className="break-all">Invoice No. {bill.billNumber}</p>
-                <p>{formatDate(bill.issueDate)}</p>
-                <p className="mt-1 text-[10px] text-black/55 sm:text-xs">Due {formatDate(bill.dueDate)} · {bill.status}</p>
-              </div>
-            </section>
-
-            {document.kind === "electricity" && (
-              <section aria-label="Electricity meter readings" className="mt-10 grid grid-cols-3 border-y border-black px-2 py-4">
-                {[
-                  ["Last reading", document.bill.previousReading],
-                  ["Current reading", document.bill.currentReading],
-                  ["Units consumed", document.bill.unitsConsumed],
-                ].map(([label, value]) => (
-                  <div key={String(label)} className="min-w-0 px-1 first:pl-0 last:pr-0 sm:px-3">
-                    <p className="text-[8px] font-bold tracking-[0.08em] text-black/55 uppercase sm:text-[10px]">{label}</p>
-                    <p className="mt-1 break-words text-sm tabular-nums sm:text-lg">{meterReading(Number(value))} <span className="text-[9px] text-black/55 sm:text-xs">units</span></p>
-                  </div>
-                ))}
-              </section>
-            )}
-
-            <div className={document.kind === "electricity" ? "mt-8" : "mt-12 sm:mt-16"}>
-              <div className="min-w-0">
-                <div className="hidden grid-cols-[minmax(0,1fr)_76px_100px_100px] border-y border-black px-2 py-3 text-xs font-bold sm:grid sm:text-sm">
-                  <span>Item</span><span className="text-center">Quantity</span><span className="text-center">Unit Price</span><span className="text-right">Total</span>
-                </div>
-                {rows.map((row) => (
-                  <div key={row.item} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 border-b border-black/70 px-1 py-3 text-[11px] first:border-t first:border-black sm:grid-cols-[minmax(0,1fr)_76px_100px_100px] sm:items-center sm:border-t-0 sm:px-2 sm:py-4 sm:text-sm">
-                    <span className="min-w-0 break-words">{row.item}</span>
-                    <span className="whitespace-nowrap text-right font-bold sm:hidden">{row.total.replace("INR ", "₹")}</span>
-                    <span className="col-span-2 text-[10px] text-black/55 sm:col-auto sm:text-center sm:text-sm sm:text-black">Qty {row.quantity}</span>
-                    <span className="hidden text-center sm:block">{row.unitPrice.replace("INR ", "₹")}</span>
-                    <span className="hidden text-right sm:block">{row.total.replace("INR ", "₹")}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="ml-auto mt-4 w-full max-w-[265px] text-[11px] sm:text-sm">
-              <InvoiceSummaryLine label="Subtotal" value={formatCurrency(subtotalFor(document))} />
-              <InvoiceSummaryLine label="Tax / adjustments" value={formatCurrency(taxFor(document))} />
-              <InvoiceSummaryLine label="Invoice total" value={formatCurrency(bill.amount)} />
-              {bill.paid > 0 && <InvoiceSummaryLine label="Amount received" value={`− ${formatCurrency(bill.paid)}`} />}
-              <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-black py-4 sm:gap-5">
-                <span className="text-lg font-bold leading-tight sm:text-2xl">Amount<br />Due</span>
-                <span className="whitespace-nowrap text-lg sm:text-2xl">{formatCurrency(bill.pending)}</span>
-              </div>
-              {issuer.showOutstandingOnInvoice && (
-                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t-2 border-black py-4 sm:gap-5">
-                  <span className="font-bold">Total outstanding</span>
-                  <span className="whitespace-nowrap text-right font-bold">{formatCurrency(document.accountOutstanding)}</span>
-                </div>
-              )}
-            </div>
-
-            {upiLink && issuer.upiId && (
-              <div className="mt-8 max-w-md">
-                <UpiPayCard link={upiLink} upiId={issuer.upiId} amount={bill.pending} />
-              </div>
-            )}
-
-            {document.kind === "electricity" && document.bill.note && (
-              <div className="mt-8 max-w-md text-xs leading-5"><span className="font-bold">Note: </span>{document.bill.note}</div>
-            )}
-
-            <footer className="mt-16 sm:mt-32">
-              <p className="text-xl sm:text-2xl">Thank you for your Business!</p>
-              <div className="mt-10 grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
-                <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-xs">
-                  <p className="font-bold">BUSINESS INFORMATION</p>
-                  {issuer.gstin && <p className="mt-1">GSTIN: {issuer.gstin}</p>}
-                  {issuer.pan && <p>PAN: {issuer.pan}</p>}
-                  {issuer.phone && <p>{issuer.phone}</p>}
-                  {issuer.email && <p>{issuer.email}</p>}
-                  {!issuer.gstin && !issuer.pan && !issuer.phone && !issuer.email && <p className="mt-1">Computer-generated invoice</p>}
-                </div>
-                <div className="min-w-0 text-left sm:text-right">
-                  <p className="break-words text-xl leading-tight sm:text-2xl">{issuer.businessName || "Bhada Property Management"}</p>
-                  {issuerAddress && <p className="mt-2 break-words text-[10px] leading-4 sm:text-xs">{issuerAddress}</p>}
-                </div>
-              </div>
-            </footer>
-          </article>
+          <BillPaper document={document} issuer={issuer} />
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function BillPaper({ document, issuer }: { document: BillDocument; issuer: BillIssuer }) {
+  const bill = document.bill;
+  const tenant = document.tenant;
+  const rows = invoiceRows(document);
+  const upiLink = upiLinkFor(document, issuer);
+  const issuerAddress = [issuer.address, issuer.city, issuer.state, issuer.pincode].filter(Boolean).join(", ");
+  const propertyLine = tenant
+    ? `${tenant.propertyName} · Unit ${tenant.unitNumber}`
+    : document.kind === "electricity"
+      ? `${document.bill.propertyName} · Unit ${document.bill.unitNumber}`
+      : "";
+
+  return (
+    <article className="font-display mx-auto min-h-[540px] w-full max-w-[720px] overflow-hidden bg-[#f7f7f3] px-4 py-7 text-[#121210] shadow-[0_14px_45px_rgba(35,40,55,.12)] sm:min-h-[900px] sm:px-14 sm:py-14">
+      <header className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:grid-cols-2 sm:gap-8">
+        <div className="flex w-fit flex-col items-center gap-2.5">
+          <span className="grid size-14 place-items-center bg-black sm:size-24">
+            <BhadaMark className="size-[calc(100%-8px)] text-[#f7f7f3]" />
+          </span>
+          <span className="text-lg sm:text-3xl">Bhada</span>
+        </div>
+        <h2 className="min-w-0 text-[clamp(1.75rem,9vw,5.5rem)] font-normal leading-[0.9] tracking-[-0.04em] text-right">
+          INVOICE
+        </h2>
+      </header>
+
+      <section className="mt-8 grid grid-cols-2 gap-4 sm:mt-9 sm:gap-8">
+        <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-sm">
+          <p className="font-bold">BILLED TO:</p>
+          <p className="mt-1">{tenant?.name || bill.tenantName}</p>
+          {tenant?.phone && <p>{tenant.phone}</p>}
+          {propertyLine && <p>{propertyLine}</p>}
+          {tenant?.email && <p>{tenant.email}</p>}
+        </div>
+        <div className="min-w-0 break-words text-right text-[11px] leading-[1.65] sm:text-sm">
+          <p className="break-all">Invoice No. {bill.billNumber}</p>
+          <p>{formatDate(bill.issueDate)}</p>
+          <p className="mt-1 text-[10px] text-black/55 sm:text-xs">Due {formatDate(bill.dueDate)} · {bill.status}</p>
+        </div>
+      </section>
+
+      {document.kind === "electricity" && (
+        <section aria-label="Electricity meter readings" className="mt-10 grid grid-cols-3 border-y border-black px-2 py-4">
+          {[
+            ["Last reading", document.bill.previousReading],
+            ["Current reading", document.bill.currentReading],
+            ["Units consumed", document.bill.unitsConsumed],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="min-w-0 px-1 first:pl-0 last:pr-0 sm:px-3">
+              <p className="text-[8px] font-bold tracking-[0.08em] text-black/55 uppercase sm:text-[10px]">{label}</p>
+              <p className="mt-1 break-words text-sm tabular-nums sm:text-lg">{meterReading(Number(value))} <span className="text-[9px] text-black/55 sm:text-xs">units</span></p>
+            </div>
+          ))}
+        </section>
+      )}
+
+      <div className={document.kind === "electricity" ? "mt-8" : "mt-12 sm:mt-16"}>
+        <div className="min-w-0">
+          <div className="hidden grid-cols-[minmax(0,1fr)_76px_100px_100px] border-y border-black px-2 py-3 text-xs font-bold sm:grid sm:text-sm">
+            <span>Item</span><span className="text-center">Quantity</span><span className="text-center">Unit Price</span><span className="text-right">Total</span>
+          </div>
+          {rows.map((row) => (
+            <div key={row.item} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 border-b border-black/70 px-1 py-3 text-[11px] first:border-t first:border-black sm:grid-cols-[minmax(0,1fr)_76px_100px_100px] sm:items-center sm:border-t-0 sm:px-2 sm:py-4 sm:text-sm">
+              <span className="min-w-0 break-words">{row.item}</span>
+              <span className="whitespace-nowrap text-right font-bold sm:hidden">{row.total.replace("INR ", "₹")}</span>
+              <span className="col-span-2 text-[10px] text-black/55 sm:col-auto sm:text-center sm:text-sm sm:text-black">Qty {row.quantity}</span>
+              <span className="hidden text-center sm:block">{row.unitPrice.replace("INR ", "₹")}</span>
+              <span className="hidden text-right sm:block">{row.total.replace("INR ", "₹")}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="ml-auto mt-4 w-full max-w-[265px] text-[11px] sm:text-sm">
+        <InvoiceSummaryLine label="Subtotal" value={formatCurrency(subtotalFor(document))} />
+        <InvoiceSummaryLine label="Tax / adjustments" value={formatCurrency(taxFor(document))} />
+        <InvoiceSummaryLine label="Invoice total" value={formatCurrency(bill.amount)} />
+        {bill.paid > 0 && <InvoiceSummaryLine label="Amount received" value={`− ${formatCurrency(bill.paid)}`} />}
+        <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-black py-4 sm:gap-5">
+          <span className="text-lg font-bold leading-tight sm:text-2xl">Amount<br />Due</span>
+          <span className="whitespace-nowrap text-lg sm:text-2xl">{formatCurrency(bill.pending)}</span>
+        </div>
+        {issuer.showOutstandingOnInvoice && (
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t-2 border-black py-4 sm:gap-5">
+            <span className="font-bold">Total outstanding</span>
+            <span className="whitespace-nowrap text-right font-bold">{formatCurrency(document.accountOutstanding)}</span>
+          </div>
+        )}
+      </div>
+
+      {upiLink && issuer.upiId && (
+        <div className="mt-8 max-w-md">
+          <UpiPayCard link={upiLink} upiId={issuer.upiId} amount={bill.pending} />
+        </div>
+      )}
+
+      {document.kind === "electricity" && document.bill.note && (
+        <div className="mt-8 max-w-md text-xs leading-5"><span className="font-bold">Note: </span>{document.bill.note}</div>
+      )}
+
+      <footer className="mt-16 sm:mt-32">
+        <p className="text-xl sm:text-2xl">Thank you for your Business!</p>
+        <div className="mt-10 grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:items-end">
+          <div className="min-w-0 break-words text-[11px] leading-[1.65] sm:text-xs">
+            <p className="font-bold">BUSINESS INFORMATION</p>
+            {issuer.gstin && <p className="mt-1">GSTIN: {issuer.gstin}</p>}
+            {issuer.pan && <p>PAN: {issuer.pan}</p>}
+            {issuer.phone && <p>{issuer.phone}</p>}
+            {issuer.email && <p>{issuer.email}</p>}
+            {!issuer.gstin && !issuer.pan && !issuer.phone && !issuer.email && <p className="mt-1">Computer-generated invoice</p>}
+          </div>
+          <div className="min-w-0 text-left sm:text-right">
+            <p className="break-words text-xl leading-tight sm:text-2xl">{issuer.businessName || "Bhada Property Management"}</p>
+            {issuerAddress && <p className="mt-2 break-words text-[10px] leading-4 sm:text-xs">{issuerAddress}</p>}
+          </div>
+        </div>
+      </footer>
+    </article>
   );
 }
 

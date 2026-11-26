@@ -27,6 +27,8 @@ export default async function WorkspacePreview({ searchParams }: { searchParams:
     tenantAnalytics={[]} tenantLedgers={[]} notifications={[]} subscriptionReceipts={[]}
     incomeOverview={[4,5,6,7,8,9,10].map((month) => ({ period: `2026-${String(month).padStart(2,"0")}`, label: ["Apr","May","Jun","Jul","Aug","Sep","Oct"][month-4], description: "Rent collected", value: month === 10 ? 15000 : 30000 }))}
     subscription={{ active: trial, status: "none", currentPeriodEnd: null, cancelAtPeriodEnd: false, trialActive: trial, trialEligible: !trial && !expired, trialEndsAt: trial ? "2099-10-21T10:00:00Z" : expired ? "2026-01-01T10:00:00Z" : null }}
+    shareLinks={{ "rent:bill-1": "http://localhost:3014/s/demo" }}
+    today="2026-10-26"
     rentalAccess={{ propertyIds: expired ? [] : ["property-1"], unitIds: expired ? [] : ["unit-0", "unit-1"], hasLockedRentals: expired }}
   />;
 }
