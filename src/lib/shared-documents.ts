@@ -220,7 +220,7 @@ export async function getSharedDocument(
             : line.chargeType === "light_bill"
               ? "Electricity"
               : line.description || "Other charges";
-        const label = line.billReference ? `${base} · ${line.billReference}` : base;
+        const label = line.billReference ? `${base} for ${line.billReference}` : base;
         return { label, amount: Number(line.totalAmount) };
       }),
     },
