@@ -110,7 +110,7 @@ export function WorkspaceGuide({ userId, subscription, hasLockedRentals, onPlan,
             {step === 0 && <><Check /><p>Your records are saved.<br /><span>Pick up exactly where you left off.</span></p></>}
             {step === 1 && <><Users /><p>Find a tenant in seconds.<br /><span>Search by name, property or unit.</span></p></>}
             {step === 2 && <><CreditCard /><p>One clear view of rent.<br /><span>See what is collected and what is pending.</span></p></>}
-            {step === 3 && <><Clock3 /><p>{subscription.trialEligible ? `${TRIAL_DAYS} days free. No card needed.` : subscription.trialActive ? "Your trial is already active." : subscription.active ? "You're already on Portfolio." : "Continue with One Door for free."}<br /><span>{subscription.trialEligible ? `After the trial, return to One Door or choose Portfolio at ₹${PORTFOLIO_PLAN.monthlyPrice}/month. Extra rentals become read-only.` : "Manage your subscription in Settings → Plan."}</span></p></>}
+            {step === 3 && <><Clock3 /><p>{subscription.trialEligible ? `${TRIAL_DAYS} days free. No card needed.` : subscription.trialActive ? "Your trial is already active." : subscription.active ? "You're already on a paid plan." : "Continue with One Door for free."}<br /><span>{subscription.trialEligible ? `After the trial, return to One Door or choose Portfolio at ₹${PORTFOLIO_PLAN.monthlyPrice}/month. Extra rentals become read-only.` : "Manage your subscription in Settings → Plan."}</span></p></>}
           </div>
           <Separator />
           <div className="flex items-center justify-between gap-3">

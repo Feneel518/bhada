@@ -104,3 +104,9 @@ export function limitsForPlan(plan: PlanId | undefined, active: boolean) {
   if (!active) return FREE_PLAN;
   return plan === "estate" ? ESTATE_PLAN : PORTFOLIO_PLAN;
 }
+
+/** Best label for a past subscription payment, inferred from what was charged. */
+export function describeSubscriptionPayment(amountPaise: number) {
+  const match = Object.values(BILLING_CHOICES).find((choice) => choice.price * 100 === amountPaise);
+  return `Bhadaa ${match?.label ?? BILLING_CHOICES.portfolio_monthly.label}`;
+}

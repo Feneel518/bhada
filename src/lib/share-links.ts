@@ -26,15 +26,28 @@ function base64url(bytes: Uint8Array) {
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+let cachedKey: { secret: string; key: Promise<CryptoKey> } | null = null;
+
+function signingKey() {
+  const value = secret();
+  if (cachedKey?.secret !== value) {
+    cachedKey = {
+      secret: value,
+      key: crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(`bhadaa-share:${value}`),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      ),
+    };
+  }
+  return cachedKey.key;
+}
+
 async function signature(payload: string) {
   const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(`bhadaa-share:${secret()}`),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
+  const key = await signingKey();
   const signed = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(payload)));
   // 128 bits is plenty for an unguessable link and keeps WhatsApp messages short.
   return base64url(signed.slice(0, 16));
