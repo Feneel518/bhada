@@ -56,6 +56,34 @@ EMAIL_FROM="Bhadaa <hello@example.com>"
 Use `SMTP_SECURE=true` for implicit TLS (commonly port 465). Password reset
 tokens expire after Better Auth's default one-hour window.
 
+## Plans
+
+| Plan | Price | Limits | Razorpay env var |
+| --- | --- | --- | --- |
+| One Door | Free | 1 property, 3 units | none |
+| Portfolio monthly | ₹49 / month | 5 properties, 25 units | `RAZORPAY_PORTFOLIO_PLAN_ID` (required) |
+| Portfolio yearly | ₹499 / year | 5 properties, 25 units | `RAZORPAY_PORTFOLIO_YEARLY_PLAN_ID` |
+| Estate | ₹99 / month | 20 properties, 100 units | `RAZORPAY_ESTATE_PLAN_ID` |
+
+Bhadaa is not GST registered, so prices are shown as final with no GST.
+Create each optional plan in Razorpay first; it only appears at checkout once
+its ID is set. Landlords already on a paid plan can't switch in-app yet.
+
+## Scheduled jobs
+
+- `/api/cron/rent-bills`: daily at 00:05 IST, creates monthly rent bills.
+- `/api/cron/daily-summary`: daily at 08:10 IST, emails landlords who have rent
+  due today, rent that turned late yesterday, or (on Mondays) anything overdue.
+
+Both run from `vercel.json` on Vercel and from `wrangler.jsonc` triggers on
+Cloudflare. Both need `CRON_SECRET`.
+
+## Database migration for this release
+
+```bash
+npx drizzle-kit migrate   # applies 0017: UPI ID, summary email, billing interval
+```
+
 ## Razorpay Portfolio billing
 
 Create a Razorpay Subscription Plan for ₹49 INR with a monthly billing period,

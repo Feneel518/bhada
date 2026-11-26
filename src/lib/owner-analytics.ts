@@ -11,7 +11,7 @@ import {
   unit,
   user,
 } from "@/db/schema";
-import { hasPortfolioAccess, PORTFOLIO_PLAN } from "@/lib/plans";
+import { ESTATE_PLAN, hasPaidPortfolioAccess, hasPortfolioAccess, PORTFOLIO_PLAN } from "@/lib/plans";
 
 const CHURN_STATUSES = new Set(["cancelled", "completed", "expired", "halted"]);
 const CHURN_EVENTS = new Set([
@@ -61,6 +61,7 @@ export async function getOwnerAnalytics(now = new Date()) {
         landlordId: landlord.id,
         businessName: landlord.businessName,
         plan: landlord.plan,
+        billingInterval: landlord.billingInterval,
         subscriptionStatus: landlord.subscriptionStatus,
         subscriptionCurrentPeriodEnd: landlord.subscriptionCurrentPeriodEnd,
         subscriptionCancelAtPeriodEnd: landlord.subscriptionCancelAtPeriodEnd,
@@ -142,7 +143,16 @@ export async function getOwnerAnalytics(now = new Date()) {
   const realizedRevenueThisMonth = revenueEvents
     .filter((event) => event.occurredAt >= currentMonthStart)
     .reduce((total, event) => total + event.amountPaise / 100, 0);
-  const mrr = payingCustomers.length * PORTFOLIO_PLAN.monthlyPrice;
+  // Trials have Portfolio access but pay nothing, so MRR counts paid plans only.
+  const mrr = Math.round(customers
+    .filter((account) => hasPaidPortfolioAccess(account, now))
+    .reduce((total, account) => total + (
+      account.plan === "estate"
+        ? ESTATE_PLAN.monthlyPrice
+        : account.billingInterval === "year"
+          ? PORTFOLIO_PLAN.yearlyPrice / 12
+          : PORTFOLIO_PLAN.monthlyPrice
+    ), 0));
   const activeUserIds = new Set(
     recentSessions
       .map((record) => record.userId)
